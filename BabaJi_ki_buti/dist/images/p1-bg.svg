@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000" viewBox="0 0 3000 2000">
+  <defs>
+    <!-- Corner radius for the whole canvas -->
+    <clipPath id="roundCorners">
+      <!-- change rx/ry to control how round the corners are -->
+      <rect x="0" y="0" width="3000" height="2000" rx="120" ry="120"/>
+    </clipPath>
+
+    <!-- Color palette -->
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0b0f"/>
+      <stop offset="45%" stop-color="#121218"/>
+      <stop offset="100%" stop-color="#0b0b0f"/>
+    </linearGradient>
+
+    <!-- Gold gradient for accents -->
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe082"/>
+      <stop offset="40%" stop-color="#ffd54a"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+
+    <!-- Soft center glow -->
+    <radialGradient id="glow" cx="50%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#ffd54a" stop-opacity="0.18"/>
+      <stop offset="35%" stop-color="#ffd54a" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffd54a" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Honeycomb pattern -->
+    <pattern id="honeycomb" width="60" height="52" patternUnits="userSpaceOnUse" patternTransform="scale(1)">
+      <polygon points="30,0 60,15 60,37 30,52 0,37 0,15" fill="none" stroke="#2a2a33" stroke-width="2"/>
+    </pattern>
+
+    <!-- Soft vignette around edges -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="60%" stop-color="#00000000"/>
+      <stop offset="100%" stop-color="#000000cc"/>
+    </radialGradient>
+
+    <!-- Mandala stroke pattern -->
+    <g id="mandala">
+      <circle cx="0" cy="0" r="260" fill="none" stroke="url(#goldGrad)" stroke-width="3" opacity="0.9"/>
+      <g fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.9">
+        <circle cx="0" cy="0" r="220"/>
+        <circle cx="0" cy="0" r="180"/>
+        <circle cx="0" cy="0" r="140"/>
+        <circle cx="0" cy="0" r="100"/>
+      </g>
+      <g fill="none" stroke="url(#goldGrad)" stroke-width="3" opacity="0.9">
+        <path d="M0,-220 C40,-180 40,-120 0,-100 C-40,-120 -40,-180 0,-220 Z"/>
+        <path d="M0,220 C40,180 40,120 0,100 C-40,120 -40,180 0,220 Z"/>
+        <path d="M-220,0 C-180,40 -120,40 -100,0 C-120,-40 -180,-40 -220,0 Z"/>
+        <path d="M220,0 C180,40 120,40 100,0 C120,-40 180,-40 220,0 Z"/>
+      </g>
+      <g fill="none" stroke="url(#goldGrad)" stroke-width="2" opacity="0.7">
+        <g id="petal">
+          <path d="M0,-160 C20,-140 20,-120 0,-110 C-20,-120 -20,-140 0,-160 Z"/>
+        </g>
+        <use href="#petal" transform="rotate(45)"/>
+        <use href="#petal" transform="rotate(90)"/>
+        <use href="#petal" transform="rotate(135)"/>
+        <use href="#petal" transform="rotate(180)"/>
+        <use href="#petal" transform="rotate(225)"/>
+        <use href="#petal" transform="rotate(270)"/>
+        <use href="#petal" transform="rotate(315)"/>
+      </g>
+    </g>
+
+    <!-- Herb leaf motif -->
+    <g id="leaf" fill="none" stroke="#7cb342" stroke-width="2">
+      <path d="M0,0 C40,-60 100,-60 160,0 C120,20 40,20 0,0 Z" fill="#7cb342" opacity="0.12"/>
+      <path d="M0,0 C40,-60 100,-60 160,0"/>
+      <path d="M20,-5 C60,-45 100,-45 140,-5"/>
+      <path d="M40,-2 C70,-30 90,-30 120,-2"/>
+    </g>
+
+    <!-- Subtle sparkles -->
+    <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter>
+  </defs>
+
+  <!-- Everything below is clipped to rounded rectangle -->
+  <g clip-path="url(#roundCorners)">
+    <!-- Background base -->
+    <rect width="3000" height="2000" fill="url(#bgGrad)"/>
+
+    <!-- Honeycomb texture on right side -->
+    <g opacity="0.25" transform="translate(1450,200)">
+      <rect width="1500" height="1600" fill="url(#honeycomb)"/>
+    </g>
+
+    <!-- Center warm glow to highlight product -->
+    <circle cx="1500" cy="1050" r="950" fill="url(#glow)"/>
+
+    <!-- Large mandala in bottom-left -->
+    <g transform="translate(520,1520) scale(1.8)">
+      <use href="#mandala"/>
+    </g>
+
+    <!-- Smaller mandalas for balance -->
+    <g transform="translate(2700,280) scale(0.9) rotate(20)">
+      <use href="#mandala" opacity="0.55"/>
+    </g>
+    <g transform="translate(2650,1720) scale(0.5) rotate(-15)">
+      <use href="#mandala" opacity="0.45"/>
+    </g>
+
+    <!-- Herb leaves near the glow -->
+    <g opacity="0.6" filter="url(#softBlur)">
+      <use href="#leaf" transform="translate(1850,1200) rotate(-10) scale(1.4)"/>
+      <use href="#leaf" transform="translate(1200,950) rotate(170) scale(1.2)"/>
+    </g>
+
+    <!-- Gold waves at the bottom to anchor composition -->
+    <path d="M0,1680 C420,1600 780,1760 1200,1700 C1620,1640 1980,1760 2400,1700 C2680,1660 2860,1680 3000,1650 L3000,2000 L0,2000 Z"
+          fill="url(#goldGrad)" opacity="0.18"/>
+
+    <!-- Gentle top shimmer -->
+    <rect x="0" y="0" width="3000" height="400" fill="url(#goldGrad)" opacity="0.05"/>
+
+    <!-- Edge vignette -->
+    <rect x="0" y="0" width="3000" height="2000" fill="url(#vignette)"/>
+  </g>
+
+  <!-- Optional: a stroked border that follows the same radius -->
+  <!-- <rect x="0" y="0" width="3000" height="2000" rx="120" ry="120" fill="none" stroke="#ffffff22"/> -->
+</svg>

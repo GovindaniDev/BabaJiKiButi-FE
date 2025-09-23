@@ -103,10 +103,10 @@ const FooterSection = () => {
                 <h3 className="text-xl font-bold mb-4">Stay Connected</h3>
                 <div className="flex gap-3">
                   {[
-                    { href: "https://www.facebook.com/", icon: "facebook.svg", label: "Facebook" },
-                    { href: "https://www.instagram.com/yourhandle", icon: "insta.svg", label: "Instagram" },
-                    { href: "https://x.com/i/flow/login?lang=en", icon: "twitter.svg", label: "Twitter" },
-                    { href: "https://www.whatsapp.com/", icon: "whatsapp.svg", label: "Whatsapp" },
+                    { href: "https://www.facebook.com/babajikibuti.fb/", icon: "facebook.svg", label: "Facebook" },
+                    { href: "https://www.instagram.com/babajikibuti_official/", icon: "insta.svg", label: "Instagram" },
+                    { href: "https://x.com/_babajikibooti_", icon: "twitter.svg", label: "Twitter" },
+                    { href: "https://api.whatsapp.com/send/?phone=9873033339&text&type=phone_number&app_absent=0", icon: "whatsapp.svg", label: "Whatsapp" },
                   ].map((item, i) => (
                     <a
                       key={i}
