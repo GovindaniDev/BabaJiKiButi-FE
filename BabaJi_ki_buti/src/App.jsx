@@ -25,6 +25,7 @@ import ContactPage from "./page/contact/ContactPage";
 import AboutPage from "./page/about/AboutPage";
 import AuthProvider from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
+import { Toaster } from "react-hot-toast";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -54,14 +55,13 @@ const App = () => {
     return (
       <div id="smooth-wrapper">
         <div id="smooth-content">
-          <NavBar />
           <HeroSection />
           <MessageSection />
           <FlavorSection />
           <NutritionSection />
           <BenefitSection />
           <TestimonialSection />
-          <FooterSection /> {/* 👈 footer scrolls with content now */}
+          <FooterSection /> 
         </div>
       </div>
     );
@@ -69,11 +69,12 @@ const App = () => {
 
   return (
     <AuthProvider>
+     <Toaster  reverseOrder={false} />
       <main>
         {loading && <Loading label="Please wait..." />}
 
         {/* Show global NavBar/Footer on non-home pages only */}
-        {!isHome && <NavBar />}
+        {<NavBar />}
 
         <Routes>
           <Route path="/" element={<HomePage />} />

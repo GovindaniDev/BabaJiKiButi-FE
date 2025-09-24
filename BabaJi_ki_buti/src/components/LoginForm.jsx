@@ -2,9 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import toast from "react-hot-toast";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("");
+   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +13,7 @@ export default function LoginForm() {
   const [error, setError] = useState("");
 
   // ✅ single call
-  const { isAuthenticated, loading, login } = useAuth();
+  const { isAuthenticated, loading, login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -24,26 +25,34 @@ export default function LoginForm() {
     try {
       const res = await login(email.trim(), password, rememberMe);
       if (res?.ok) {
+        const name = res.user?.name || res.user?.fullName || res.user?.email || "User";
+        toast.success(`Welcome, ${name}!`, { duration: 4000 });
         navigate(from, { replace: true });
       } else {
-        setError(res?.message || "Login failed");
+        const msg = res?.message || "Login failed";
+        setError(msg);
+        toast.error(msg, { duration: 3000 });
       }
     } catch (err) {
-      setError(
+      const msg =
         err?.response?.data?.message ||
         err?.message ||
-        "Unable to login. Please try again."
-      );
+        "Unable to login. Please try again.";
+      setError(msg);
+      toast.error(msg, { duration: 4000 });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // already-logged-in → home
-  useEffect(() => {
-    if (!loading && isAuthenticated) navigate("/", { replace: true });
-  }, [isAuthenticated, loading, navigate]);
-
+    // already-logged-in → home
+   useEffect(() => {
+    if (!loading && isAuthenticated) {
+      const name = user?.name || user?.fullName || user?.email || "User";
+      toast.success(`You are already logged in, ${name}.`, { duration: 4000 });
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate, user]);
   const handleSocialLogin = (provider) => {
     console.log(`Login with ${provider}`);
   };
