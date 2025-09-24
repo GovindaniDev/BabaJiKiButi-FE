@@ -8,16 +8,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://127.0.0.1:8090",       // ✅ host:port only
-        changeOrigin: true,
-        secure: false,
-        rewrite: (p) => p.replace(/^\/api/, ""), // ✅ /api/auth/x -> /auth/x
-        timeout: 60_000,
-        proxyTimeout: 60_000,
-      },
+  proxy: {
+    "/auth": {
+      target: "http://localhost:8090",
+      changeOrigin: true,
+      secure: false,
+      //rewrite: (path) => path.replace(/^\/auth/, ""), // ⬅️ add this
     },
   },
+}
+
 });

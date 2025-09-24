@@ -1,16 +1,23 @@
+// src/auth/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
-
-import { api, clearAccessToken, getAccessToken, setAccessToken } from "./http";
+import {
+  api,
+  getAccessToken,
+  setAccessToken,
+  clearAccessToken,
+  getRefreshToken,
+  setRefreshToken,
+  clearRefreshToken,
+} from "./http";
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
 
 export default function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);   // { id, email, roles, ... }
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Try to get user info; if unauthorized, try refresh once.
   const fetchMe = async () => {
     const { data } = await api.get("/auth/me");
     setUser(data);
@@ -20,59 +27,88 @@ export default function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        await fetchMe();
-      } catch (err) {
-        if (err?.response?.status === 401) {
-          try {
-            // Cookie-based refresh OR token refresh via interceptor
-            await api.post("/auth/refresh"); 
-            await fetchMe();
-          } catch {
-            // As a last resort, if you still have an access token locally, set headers & try /me once.
-            const token = getAccessToken?.();
-            if (token) {
-              try { await fetchMe(); } catch { setUser(null); }
-            } else {
-              setUser(null);
-            }
+        const access = getAccessToken?.();
+        if (!access) {
+          const rt = getRefreshToken?.();
+          if (!rt) {
+            setUser(null);
+            return;
           }
-        } else {
-          setUser(null);
+          try {
+            const { data } = await api.post("/refresh", { refreshToken: rt });
+            if (data?.accessToken) setAccessToken(data.accessToken, true);
+            if (data?.refreshToken) setRefreshToken(data.refreshToken, true); // rotate if provided
+          } catch {
+            setUser(null);
+            return;
+          }
         }
+        await fetchMe();
+      } catch {
+        setUser(null);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
- // AuthContext.jsx
-const login = async (email, password, remember) => {
-  try {
-    const { data } = await api.post("/auth/login", { email, password });
-    if (data?.accessToken) setAccessToken(data.accessToken, remember);
-    if (data?.user) setUser(data.user);
-    else if (data?.accessToken) {
-     const payload = jwtDecode(data.accessToken);
+  const login = async (email, password, remember) => {
+    try {
+      const { data } = await api.post("/login", { email, password });
+      if (data?.accessToken) setAccessToken(data.accessToken, remember);
+      if (data?.refreshToken) setRefreshToken(data.refreshToken, remember);
 
-      setUser({ id: payload.sub, email: payload.email, roles: payload.roles || [] });
+      if (data?.user) {
+        setUser(data.user);
+      } else if (data?.accessToken) {
+        const payload = jwtDecode(data.accessToken);
+        setUser({
+          id: payload.sub,
+          email: payload.email,
+          roles: payload.roles || [],
+        });
+      } else {
+        try { await fetchMe(); } catch {}
+      }
+      return { ok: true };
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Invalid email or password";
+      return { ok: false, message };
     }
-    return { ok: true };
-  } catch (err) {
-    const message =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Invalid email or password";
-    return { ok: false, message };
-  }
-};
+  };
 
+  // Call this from your SignUpForm; on res.ok redirect to /login
+  const signup = async ({ name, email, password }) => {
+    try {
+      // If your backend expects `name` instead of `fullName`, change the key below.
+      await api.post("/signup", { name, email, password });
+      return { ok: true };
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Unable to sign up";
+      return { ok: false, message };
+    }
+  };
 
   const logout = async () => {
-    try { await api.post("/auth/logout", {}, { withCredentials: true }); } catch {}
+    try {
+      const rt = getRefreshToken?.();
+      if (rt) {
+        await api.post("/logout", { refreshToken: rt });
+      } else {
+        await api.post("/logout", {});
+      }
+    } catch {}
     clearAccessToken();
+    clearRefreshToken();
     setUser(null);
   };
 
-  const value = { user, isAuthenticated: !!user, login, logout, loading };
+  const value = { user, isAuthenticated: !!user, login, signup, logout, loading };
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

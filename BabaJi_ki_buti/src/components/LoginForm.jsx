@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { toast } from "react-toastify";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -34,6 +35,7 @@ export default function LoginForm() {
         err?.message ||
         "Unable to login. Please try again."
       );
+      toast.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +43,11 @@ export default function LoginForm() {
 
   // already-logged-in → home
   useEffect(() => {
-    if (!loading && isAuthenticated) navigate("/", { replace: true });
+    if (!loading && isAuthenticated) 
+      {
+        navigate("/", { replace: true });
+        toast.success("You are already logged in.");
+      }
   }, [isAuthenticated, loading, navigate]);
 
   const handleSocialLogin = (provider) => {

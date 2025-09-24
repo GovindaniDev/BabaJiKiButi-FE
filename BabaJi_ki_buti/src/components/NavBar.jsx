@@ -153,8 +153,8 @@ export default function NavBar() {
             </button>
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Login</Link>
-                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Register</Link>
+                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setIsProfileOpen(false); window.scrollTo({top:0,behavior:'instant'}); }}>Login</Link>
+                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setIsProfileOpen(false); window.scrollTo({top:0,behavior:'instant'}); }}>Register</Link>
                 <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Profile</a>
                 <a href="#orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Orders</a>
               </div>
