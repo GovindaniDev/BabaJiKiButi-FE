@@ -10,13 +10,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": {
+      "/auth": {
         target: "http://127.0.0.1:8090",       // ✅ host:port only
         changeOrigin: true,
         secure: false,
-        rewrite: (p) => p.replace(/^\/api/, ""), // ✅ /api/auth/x -> /auth/x
-        timeout: 60_000,
-        proxyTimeout: 60_000,
+        
       },
     },
   },
