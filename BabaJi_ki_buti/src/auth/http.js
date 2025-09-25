@@ -1,19 +1,26 @@
-// src/api/http.js
+// src/auth/http.js
 import axios from "axios";
 
-/** ------------------ persistence helpers ------------------ */
+/** ------------------ keys & in-memory cache ------------------ */
 const LS_KEY = "accessToken";
 const SS_KEY = "accessToken";
 let ACCESS_TOKEN = null;
+
+// ✅ NEW: store refresh token too
+const REFRESH_LS_KEY = "refreshToken";
+const REFRESH_SS_KEY = "refreshToken";
+let REFRESH_TOKEN = null;
+
 let STORAGE = null; // "local" | "session" | null
 
 /** ------------------ axios instance ------------------ */
 export const api = axios.create({
-  baseURL: "/api",           // <-- use the Vite proxy
-  withCredentials: true,     // keep if refresh token is in HttpOnly cookie
+  baseURL: "/auth",             // Vite proxy (use rewrite in vite if backend has no /api)
+  withCredentials: true,       // keep true; harmless for body-based refresh
 });
 
-/** Restore on startup (and prime the default header for immediate use) */
+/** ------------------ restore tokens on startup ------------------ */
+// access token
 const savedLocal = typeof window !== "undefined" && localStorage.getItem(LS_KEY);
 const savedSession = typeof window !== "undefined" && sessionStorage.getItem(SS_KEY);
 if (savedLocal) {
@@ -26,10 +33,21 @@ if (savedLocal) {
   api.defaults.headers.common.Authorization = `Bearer ${ACCESS_TOKEN}`;
 }
 
+// ✅ NEW: restore refresh token
+const savedRefreshLocal =
+  typeof window !== "undefined" && localStorage.getItem(REFRESH_LS_KEY);
+const savedRefreshSession =
+  typeof window !== "undefined" && sessionStorage.getItem(REFRESH_SS_KEY);
+if (savedRefreshLocal) {
+  REFRESH_TOKEN = savedRefreshLocal;
+} else if (savedRefreshSession) {
+  REFRESH_TOKEN = savedRefreshSession;
+}
+
+/** ------------------ setters/getters ------------------ */
 export function setAccessToken(token, remember = false) {
   ACCESS_TOKEN = token;
   STORAGE = remember ? "local" : "session";
-
   if (remember) {
     localStorage.setItem(LS_KEY, token);
     sessionStorage.removeItem(SS_KEY);
@@ -39,6 +57,24 @@ export function setAccessToken(token, remember = false) {
   }
   api.defaults.headers.common.Authorization = `Bearer ${token}`;
 }
+
+// ✅ NEW: refresh token helpers
+export function setRefreshToken(token, remember = false) {
+  REFRESH_TOKEN = token;
+  if (remember) {
+    localStorage.setItem(REFRESH_LS_KEY, token);
+    sessionStorage.removeItem(REFRESH_SS_KEY);
+  } else {
+    sessionStorage.setItem(REFRESH_SS_KEY, token);
+    localStorage.removeItem(REFRESH_LS_KEY);
+  }
+}
+export function clearRefreshToken() {
+  REFRESH_TOKEN = null;
+  localStorage.removeItem(REFRESH_LS_KEY);
+  sessionStorage.removeItem(REFRESH_SS_KEY);
+}
+export const getRefreshToken = () => REFRESH_TOKEN;
 
 export function clearAccessToken() {
   ACCESS_TOKEN = null;
@@ -50,7 +86,7 @@ export function clearAccessToken() {
 
 export const getAccessToken = () => ACCESS_TOKEN;
 
-/** Attach Authorization where needed */
+/** ------------------ request interceptor ------------------ */
 api.interceptors.request.use((config) => {
   const url = config.url || "";
   const isAuthCall =
@@ -65,13 +101,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-/** Single-flight 401 refresh */
+/** ------------------ single-flight refresh ------------------ */
 let isRefreshing = false;
 let queue = [];
 const flushQueue = (error, token = null) => {
-  queue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve(token)
-  );
+  queue.forEach(({ resolve, reject }) => (error ? reject(error) : resolve(token)));
   queue = [];
 };
 
@@ -105,20 +139,31 @@ api.interceptors.response.use(
 
     isRefreshing = true;
     try {
-      const { data } = await api.post("/auth/refresh");
-      const newToken = data?.accessToken;
-      if (!newToken) throw new Error("No access token from /auth/refresh");
+      // ✅ CHANGED: send refresh token in BODY (your backend expects @RequestBody)
+      const rt = getRefreshToken?.();
+      if (!rt) throw new Error("No stored refresh token for /auth/refresh");
 
-      setAccessToken(newToken, STORAGE === "local");
-      flushQueue(null, newToken);
+      const { data } = await api.post("/auth/refresh", { refreshToken: rt });
+
+      const newAccess = data?.accessToken;
+      if (!newAccess) throw new Error("No access token from /auth/refresh");
+
+      // persist new access
+      setAccessToken(newAccess, STORAGE === "local");
+
+      // ✅ OPTIONAL: rotate refresh token if backend returns a new one
+      if (data?.refreshToken) setRefreshToken(data.refreshToken, STORAGE === "local");
+
+      flushQueue(null, newAccess);
 
       original.headers = original.headers || {};
-      original.headers.Authorization = `Bearer ${newToken}`;
+      original.headers.Authorization = `Bearer ${newAccess}`;
       return api(original);
-    } catch (refreshErr) {
-      flushQueue(refreshErr, null);
+    } catch (e) {
+      flushQueue(e, null);
       clearAccessToken();
-      throw refreshErr;
+      clearRefreshToken(); // ✅ also clear stored refresh if refresh fails
+      throw e;
     } finally {
       isRefreshing = false;
     }
