@@ -26,6 +26,7 @@ import AboutPage from "./page/about/AboutPage";
 import AuthProvider from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
+import SessionsPage from "./page/account/SessionsPage";
 import BMIPage from "./page/BMI/BMIPage";
 
 // ✅ register once
@@ -82,6 +83,7 @@ const App = () => {
           <Route path="/shop" element={<Product />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/sessions" element={<SessionsPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<SignUpPage />} />

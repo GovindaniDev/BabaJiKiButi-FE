@@ -15,13 +15,25 @@ const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
 
 export default function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // { id, email, name, roles, exp, iat, jti }
   const [loading, setLoading] = useState(true);
 
-  const fetchMe = async () => {
-    const { data } = await api.get("/me"); // should return { id, name, email, ... }
-    setUser(data);
-    return data;
+  const resolveUserFromJWT = (access) => {
+    if (!access) return null;
+    try {
+      const p = jwtDecode(access);
+      return {
+        id: p.sub,
+        email: p.email,
+        name: p.name || p.username || null,
+        roles: p.roles || [],
+        exp: p.exp,
+        iat: p.iat,
+        jti: p.jti,
+      };
+    } catch {
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -35,15 +47,36 @@ export default function AuthProvider({ children }) {
             return;
           }
           try {
-            const { data } = await api.post("/refresh", { refreshToken: rt });
-            if (data?.accessToken) setAccessToken(data.accessToken, true);
-            if (data?.refreshToken) setRefreshToken(data.refreshToken, true); // rotate if provided
+            // unwrap envelope: { data: {...}, timestamp, error }
+            const res = await api.post("/refresh", { refreshToken: rt });
+            const payload = res?.data?.data ?? res?.data;
+
+            if (payload?.accessToken) setAccessToken(payload.accessToken, true);
+            if (payload?.refreshToken) setRefreshToken(payload.refreshToken, true);
+
+            // ✅ store "appSession" in localStorage (not sessionStorage)
+            if (payload?.sessionId) {
+              localStorage.setItem(
+                "appSession",
+                JSON.stringify({
+                  sessionId: payload.sessionId,
+                  startedAtUtc: new Date().toISOString(),
+                  startedAtLocal: new Date().toString(),
+                  storage: "local",
+                })
+              );
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new Event("appSession:updated"));
+              }
+            }
           } catch {
             setUser(null);
             return;
           }
         }
-        await fetchMe();
+        const accessNow = getAccessToken?.();
+        const u = resolveUserFromJWT(accessNow);
+        setUser(u);
       } catch {
         setUser(null);
       } finally {
@@ -54,44 +87,37 @@ export default function AuthProvider({ children }) {
 
   const login = async (email, password, remember) => {
     try {
-      const { data } = await api.post("/login", { email, password });
+      const res = await api.post("/login", { email, password });
+      const payload = res?.data?.data ?? res?.data; // unwrap envelope
 
-      // 1) Store tokens
-      if (data?.accessToken) setAccessToken(data.accessToken, remember);
-      if (data?.refreshToken) setRefreshToken(data.refreshToken, remember);
+      // store tokens
+      if (payload?.accessToken) setAccessToken(payload.accessToken, remember);
+      if (payload?.refreshToken) setRefreshToken(payload.refreshToken, remember);
 
-      // 2) Resolve a concrete DB user object (with name)
-      let u = null;
-      if (data?.user) {
-        // backend already returned DB user
-        u = data.user;
-        setUser(u);
-      } else if (data?.accessToken) {
-        // prefer DB over JWT so we always get name from DB
-        try {
-          u = await fetchMe(); // hits /auth/me
-        } catch {
-          // fallback to JWT fields if /auth/me fails
-          const payload = jwtDecode(data.accessToken);
-          u = {
-            id: payload.sub,
-            email: payload.email,
-            roles: payload.roles || [],
-            name: payload.name, // if your JWT includes it
-          };
-          setUser(u);
+      // ✅ always store client-visible session in localStorage
+      if (payload?.sessionId) {
+        localStorage.setItem(
+          "appSession",
+          JSON.stringify({
+            sessionId: payload.sessionId,
+            startedAtUtc: new Date().toISOString(),
+            startedAtLocal: new Date().toString(),
+            storage: "local", // this blob lives in localStorage
+          })
+        );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("appSession:updated"));
         }
-      } else {
-        // rare fallback
-        u = await fetchMe().catch(() => null);
       }
+
+      // resolve user from JWT
+      const u = resolveUserFromJWT(payload?.accessToken);
+      setUser(u);
 
       return { ok: true, user: u };
     } catch (err) {
       const message =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Invalid email or password";
+        err?.response?.data?.message || err?.message || "Invalid email or password";
       return { ok: false, message };
     }
   };
@@ -101,10 +127,7 @@ export default function AuthProvider({ children }) {
       await api.post("/signup", { name, email, password });
       return { ok: true };
     } catch (err) {
-      const message =
-        err?.response?.data?.message ||
-        err?.message ||
-        "Unable to sign up";
+      const message = err?.response?.data?.message || err?.message || "Unable to sign up";
       return { ok: false, message };
     }
   };
@@ -115,14 +138,43 @@ export default function AuthProvider({ children }) {
       if (rt) {
         await api.post("/logout", { refreshToken: rt });
       } else {
-        await api.post("/logout", {});
+        await api.post("/logout", {}); // backend accepts empty body too
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
     clearAccessToken();
     clearRefreshToken();
+
+    // ✅ remove from localStorage (not sessionStorage)
+    localStorage.removeItem("appSession");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("appSession:updated"));
+    }
     setUser(null);
   };
 
-  const value = { user, isAuthenticated: !!user, login, signup, logout, loading };
+  /** ---------- sessions API (list & revoke) ---------- */
+  const listSessions = async () => {
+    const res = await api.get("/sessions"); // returns SessionDto[] (top-level array)
+    return res.data?.data ?? res.data; // support envelope or plain
+  };
+
+  const revokeSession = async (sessionId) => {
+    await api.post("/logout", { sessionId });
+    return true;
+  };
+
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    login,
+    signup,
+    logout,
+    listSessions,
+    revokeSession,
+    loading,
+  };
+
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
