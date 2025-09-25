@@ -26,6 +26,7 @@ import AboutPage from "./page/about/AboutPage";
 import AuthProvider from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
+import BMIPage from "./page/BMI/BMIPage";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -89,6 +90,7 @@ const App = () => {
           <Route path="/return" element={<ReturnRefundSection />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/bmi" element={<BMIPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
 
