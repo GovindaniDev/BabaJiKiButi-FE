@@ -29,6 +29,11 @@ import { Toaster } from "react-hot-toast";
 import SessionsPage from "./page/account/SessionsPage";
 import BMIPage from "./page/BMI/BMIPage";
 import NutrientPage from "./page/service/Nutrient/NutrientPage";
+import PanchkarmaPage from "./page/panchkarma/PanchkarmaPage";
+import OPDPage from "./page/OPD/OPDPage";
+import NaadiPage from "./page/naadi/NaadiPage";
+
+
 import RemediosPage from "./page/service/remedios/RemediosPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -94,7 +99,10 @@ const App = () => {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/bmi" element={<BMIPage />} />
+          <Route path="/opd" element={<OPDPage />} />
           <Route path="/service/nutrient" element={<NutrientPage />} />
+          <Route path="/panchkarma" element={<PanchkarmaPage />} />
+          <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           
           <Route path="*" element={<NotFound />} />

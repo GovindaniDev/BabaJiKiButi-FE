@@ -2,14 +2,14 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Search,
-  User,
-  ShoppingBag,
-  Grid2x2,
+  Scale,
+  BriefcaseMedical,
+  HeartPulse,
+  Handshake,
   CheckCircle,
-  Clock,
   MapPin,
-  Phone,
+  Clock,
+
 } from "lucide-react";
 
 // ⬇️ Make sure these paths point to your real local image files
@@ -121,10 +121,6 @@ function OPDSection() {
               <p className="text-babi-medium leading-relaxed text-lg mb-8">
                 हर रविवार को, बाबा जी की बुटी में अनुभवी और प्रमाणित आयुर्वेदाचार्य द्वारा निःशुल्क परामर्श प्रदान किया जाता है। यह सेवा हर उस व्यक्ति के लिए खुली है, जो अपने स्वास्थ्य को दवाइयों से नहीं — जड़ से समझकर, संतुलन और समाधान से ठीक करना चाहता है।
               </p>
-
-              <Button variant="secondary" size="lg" className="px-8 py-4 text-lg hover:scale-105 transition-transform duration-300">
-                अभी बुक करें
-              </Button>
             </motion.div>
 
             {/* Right Image */}
@@ -167,7 +163,7 @@ function OPDSection() {
           {/* Service 1 */}
           <motion.div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl hover:bg-white/90 transition-all duration-300" variants={fadeInUp}>
             <div className="w-20 h-20 bg-gradient-blue-cyan rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Search className="w-10 h-10 text-babi-white" />
+              <Handshake className="w-10 h-10 text-babi-white" />
             </div>
             <h3 className="text-xl font-semibold text-babi-primary mb-4">व्यक्तिगत परामर्श</h3>
             <p className="text-babi-medium leading-relaxed">
@@ -178,7 +174,7 @@ function OPDSection() {
           {/* Service 2 */}
           <motion.div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl hover:bg-white/90 transition-all duration-300" variants={fadeInUp}>
             <div className="w-20 h-20 bg-gradient-green-emerald rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <User className="w-10 h-10 text-babi-white" />
+              <HeartPulse className="w-10 h-10 text-babi-white" />
             </div>
             <h3 className="text-xl font-semibold text-babi-primary mb-4">नाड़ी परीक्षण</h3>
             <p className="text-babi-medium leading-relaxed">
@@ -189,7 +185,7 @@ function OPDSection() {
           {/* Service 3 */}
           <motion.div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl hover:bg-white/90 transition-all duration-300" variants={fadeInUp}>
             <div className="w-20 h-20 bg-gradient-purple-pink rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <ShoppingBag className="w-10 h-10 text-babi-white" />
+              <BriefcaseMedical className="w-10 h-10 text-babi-white" />
             </div>
             <h3 className="text-xl font-semibold text-babi-primary mb-4">रोगानुसार आयुर्वेदिक निर्देश</h3>
             <p className="text-babi-medium leading-relaxed">
@@ -200,7 +196,7 @@ function OPDSection() {
           {/* Service 4 */}
           <motion.div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-xl hover:bg-white/90 transition-all duration-300" variants={fadeInUp}>
             <div className="w-20 h-20 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Grid2x2 className="w-10 h-10 text-babi-white" />
+              <Scale className="w-10 h-10 text-babi-white" />
             </div>
             <h3 className="text-xl font-semibold text-babi-primary mb-4">त्रिदोष संतुलन</h3>
             <p className="text-babi-medium leading-relaxed">
@@ -334,16 +330,13 @@ function OPDSection() {
             transition={{ delay: 0.6, duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <Button variant="secondary" size="lg" className="text-xl px-12 py-4 hover:scale-105 transition-transform duration-300">
-              <Phone className="w-5 h-5 mr-2" />
-              VISIT US
-            </Button>
+            
             <Button
               variant="outline"
               size="lg"
               className="px-12 py-4 text-xl border-babi-dark/30 text-babi-dark hover:bg-babi-dark/10 hover:scale-105 transition-all duration-300"
             >
-              संपर्क करें
+              VISIT US
             </Button>
           </motion.div>
         </div>

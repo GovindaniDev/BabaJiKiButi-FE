@@ -76,15 +76,15 @@ export default function NavBar() {
 
             {isServicesOpen && (
               <div role="menu" className="absolute right-0 mt-2 w-52 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <a href="#opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>ओ.पी.डी. सेवाएं</a>
+                <a href="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>ओ.पी.डी. सेवाएं</a>
                 <a href="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>BMI Calculator</a>
                 <a href="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Dosha Test</a>
                 <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
                 <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
                 <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
-                <a href="#panchakarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>पंचकर्म</a>
-                <a href="#naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>नाड़ी परीक्षण</a>
-              </div>
+                <a href="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>पंचकर्म</a>
+                <a href="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>नाड़ी परीक्षण</a>
+                 </div>
             )}
           </li>
 
@@ -208,7 +208,7 @@ export default function NavBar() {
             {/* Links */}
             <Link to="/" className="block px-2 py-2 rounded-lg text-gray-800 ">HOME</Link>
             <Link to="/wishlist" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">WISHLIST</Link>
-            <a href="#about" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">ABOUT US</a>
+            <a href="/about" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">ABOUT US</a>
             <Link to="/shop" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">SHOP NOW</Link>
 
             {/* Services accordion (same items as desktop) */}
@@ -227,14 +227,14 @@ export default function NavBar() {
 
               {isMobileServicesOpen && (
                 <div className="mt-1 ml-3 space-y-1">
-                  <a href="#opd" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">ओ.पी.डी. सेवाएं</a>
+                  <a href="/opd" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">ओ.पी.डी. सेवाएं</a>
                   <a href="/bmi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">BMI Calculator</a>
                   <a href="#dosha" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">Dosha Test</a>
-                  <a href="#nutrient" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">न्यूट्रीशंट</a>
-                  <a href="#naturopathy" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">प्राकृतिक चिकित्सा</a>
-                  <a href="#tailor" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">Tailor-Made Ayurvedic Therapy</a>
-                  <a href="#panchakarma" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">पंचकर्म</a>
-                  <a href="#naadi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">नाड़ी परीक्षण</a>
+                 <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
+                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
+                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
+                  <a href="/panchakarma" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">पंचकर्म</a>
+                  <a href="/naadi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">नाड़ी परीक्षण</a>
                 </div>
               )}
             </div>
