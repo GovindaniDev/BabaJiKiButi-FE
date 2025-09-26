@@ -34,6 +34,7 @@ import OPDPage from "./page/OPD/OPDPage";
 import NaadiPage from "./page/naadi/NaadiPage";
 
 
+import RemediosPage from "./page/service/remedios/RemediosPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -102,6 +103,8 @@ const App = () => {
           <Route path="/service/nutrient" element={<NutrientPage />} />
           <Route path="/panchkarma" element={<PanchkarmaPage />} />
           <Route path="/naadi" element={<NaadiPage />} />
+          <Route path="/service/remedios" element={<RemediosPage />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
 
