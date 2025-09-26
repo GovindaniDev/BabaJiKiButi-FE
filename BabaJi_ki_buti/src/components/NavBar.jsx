@@ -79,7 +79,7 @@ export default function NavBar() {
                 <a href="#opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>ओ.पी.डी. सेवाएं</a>
                 <a href="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>BMI Calculator</a>
                 <a href="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Dosha Test</a>
-                <a href="#nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</a>
+                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
                 <a href="#naturopathy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</a>
                 <a href="#tailor" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</a>
                 <a href="#panchakarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>पंचकर्म</a>
