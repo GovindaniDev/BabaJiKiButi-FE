@@ -29,7 +29,7 @@ import { Toaster } from "react-hot-toast";
 import SessionsPage from "./page/account/SessionsPage";
 import BMIPage from "./page/BMI/BMIPage";
 import NutrientPage from "./page/service/Nutrient/NutrientPage";
-
+import RemediosPage from "./page/service/remedios/RemediosPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -95,6 +95,8 @@ const App = () => {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/bmi" element={<BMIPage />} />
           <Route path="/service/nutrient" element={<NutrientPage />} />
+          <Route path="/service/remedios" element={<RemediosPage />} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
 
