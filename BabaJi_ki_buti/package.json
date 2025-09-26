@@ -13,6 +13,7 @@
     "@gsap/react": "^2.1.2",
     "@tailwindcss/vite": "^4.1.13",
     "axios": "^1.12.2",
+    "dotenv": "^17.2.2",
     "framer-motion": "^12.23.15",
     "gsap": "^3.13.0",
     "jwt-decode": "^4.0.0",
