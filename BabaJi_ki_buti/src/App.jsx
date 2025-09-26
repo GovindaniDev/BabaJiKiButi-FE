@@ -26,7 +26,16 @@ import AboutPage from "./page/about/AboutPage";
 import AuthProvider from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
+import SessionsPage from "./page/account/SessionsPage";
+import BMIPage from "./page/BMI/BMIPage";
+import NutrientPage from "./page/service/Nutrient/NutrientPage";
+import PanchkarmaPage from "./page/panchkarma/PanchkarmaPage";
+import OPDPage from "./page/OPD/OPDPage";
+import NaadiPage from "./page/naadi/NaadiPage";
 
+
+import RemediosPage from "./page/service/remedios/RemediosPage";
+import TherapyPage from "./page/service/therapy/TherapyPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -81,6 +90,7 @@ const App = () => {
           <Route path="/shop" element={<Product />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/sessions" element={<SessionsPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<SignUpPage />} />
@@ -89,6 +99,13 @@ const App = () => {
           <Route path="/return" element={<ReturnRefundSection />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/bmi" element={<BMIPage />} />
+          <Route path="/opd" element={<OPDPage />} />
+          <Route path="/service/nutrient" element={<NutrientPage />} />
+          <Route path="/panchkarma" element={<PanchkarmaPage />} />
+          <Route path="/naadi" element={<NaadiPage />} />
+          <Route path="/service/remedios" element={<RemediosPage />} />
+          <Route path="/service/therapy" element={<TherapyPage />} />          
           <Route path="*" element={<NotFound />} />
         </Routes>
 

@@ -162,9 +162,6 @@ body::-webkit-scrollbar {
   .nutrition-section {
     @apply min-h-dvh 2xl:h-[120dvh] overflow-hidden relative;
 
-    .big-img {
-      @apply w-full absolute 2xl:h-full md:h-2/3 h-1/2 left-0 bottom-0 object-bottom 2xl:object-contain object-cover;
-    }
 
     .nutrition-title {
       @apply 2xl:max-w-4xl xl:max-w-2xl md:py-0 py-3 md:pb-5 pb-0 lg:pb-0 md:text-center text-[#513022];

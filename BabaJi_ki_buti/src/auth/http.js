@@ -1,4 +1,3 @@
-// src/auth/http.js
 import axios from "axios";
 
 /** ------------------ keys & in-memory cache ------------------ */
@@ -6,23 +5,30 @@ const LS_KEY = "accessToken";
 const SS_KEY = "accessToken";
 let ACCESS_TOKEN = null;
 
-// ✅ NEW: store refresh token too
+// refresh token keys
 const REFRESH_LS_KEY = "refreshToken";
 const REFRESH_SS_KEY = "refreshToken";
 let REFRESH_TOKEN = null;
 
-let STORAGE = null; // "local" | "session" | null
+// where the access token is persisted ("local" | "session" | null)
+let STORAGE = null;
 
 /** ------------------ axios instance ------------------ */
+/**
+ * IMPORTANT:
+ * - baseURL is "/auth" so calls should be "/login", "/signup", "/refresh", "/logout", "/sessions" etc.
+ * - Vite proxy maps "/auth" -> backend host in vite.config.ts
+ */
 export const api = axios.create({
-  baseURL: "/auth",             // Vite proxy (use rewrite in vite if backend has no /api)
-  withCredentials: true,       // keep true; harmless for body-based refresh
+  baseURL: "/auth",
+  withCredentials: true,
 });
 
 /** ------------------ restore tokens on startup ------------------ */
 // access token
 const savedLocal = typeof window !== "undefined" && localStorage.getItem(LS_KEY);
 const savedSession = typeof window !== "undefined" && sessionStorage.getItem(SS_KEY);
+
 if (savedLocal) {
   ACCESS_TOKEN = savedLocal;
   STORAGE = "local";
@@ -33,11 +39,12 @@ if (savedLocal) {
   api.defaults.headers.common.Authorization = `Bearer ${ACCESS_TOKEN}`;
 }
 
-// ✅ NEW: restore refresh token
+// refresh token
 const savedRefreshLocal =
   typeof window !== "undefined" && localStorage.getItem(REFRESH_LS_KEY);
 const savedRefreshSession =
   typeof window !== "undefined" && sessionStorage.getItem(REFRESH_SS_KEY);
+
 if (savedRefreshLocal) {
   REFRESH_TOKEN = savedRefreshLocal;
 } else if (savedRefreshSession) {
@@ -58,7 +65,15 @@ export function setAccessToken(token, remember = false) {
   api.defaults.headers.common.Authorization = `Bearer ${token}`;
 }
 
-// ✅ NEW: refresh token helpers
+export function clearAccessToken() {
+  ACCESS_TOKEN = null;
+  STORAGE = null;
+  localStorage.removeItem(LS_KEY);
+  sessionStorage.removeItem(SS_KEY);
+  delete api.defaults.headers.common.Authorization;
+}
+export const getAccessToken = () => ACCESS_TOKEN;
+
 export function setRefreshToken(token, remember = false) {
   REFRESH_TOKEN = token;
   if (remember) {
@@ -76,28 +91,23 @@ export function clearRefreshToken() {
 }
 export const getRefreshToken = () => REFRESH_TOKEN;
 
-export function clearAccessToken() {
-  ACCESS_TOKEN = null;
-  STORAGE = null;
-  localStorage.removeItem(LS_KEY);
-  sessionStorage.removeItem(SS_KEY);
-  delete api.defaults.headers.common.Authorization;
-}
-
-export const getAccessToken = () => ACCESS_TOKEN;
-
 /** ------------------ request interceptor ------------------ */
 api.interceptors.request.use((config) => {
   const url = config.url || "";
+  // These are relative to baseURL "/auth"
   const isAuthCall =
-    url.includes("/auth/login") ||
-    url.includes("/auth/register") ||
-    url.includes("/auth/refresh");
+    url.includes("/login") || url.includes("/signup") || url.includes("/refresh");
 
   if (!isAuthCall && ACCESS_TOKEN) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${ACCESS_TOKEN}`;
   }
+
+  // Optional: pass a friendlier UA for server deviceInfo
+  if (typeof navigator !== "undefined") {
+    config.headers["X-Client-UA"] = navigator.userAgent;
+  }
+
   return config;
 });
 
@@ -114,7 +124,7 @@ api.interceptors.response.use(
   async (err) => {
     const original = err.config || {};
     const status = err.response?.status;
-    const isRefreshCall = (original.url || "").includes("/auth/refresh");
+    const isRefreshCall = (original.url || "").includes("/refresh");
 
     if (status !== 401 || original._retry || isRefreshCall) {
       throw err;
@@ -139,20 +149,36 @@ api.interceptors.response.use(
 
     isRefreshing = true;
     try {
-      // ✅ CHANGED: send refresh token in BODY (your backend expects @RequestBody)
       const rt = getRefreshToken?.();
       if (!rt) throw new Error("No stored refresh token for /auth/refresh");
 
-      const { data } = await api.post("/auth/refresh", { refreshToken: rt });
+      const res = await api.post("/refresh", { refreshToken: rt });
+      const payload = res?.data?.data ?? res?.data; // unwrap envelope or accept plain
 
-      const newAccess = data?.accessToken;
+      const newAccess = payload?.accessToken;
       if (!newAccess) throw new Error("No access token from /auth/refresh");
 
       // persist new access
       setAccessToken(newAccess, STORAGE === "local");
 
-      // ✅ OPTIONAL: rotate refresh token if backend returns a new one
-      if (data?.refreshToken) setRefreshToken(data.refreshToken, STORAGE === "local");
+      // rotate refresh if provided
+      if (payload?.refreshToken) setRefreshToken(payload.refreshToken, STORAGE === "local");
+
+      // also refresh client session blob if backend returned sessionId again
+      if (payload?.sessionId) {
+        sessionStorage.setItem(
+          "appSession",
+          JSON.stringify({
+            sessionId: payload.sessionId,
+            startedAtUtc: new Date().toISOString(),
+            startedAtLocal: new Date().toString(),
+            storage: STORAGE || "session",
+          })
+        );
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("appSession:updated"));
+        }
+      }
 
       flushQueue(null, newAccess);
 
@@ -162,7 +188,11 @@ api.interceptors.response.use(
     } catch (e) {
       flushQueue(e, null);
       clearAccessToken();
-      clearRefreshToken(); // ✅ also clear stored refresh if refresh fails
+      clearRefreshToken();
+      sessionStorage.removeItem("appSession");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("appSession:updated"));
+      }
       throw e;
     } finally {
       isRefreshing = false;

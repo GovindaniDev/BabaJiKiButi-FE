@@ -127,25 +127,24 @@ const BenefitSection = () => {
   <div className="nutrition-box">
     {/* Buttons row */}
     <div className="flex items-center justify-between px-3 md:px-6 pt-2 md:pt-0">
-      <button
-        onClick={goToBMI}
-        className="
-            pointer-events-auto
-  rounded-full font-bold uppercase whitespace-nowrap
-  bg-light-brown text-dark-brown
-  px-3.5 py-1.5 text-sm
-  sm:px-4 sm:py-2 sm:text-base
-  md:px-5 md:py-2 md:text-base
-  lg:px-6 lg:py-2.5 lg:text-lg
-  shadow-sm hover:shadow-md transition
-  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-300
-  disabled:opacity-50 disabled:cursor-not-allowed
-        "
-        aria-label="Open BMI Calculator"
-        type="button"
-      >
-        BMI Calculator
-      </button>
+      <Link
+              to="/bmi"
+              className="
+    pointer-events-auto
+    rounded-full font-bold uppercase whitespace-nowrap
+    bg-light-brown text-dark-brown
+    px-3.5 py-1.5 text-sm
+    sm:px-4 sm:py-2 sm:text-base
+    md:px-5 md:py-2 md:text-base
+    lg:px-6 lg:py-2.5 lg:text-lg
+    shadow-sm hover:shadow-md transition
+    focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-300
+    disabled:opacity-50 disabled:cursor-not-allowed
+  "
+              aria-label="Open BMI Calculator"
+            >
+              BMI Calculator
+            </Link>
 
       <button
         onClick={goToDosha}
