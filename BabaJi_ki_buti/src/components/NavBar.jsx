@@ -1,4 +1,3 @@
-// src/components/NavBar.jsx
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CartMenu from "../page/cart/CartMenu";
@@ -76,14 +75,14 @@ export default function NavBar() {
 
             {isServicesOpen && (
               <div role="menu" className="absolute right-0 mt-2 w-52 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <a href="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>ओ.पी.डी. सेवाएं</a>
-                <a href="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>BMI Calculator</a>
-                <a href="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Dosha Test</a>
-                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
-                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
-                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
-                <a href="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>पंचकर्म</a>
-                <a href="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>नाड़ी परीक्षण</a>
+                <a href="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>ओ.पी.डी. सेवाएं</a>
+                <a href="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>BMI Calculator</a>
+                <a href="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Dosha Test</a>
+                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>न्यूट्रीशंट</Link>
+                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>प्राकृतिक चिकित्सा</Link>
+                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Tailor-Made Ayurvedic Therapy</Link>
+                <Link to="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>पंचकर्म</Link>
+                <Link to="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>नाड़ी परीक्षण</Link>
                  </div>
             )}
           </li>
@@ -153,10 +152,10 @@ export default function NavBar() {
             </button>
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Login</Link>
-                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Register</Link>
-                <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Profile</a>
-                <a href="#orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Orders</a>
+                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Login</Link>
+                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Register</Link>
+                <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>My Profile</a>
+                <a href="#orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>My Orders</a>
               </div>
             )}
           </div>
@@ -206,10 +205,10 @@ export default function NavBar() {
             </div>
 
             {/* Links */}
-            <Link to="/" className="block px-2 py-2 rounded-lg text-gray-800 ">HOME</Link>
-            <Link to="/wishlist" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">WISHLIST</Link>
-            <a href="/about" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">ABOUT US</a>
-            <Link to="/shop" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">SHOP NOW</Link>
+            <Link to="/" className="block px-2 py-2 rounded-lg text-gray-800 " onClick={() => window.scrollTo({top:0,behavior:'instant'})}>HOME</Link>
+            <Link to="/wishlist" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50" onClick={() => window.scrollTo({top:0,behavior:'instant'})}>WISHLIST</Link>
+            <Link to="/about" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50" onClick={() => window.scrollTo({top:0,behavior:'instant'})}>ABOUT US</Link>
+            <Link to="/shop" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50" onClick={() => window.scrollTo({top:0,behavior:'instant'})}>SHOP NOW</Link>
 
             {/* Services accordion (same items as desktop) */}
             <div className="pt-2">
@@ -227,14 +226,14 @@ export default function NavBar() {
 
               {isMobileServicesOpen && (
                 <div className="mt-1 ml-3 space-y-1">
-                  <a href="/opd" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">ओ.पी.डी. सेवाएं</a>
-                  <a href="/bmi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">BMI Calculator</a>
-                  <a href="#dosha" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">Dosha Test</a>
-                 <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
-                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
-                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
-                  <a href="/panchakarma" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">पंचकर्म</a>
-                  <a href="/naadi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">नाड़ी परीक्षण</a>
+                  <a href="/opd" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>ओ.पी.डी. सेवाएं</a>
+                  <a href="/bmi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>BMI Calculator</a>
+                  <a href="#dosha" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Dosha Test</a>
+                 <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>न्यूट्रीशंट</Link>
+                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>प्राकृतिक चिकित्सा</Link>
+                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem"onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Tailor-Made Ayurvedic Therapy</Link>
+                  <Link to="/panchakarma" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>पंचकर्म</Link>
+                  <Link to="/naadi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>नाड़ी परीक्षण</Link>
                 </div>
               )}
             </div>
@@ -253,7 +252,7 @@ export default function NavBar() {
             {/* Profile quick links */}
             <div className="pt-3 border-t border-gray-200">
               <div className="space-y-1">
-                <Link to="/login" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">Login</Link>
+                <Link to="/login" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50" onClick={() => window.scrollTo({top:0,behavior:'instant'})}>Login</Link>
                 <a href="#register" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">Register</a>
                 <a href="#profile" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">My Profile</a>
                 <a href="#orders" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">My Orders</a>
