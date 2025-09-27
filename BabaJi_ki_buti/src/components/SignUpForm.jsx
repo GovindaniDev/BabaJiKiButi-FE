@@ -27,7 +27,7 @@ export default function SignUpForm() {
       return;
     }
     if (!agree) {
-      setError("Please accept Terms & Privacy.");
+      setError("Please accept Terms & Privacy");
       return;
     }
 

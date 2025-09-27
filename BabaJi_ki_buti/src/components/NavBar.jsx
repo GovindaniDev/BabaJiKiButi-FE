@@ -1,4 +1,3 @@
-// src/components/NavBar.jsx
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CartMenu from "../page/cart/CartMenu";
@@ -76,14 +75,14 @@ export default function NavBar() {
 
             {isServicesOpen && (
               <div role="menu" className="absolute right-0 mt-2 w-52 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <a href="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>ओ.पी.डी. सेवाएं</a>
-                <a href="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>BMI Calculator</a>
-                <a href="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Dosha Test</a>
-                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
-                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
-                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
-                <a href="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>पंचकर्म</a>
-                <a href="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>नाड़ी परीक्षण</a>
+                <Link to="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>ओ.पी.डी. सेवाएं</Link>
+                <Link to="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>BMI Calculator</Link>
+                <Link to="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Dosha Test</Link>
+                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>न्यूट्रीशंट</Link>
+                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>प्राकृतिक चिकित्सा</Link>
+                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Tailor-Made Ayurvedic Therapy</Link>
+                <Link to="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>पंचकर्म</Link>
+                <Link to="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>नाड़ी परीक्षण</Link>
                  </div>
             )}
           </li>
@@ -153,10 +152,10 @@ export default function NavBar() {
             </button>
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Login</Link>
-                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>Register</Link>
-                <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Profile</a>
-                <a href="#orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setIsProfileOpen(false)}>My Orders</a>
+                <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Login</Link>
+                <Link to="/register" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Register</Link>
+                <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>My Profile</a>
+                <a href="#orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>My Orders</a>
               </div>
             )}
           </div>
@@ -186,82 +185,104 @@ export default function NavBar() {
       </div>
 
       {/* Mobile menu panel (mirrors desktop content) */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden mt-2 mx-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur-md shadow-lg">
-          <div className="px-4 py-3 space-y-2">
-            {/* Search */}
-            <div className="pb-3 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
+    {isMobileMenuOpen && (
+  <div className="md:hidden mt-2 mx-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur-md shadow-lg">
+    <div className="px-4 py-3 space-y-2">
+      {/* ----------  links  ---------- */}
+      {[
+        { to: '/', label: 'HOME' },
+        { to: '/wishlist', label: 'WISHLIST' },
+        { to: '/about', label: 'ABOUT US' },
+        { to: '/shop', label: 'SHOP NOW' },
+      ].map(l => (
+        <Link
+          key={l.to}
+          to={l.to}
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            setIsMobileMenuOpen(false); // ← close menu
+          }}
+          className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50"
+        >
+          {l.label}
+        </Link>
+      ))}
 
-            {/* Links */}
-            <Link to="/" className="block px-2 py-2 rounded-lg text-gray-800 ">HOME</Link>
-            <Link to="/wishlist" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">WISHLIST</Link>
-            <a href="/about" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">ABOUT US</a>
-            <Link to="/shop" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">SHOP NOW</Link>
-
-            {/* Services accordion (same items as desktop) */}
-            <div className="pt-2">
-              <button
-                type="button"
-                className="w-full flex items-center justify-between px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50"
-                onClick={() => setIsMobileServicesOpen(v => !v)}
-                aria-expanded={isMobileServicesOpen}
+      {/* services accordion */}
+      <div className="pt-2">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50"
+          onClick={() => setIsMobileServicesOpen(v => !v)}
+        >
+          <span>SERVICES</span>
+          <svg className={`size-4 transition-transform ${isMobileServicesOpen ? 'rotate-180' : 'rotate-0'}`} />
+        </button>
+        {isMobileServicesOpen && (
+          <div className="mt-1 ml-3 space-y-1">
+            {[
+              { to: '/opd', label: 'ओ.पी.डी. सेवाएं' },
+              { to: '/bmi', label: 'BMI Calculator' },
+              { to: '#dosha', label: 'Dosha Test' },
+              { to: '/service/nutrient', label: 'न्यूट्रीशंट' },
+              { to: '/service/remedios', label: 'प्राकृतिक चिकित्सा' },
+              { to: '/service/therapy', label: 'Tailor-Made Ayurvedic Therapy' },
+              { to: '/panchakarma', label: 'पंचकर्म' },
+              { to: '/naadi', label: 'नाड़ी परीक्षण' },
+            ].map(l => (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'instant' });
+                  setIsMobileMenuOpen(false); // ← close menu
+                  setIsMobileServicesOpen(false);
+                }}
+                className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50"
               >
-                <span>SERVICES</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`size-4 transition-transform ${isMobileServicesOpen ? "rotate-180" : "rotate-0"}`} viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                </svg>
-              </button>
-
-              {isMobileServicesOpen && (
-                <div className="mt-1 ml-3 space-y-1">
-                  <a href="/opd" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">ओ.पी.डी. सेवाएं</a>
-                  <a href="/bmi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">BMI Calculator</a>
-                  <a href="#dosha" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">Dosha Test</a>
-                 <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>न्यूट्रीशंट</Link>
-                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>प्राकृतिक चिकित्सा</Link>
-                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => setIsServicesOpen(false)}>Tailor-Made Ayurvedic Therapy</Link>
-                  <a href="/panchakarma" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">पंचकर्म</a>
-                  <a href="/naadi" className="block px-2 py-2 rounded-lg text-gray-700 hover:bg-gray-50">नाड़ी परीक्षण</a>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile cart quick link (count badge) */}
-            <Link
-              to="/cart"
-              className="mt-2 flex items-center justify-between px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50 border-t border-gray-200"
-            >
-              <span>Cart</span>
-              <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-full bg-yellow-500 text-white text-xs">
-                {cartCount}
-              </span>
-            </Link>
-
-            {/* Profile quick links */}
-            <div className="pt-3 border-t border-gray-200">
-              <div className="space-y-1">
-                <Link to="/login" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">Login</Link>
-                <a href="#register" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">Register</a>
-                <a href="#profile" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">My Profile</a>
-                <a href="#orders" className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50">My Orders</a>
-              </div>
-            </div>
+                {l.label}
+              </Link>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* cart */}
+      <Link
+        to="/cart"
+        onClick={() => setIsMobileMenuOpen(false)} // ← close menu
+        className="mt-2 flex items-center justify-between px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50 border-t border-gray-200"
+      >
+        <span>Cart</span>
+        <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded-full bg-yellow-500 text-white text-xs">
+          {cartCount}
+        </span>
+      </Link>
+
+      {/* profile links */}
+      <div className="pt-3 border-t border-gray-200">
+        {[
+          { to: '/login', label: 'Login' },
+          { to: '#register', label: 'Register' },
+          { to: '#profile', label: 'My Profile' },
+          { to: '#orders', label: 'My Orders' },
+        ].map(l => (
+          <Link
+            key={l.to}
+            to={l.to}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'instant' });
+              setIsMobileMenuOpen(false); // ← close menu
+            }}
+            className="block px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50"
+          >
+            {l.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
     </nav>
   );
 }
