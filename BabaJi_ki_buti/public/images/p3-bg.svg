@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000" viewBox="0 0 3000 2000">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="50%" stop-color="#121820"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </linearGradient>
+
+    <!-- Energy glow -->
+    <radialGradient id="energyGlow" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.22"/>
+      <stop offset="40%" stop-color="#00e5ff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Green wellness glow -->
+    <radialGradient id="greenGlow3" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#8bc34a" stop-opacity="0.18"/>
+      <stop offset="50%" stop-color="#8bc34a" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#8bc34a" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Gold accents -->
+    <linearGradient id="goldGrad3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe082"/>
+      <stop offset="40%" stop-color="#ffd54a"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+
+    <!-- Vignette -->
+    <radialGradient id="vignette3" cx="50%" cy="50%" r="70%">
+      <stop offset="60%" stop-color="#00000000"/>
+      <stop offset="100%" stop-color="#000000dd"/>
+    </radialGradient>
+
+    <!-- Mandala with energy wave -->
+    <g id="mandala3">
+      <circle cx="0" cy="0" r="250" fill="none" stroke="url(#goldGrad3)" stroke-width="3" opacity="0.8"/>
+      <circle cx="0" cy="0" r="200" fill="none" stroke="#00e5ff" stroke-width="2" opacity="0.5"/>
+      <circle cx="0" cy="0" r="150" fill="none" stroke="#8bc34a" stroke-width="2" opacity="0.5"/>
+      <!-- Energy swirl -->
+      <path d="M-200,0 Q0,-300 200,0 Q0,300 -200,0 Z" fill="none" stroke="#00e5ff" stroke-width="2" opacity="0.6"/>
+    </g>
+
+    <!-- Leaf motif -->
+    <g id="leaf3" fill="none" stroke="#8bc34a" stroke-width="2">
+      <path d="M0,0 C30,-50 80,-50 130,0 C90,20 40,20 0,0 Z" fill="#8bc34a22"/>
+      <path d="M0,0 C30,-50 80,-50 130,0"/>
+      <path d="M20,-5 C60,-35 90,-35 110,-5"/>
+    </g>
+
+    <!-- Blur filter -->
+    <filter id="softBlur3" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5"/>
+    </filter>
+
+    <!-- NEW: rounded-corner clip for whole canvas -->
+    <clipPath id="roundCorners">
+      <rect x="0" y="0" width="3000" height="2000" rx="120" ry="120"/>
+    </clipPath>
+  </defs>
+
+  <!-- EVERYTHING VISIBLE IS CLIPPED TO THE ROUNDED RECT -->
+  <g clip-path="url(#roundCorners)">
+    <!-- Background base -->
+    <rect width="3000" height="2000" fill="url(#bgGrad3)"/>
+
+    <!-- Glow layers -->
+    <circle cx="1500" cy="1000" r="950" fill="url(#energyGlow)"/>
+    <circle cx="1500" cy="1000" r="1000" fill="url(#greenGlow3)"/>
+
+    <!-- Mandalas -->
+    <g transform="translate(600,1600) scale(1.4)">
+      <use href="#mandala3"/>
+    </g>
+    <g transform="translate(2500,400) scale(0.8) rotate(25)">
+      <use href="#mandala3" opacity="0.55"/>
+    </g>
+
+    <!-- Dynamic leaves -->
+    <g opacity="0.7" filter="url(#softBlur3)">
+      <use href="#leaf3" transform="translate(1800,1200) rotate(-10) scale(1.3)"/>
+      <use href="#leaf3" transform="translate(1200,850) rotate(160) scale(1.1)"/>
+      <use href="#leaf3" transform="translate(2200,1400) rotate(35) scale(1.2)"/>
+    </g>
+
+    <!-- Energetic waves -->
+    <path d="M0,1700 C400,1650 900,1750 1400,1700 C1900,1650 2400,1750 3000,1700 L3000,2000 L0,2000 Z"
+          fill="url(#goldGrad3)" opacity="0.15"/>
+    <path d="M0,1750 C500,1680 1000,1780 1500,1720 C2000,1660 2500,1780 3000,1720 L3000,2000 L0,2000 Z"
+          fill="#00e5ff33" opacity="0.1"/>
+
+    <!-- Top glow -->
+    <rect x="0" y="0" width="3000" height="400" fill="url(#goldGrad3)" opacity="0.06"/>
+
+    <!-- Vignette overlay -->
+    <rect x="0" y="0" width="3000" height="2000" fill="url(#vignette3)"/>
+  </g>
+
+  <!-- Optional border that follows the same radius -->
+  <!-- <rect x="0" y="0" width="3000" height="2000" rx="120" ry="120" fill="none" stroke="#ffffff22"/> -->
+</svg>

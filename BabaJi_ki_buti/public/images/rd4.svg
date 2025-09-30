@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="grad4" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"  stop-color="#a855f7"/> <!-- purple-500 -->
+      <stop offset="100%" stop-color="#ec4899"/> <!-- pink-500   -->
+    </linearGradient>
+  </defs>
+  <!-- board -->
+  <rect x="10" y="8" width="44" height="52" rx="4" stroke="url(#grad4)" stroke-width="3" fill="#fff"/>
+  <!-- clip -->
+  <path d="M24 8v8h16V8" stroke="url(#grad4)" stroke-width="3" stroke-linecap="round"/>
+  <!-- heart -->
+  <path d="M32 20c-2 0-4 2-4 4 0 3 4 7 4 7s4-4 4-7c0-2-2-4-4-4z" fill="url(#grad4)"/>
+  <!-- lines -->
+  <line x1="18" y1="36" x2="46" y2="36" stroke="url(#grad4)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="44" x2="38" y2="44" stroke="url(#grad4)" stroke-width="2" stroke-linecap="round"/>
+</svg>
