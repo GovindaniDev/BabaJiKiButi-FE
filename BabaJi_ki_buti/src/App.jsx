@@ -43,6 +43,7 @@ import CatalogPage from "./page/admin/catalog/CatalogPage";
 import InventoryPage from "./page/admin/inventory/InventoryPage";
 import PricingPage from "./page/admin/pricing/PricingPage";
 import OrderPage from "./page/admin/orders/OrderPage";
+import DoshaPage from "./page/dosha/DoshaPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -108,6 +109,7 @@ const App = () => {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/bmi" element={<BMIPage />} />
+          <Route path="/dosha" element={<DoshaPage />} />
           <Route path="/opd" element={<OPDPage />} />
 
           <Route path="/service/nutrient" element={<NutrientPage />} />
