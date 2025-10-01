@@ -9,10 +9,12 @@ export default function NavBar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
   const profileRef = useRef(null);
 
+  const [isTherapyOpen, setIsTherapyOpen] = useState(false);
   // FIX: useState returns [value, setter]
   const [cartItems] = useState([]);
   const cartCount = cartItems.reduce((n, it) => n + (it.qty || 1), 0);
@@ -55,37 +57,91 @@ export default function NavBar() {
           </li>
 
           {/* Services */}
-          <li className="relative" ref={dropdownRef}>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
-              onClick={() => setIsServicesOpen(v => !v)}
-              aria-haspopup="menu"
-              aria-expanded={isServicesOpen}
-            >
-              SERVICES
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
+        {/* Add state: const [isTherapyOpen, setIsTherapyOpen] = useState(false); */}
 
-            {isServicesOpen && (
-              <div role="menu" className="absolute right-0 mt-2 w-52 rounded-lg border border-gray-200 bg-white shadow-lg py-2">
-                <Link to="/opd" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>ओ.पी.डी. सेवाएं</Link>
-                <Link to="/bmi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>BMI Calculator</Link>
-                <Link to="#dosha" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Dosha Test</Link>
-                <Link to="/service/nutrient" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>न्यूट्रीशंट</Link>
-                <Link to="/service/remedios" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>प्राकृतिक चिकित्सा</Link>
-                <Link to="/service/therapy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>Tailor-Made Ayurvedic Therapy</Link>
-                <Link to="/panchkarma" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>पंचकर्म</Link>
-                <Link to="/naadi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem" onClick={() => {setIsServicesOpen(false),window.scrollTo({top:0,behavior:'instant'})}}>नाड़ी परीक्षण</Link>
-                 </div>
-            )}
-          </li>
+<li className="relative" ref={dropdownRef}>
+  <button
+    type="button"
+    className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+    onClick={() => setIsServicesOpen(v => !v)}
+    aria-haspopup="menu"
+    aria-expanded={isServicesOpen}
+  >
+    SERVICES
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
+      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+    </svg>
+  </button>
+
+  {isServicesOpen && (
+    <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-2xl py-2 z-50 border border-[#faeade] overflow-visible">
+      <Link to="/opd" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+        onClick={() => { setIsServicesOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+        <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+        <span className="relative">ओ.पी.डी. सेवाएं</span>
+      </Link>
+
+      <Link to="/bmi" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+        onClick={() => { setIsServicesOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+        <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+        <span className="relative">BMI Calculator</span>
+      </Link>
+
+       <Link to="/dosha" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+        onClick={() => { setIsServicesOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+        <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+        <span className="relative">Dosha Test</span>
+      </Link>
+
+      {/* Submenu wrapper handles hover, not the button */}
+      <div
+        className="relative group/submenu"
+        onMouseEnter={() => setIsTherapyOpen(true)}
+        onMouseLeave={() => setIsTherapyOpen(false)}
+      >
+        <button className="relative w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group">
+          <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+          <span className="relative">Therapy Services</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4 relative">
+            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.17 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        {isTherapyOpen && (
+          <div className="absolute left-full top-0 ml-2 w-56 rounded-2xl bg-white shadow-2xl py-2 border border-[#faeade] z-[60]">
+            <Link to="/service/nutrient" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+              <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              <span className="relative">न्यूट्रीशंट</span>
+            </Link>
+            <Link to="/service/remedios" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+              <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              <span className="relative">प्राकृतिक चिकित्सा</span>
+            </Link>
+            <Link to="/service/therapy" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+              <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+              <span className="relative">Tailor-Made Ayurvedic Therapy</span>
+            </Link>
+          </div>
+        )}
+      </div>
+
+      <Link to="/panchkarma" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+        onClick={() => { setIsServicesOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+        <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+        <span className="relative">पंचकर्म</span>
+      </Link>
+
+      <Link to="/naadi" className="relative block px-4 py-2.5 text-sm text-gray-700 hover:text-[#d4956c] overflow-hidden group"
+        onClick={() => { setIsServicesOpen(false); window.scrollTo({ top:0, behavior:'instant' }); }}>
+        <span className="absolute inset-0 bg-[#faeade] -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></span>
+        <span className="relative">नाड़ी परीक्षण</span>
+      </Link>
+    </div>
+  )}
+</li>
 
           <li><Link to="/blog" className="hover:text-gray-900 transition-colors" onClick={()=>window.scrollTo({top:0,behavior:"instant"})}>OUR BLOGS</Link></li>
           <li><Link to="/contact" className="hover:text-gray-900 transition-colors" onClick={()=>{window.scrollTo({top:0,behavior:"instant"})}}>CONTACTS</Link></li>
@@ -94,33 +150,47 @@ export default function NavBar() {
         {/* Desktop actions: Search | Cart | Profile */}
         <div className="hidden md:flex items-center gap-4">
           {/* Search */}
-          <div className="relative" ref={searchRef}>
-            <button
-              type="button"
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              onClick={() => setIsSearchOpen(v => !v)}
-              aria-label="Search"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-              </svg>
-            </button>
-            {isSearchOpen && (
-              <div className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg p-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                    Search
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+         <div className="relative" ref={searchRef}>
+  <button
+    type="button"
+    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+    onClick={() => setIsSearchOpen(v => !v)}
+    aria-label="Search"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+  </button>
+  {isSearchOpen && (
+    <div className="absolute right-0 mt-2 w-96 rounded-xl border border-gray-200 bg-white shadow-xl overflow-hidden">
+      <div className="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search for products..."
+          className="w-full pl-12 pr-4 py-4 text-gray-700 placeholder-gray-400 focus:outline-none border-b border-gray-100"
+          autoFocus
+        />
+      </div>
+      <div className="p-3 bg-gray-50">
+        <p className="text-xs text-gray-500 mb-2">Popular searches</p>
+        <div className="flex flex-wrap gap-2">
+          <button className="px-3 py-1 text-sm bg-white border border-gray-200 rounded-full hover:border-blue-500 hover:text-blue-600 transition-colors">
+            Energy
+          </button>
+          <button className="px-3 py-1 text-sm bg-white border border-gray-200 rounded-full hover:border-blue-500 hover:text-blue-600 transition-colors">
+            Pain Relief
+          </button>
+          <button className="px-3 py-1 text-sm bg-white border border-gray-200 rounded-full hover:border-blue-500 hover:text-blue-600 transition-colors">
+            Weight Management
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
 
           {/* Divider */}
           <div className="w-px h-6 bg-gray-300" />
