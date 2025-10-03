@@ -72,7 +72,7 @@ const App = () => {
 
     return (
       <div id="smooth-wrapper">
-        <div id="smooth-content">
+        <div id="smooth-content"z>
           <HeroSection />
           <MessageSection />
           <FlavorSection />
