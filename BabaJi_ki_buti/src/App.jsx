@@ -44,6 +44,7 @@ import InventoryPage from "./page/admin/inventory/InventoryPage";
 import PricingPage from "./page/admin/pricing/PricingPage";
 import OrderPage from "./page/admin/orders/OrderPage";
 import DoshaPage from "./page/dosha/DoshaPage";
+import AddProductPage from "./page/admin/catalog/AddProdPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -126,6 +127,7 @@ const App = () => {
     <Route path="inventory" element={<InventoryPage />} />
     <Route path="pricing" element={<PricingPage />} />
     <Route path="orders" element={<OrderPage />} />
+    <Route path="catalog/AddProdPage" element={<AddProductPage/>}/>
     {/*  more admin pages …  */}
   </Route>
 
