@@ -140,7 +140,8 @@ export default function ProductCatalog() {
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Product Catalog</h1>
             <p className="text-gray-600">Manage your Ayurveda products, variants, and inventory</p>
           </div>
-          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-medium transition-colors">
+          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2
+           font-medium transition-colors" onClick={()=>window.location.href="catalog/addProdPage"}>
             <Plus className="w-5 h-5" />
             <span>Add Product</span>
           </button>
