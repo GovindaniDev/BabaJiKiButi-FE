@@ -140,7 +140,7 @@ const FooterSection = () => {
                   ].map((label, i) => (
                     <a
                       key={i}
-                      href="#"
+                      href="/shop"
                       className="group flex items-start gap-2 text-white/90 hover:text-yellow-400 transition-colors"
                     >
                       <span className="text-[#cdb085] mt-[2px]">▶</span>
