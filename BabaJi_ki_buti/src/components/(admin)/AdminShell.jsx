@@ -7,8 +7,8 @@ export default function AdminShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Tailwind width classes for open/closed states
-  const sideWidthClass = sidebarOpen ? "w-64" : "w-20";     // 16rem vs 5rem
-  const contentLeftClass = sidebarOpen ? "ml-64" : "ml-20"; // match sidebar width
+  const sideWidthClass = sidebarOpen ? "w-50" : "w-10";     // 16rem vs 5rem
+  const contentLeftClass = sidebarOpen ? "ml-54" : "ml-20"; // match sidebar width
 
   return (
     <div className="min-h-screen bg-gray-50 font-semibold" style={{ fontFamily: "'Arial', sans-serif" }}>
@@ -19,7 +19,7 @@ export default function AdminShell() {
       </aside>
 
       {/* Fixed Admin Header (sticks to the top, spans from sidebar to right edge) */}
-      <header className={`fixed top-0 right-0 z-30 ${sidebarOpen ? "left-64" : "left-20"} h-16 bg-white `}>
+      <header className={`fixed top-0 right-0 z-30 ${sidebarOpen ? "left-54" : "left-20"} h-16 bg-white `}>
         <div className="h-full">
           <AdminHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         </div>
