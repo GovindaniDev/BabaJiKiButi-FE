@@ -64,7 +64,7 @@ const App = () => {
       const smoother = ScrollSmoother.create({
         wrapper: "#smooth-wrapper",
         content: "#smooth-content",
-        smooth: 1.5,
+        smooth: 2.3,
         effects: true,
       });
       return () => smoother.kill(); // cleanup on route change

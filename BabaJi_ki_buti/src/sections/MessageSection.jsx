@@ -1,3 +1,4 @@
+// MembersExclusivePage.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -20,27 +21,12 @@ function MiniCardSlider() {
     { id: 3, img: "/images/s2img3.webp", alt: "Hum Aapka Khana" },
   ];
 
-  useEffect(() => {
-    slides.forEach((s) => {
-      const im = new Image();
-      im.src = s.img;
-    });
-  }, []);
+  useEffect(() => { slides.forEach(s => { const im = new Image(); im.src = s.img; }); }, []);
 
-  const next = (d = 1) => {
-    setDir(d);
-    setIdx((p) => (p + d + slides.length) % slides.length);
-  };
-  const goTo = (i) => {
-    if (i === idx) return;
-    next(i > idx ? 1 : -1);
-  };
+  const next = (d = 1) => { setDir(d); setIdx(p => (p + d + slides.length) % slides.length); };
+  const goTo = (i) => { if (i !== idx) next(i > idx ? 1 : -1); };
 
-  useEffect(() => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => next(1), SLIDE_MS);
-    return () => clearTimeout(timer.current);
-  }, [idx]);
+  useEffect(() => { clearTimeout(timer.current); timer.current = setTimeout(() => next(1), SLIDE_MS); return () => clearTimeout(timer.current); }, [idx]);
 
   const variants = {
     enter: (d) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
@@ -50,23 +36,19 @@ function MiniCardSlider() {
 
   return (
     <div className="relative rounded-3xl overflow-hidden">
-      {/* Aspect-ratio wrapper to keep full image visible */}
-      <div className="relative w-full aspect-[16/9]"> 
+      <div className="relative w-full aspect-[16/9]">
         <AnimatePresence custom={dir} mode="wait">
           <motion.img
             key={slides[idx].id}
             src={slides[idx].img}
             alt={slides[idx].alt}
-            className="absolute inset-0 w-full h-full object-contain" 
+            className="absolute inset-0 w-full h-full object-contain"
             custom={dir}
             variants={variants}
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{
-              x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.25 },
-            }}
+            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.25 } }}
             loading="eager"
             decoding="async"
             draggable="false"
@@ -74,7 +56,7 @@ function MiniCardSlider() {
         </AnimatePresence>
       </div>
 
-      {/* Dots */}
+      {/* dots */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-2 py-1 rounded-full bg-black/30 backdrop-blur-sm">
         {slides.map((sl, i) => {
           const active = i === idx;
@@ -83,9 +65,7 @@ function MiniCardSlider() {
               key={sl.id}
               onClick={() => goTo(i)}
               aria-label={`Go to mini slide ${i + 1}`}
-              className={`relative h-1.5 rounded-full transition-all ${
-                active ? "w-6 bg-white/70" : "w-2.5 bg-white/40 hover:bg-white/60"
-              }`}
+              className={`relative h-1.5 rounded-full transition-all ${active ? "w-6 bg-white/70" : "w-2.5 bg-white/40 hover:bg-white/60"}`}
             >
               {active && (
                 <motion.span
@@ -104,9 +84,7 @@ function MiniCardSlider() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-
-
+/* ---------------- Second mini ---------------- */
 function MiniCardSliderBottom() {
   const SLIDE_MS = 4000;
   const [idx, setIdx] = useState(0);
@@ -119,53 +97,30 @@ function MiniCardSliderBottom() {
     { id: 3, img: "/images/s3img3.webp", alt: "Hum Aapka Khana" },
   ];
 
-  useEffect(() => {
-    slidesBottom.forEach((s) => {
-      const im = new Image();
-      im.src = s.img;
-    });
-  }, []);
+  useEffect(() => { slidesBottom.forEach(s => { const im = new Image(); im.src = s.img; }); }, []);
 
-  const next = (d = 1) => {
-    setDir(d);
-    setIdx((p) => (p + d + slidesBottom.length) % slidesBottom.length);
-  };
-  const goTo = (i) => {
-    if (i === idx) return;
-    next(i > idx ? 1 : -1);
-  };
+  const next = (d = 1) => { setDir(d); setIdx(p => (p + d + slidesBottom.length) % slidesBottom.length); };
+  const goTo = (i) => { if (i !== idx) next(i > idx ? 1 : -1); };
 
-  useEffect(() => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => next(1), SLIDE_MS);
-    return () => clearTimeout(timer.current);
-  }, [idx]);
+  useEffect(() => { clearTimeout(timer.current); timer.current = setTimeout(() => next(1), SLIDE_MS); return () => clearTimeout(timer.current); }, [idx]);
 
-  const variants = {
-    enter: (d) => ({ x: d > 0 ? 200 : -200, opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (d) => ({ x: d < 0 ? 200 : -200, opacity: 0 }),
-  };
+  const variants = { enter: (d) => ({ x: d > 0 ? 200 : -200, opacity: 0 }), center: { x: 0, opacity: 1 }, exit: (d) => ({ x: d < 0 ? 200 : -200, opacity: 0 }) };
 
   return (
     <div className="relative rounded-3xl overflow-hidden">
-      {/* Aspect-ratio wrapper to keep full image visible */}
-      <div className="relative w-full aspect-[16/9]"> 
+      <div className="relative w-full aspect-[16/9]">
         <AnimatePresence custom={dir} mode="wait">
           <motion.img
             key={slidesBottom[idx].id}
-            src={ slidesBottom[idx].img}
+            src={slidesBottom[idx].img}
             alt={slidesBottom[idx].alt}
-            className="absolute inset-0 w-full h-full object-contain" 
+            className="absolute inset-0 w-full h-full object-contain"
             custom={dir}
             variants={variants}
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{
-              x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.25 },
-            }}
+            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.25 } }}
             loading="eager"
             decoding="async"
             draggable="false"
@@ -173,7 +128,7 @@ function MiniCardSliderBottom() {
         </AnimatePresence>
       </div>
 
-      {/* Dots */}
+      {/* dots */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-2 py-1 rounded-full bg-black/30 backdrop-blur-sm">
         {slidesBottom.map((sl, i) => {
           const active = i === idx;
@@ -182,9 +137,7 @@ function MiniCardSliderBottom() {
               key={sl.id}
               onClick={() => goTo(i)}
               aria-label={`Go to mini slide ${i + 1}`}
-              className={`relative h-1.5 rounded-full transition-all ${
-                active ? "w-6 bg-white/70" : "w-2.5 bg-white/40 hover:bg-white/60"
-              }`}
+              className={`relative h-1.5 rounded-full transition-all ${active ? "w-6 bg-white/70" : "w-2.5 bg-white/40 hover:bg-white/60"}`}
             >
               {active && (
                 <motion.span
@@ -203,8 +156,16 @@ function MiniCardSliderBottom() {
   );
 }
 
+/* ------------------------- Icon (Shop by Need) row ------------------------- */
 
 
+/* --------------------------- Product Card (4x) ---------------------------- */
+
+
+
+/* -------------------------- Ayurveda feature strip ------------------------- */
+
+/* ------------------------------ MAIN PAGE --------------------------------- */
 export default function MembersExclusivePage() {
   const pageRef = useRef(null);
 
@@ -223,12 +184,7 @@ export default function MembersExclusivePage() {
   const timeoutRef = useRef(null);
 
   // preload
-  useEffect(() => {
-    offers.forEach((o) => {
-      const img = new Image();
-      img.src = o.img;
-    });
-  }, []);
+  useEffect(() => { offers.forEach(o => { const img = new Image(); img.src = o.img; }); }, []);
 
   const slideVariants = {
     enter: (dir) => ({ x: dir > 0 ? 300 : -300, opacity: 0 }),
@@ -236,23 +192,10 @@ export default function MembersExclusivePage() {
     exit:  (dir) => ({ x: dir < 0 ? 300 : -300, opacity: 0 }),
   };
 
-  const paginate = (dir) => {
-    setDirection(dir);
-    setCurrentSlide((prev) => (prev + dir + offers.length) % offers.length);
-  };
+  const paginate = (dir) => { setDirection(dir); setCurrentSlide(prev => (prev + dir + offers.length) % offers.length); };
+  const goToSlide = (i) => { if (i !== currentSlide) { setDirection(i > currentSlide ? 1 : -1); setCurrentSlide(i); } };
 
-  const goToSlide = (i) => {
-    if (i === currentSlide) return;
-    const dir = i > currentSlide ? 1 : -1;
-    setDirection(dir);
-    setCurrentSlide(i);
-  };
-
-  useEffect(() => {
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => paginate(1), DURATION_MS);
-    return () => clearTimeout(timeoutRef.current);
-  }, [currentSlide]);
+  useEffect(() => { clearTimeout(timeoutRef.current); timeoutRef.current = setTimeout(() => paginate(1), DURATION_MS); return () => clearTimeout(timeoutRef.current); }, [currentSlide]);
 
   /* ------------------------------ GSAP (scoped) ----------------------------- */
   useGSAP(
@@ -301,10 +244,7 @@ export default function MembersExclusivePage() {
       gsap.fromTo(
         q(".me-products"),
         { y: 40, opacity: 0.6 },
-        {
-          y: 0, opacity: 1, ease: "power2.out",
-          scrollTrigger: { trigger: q(".me-hero"), start: "top 65%", end: "top 20%", scrub: true },
-        }
+        { y: 0, opacity: 1, ease: "power2.out", scrollTrigger: { trigger: q(".me-hero"), start: "top 65%", end: "top 20%", scrub: true } }
       );
 
       gsap.from(q(".me-dots button"), {
@@ -337,16 +277,19 @@ export default function MembersExclusivePage() {
         titleSplit?.revert();
         lovedSplit?.revert();
         paraSplit?.revert();
-        ScrollTrigger.getAll().forEach((t) => t.kill());
+        ScrollTrigger.getAll().forEach(t => t.kill());
         gsap.set(context.selector("*"), { clearProps: "all" });
       };
     },
     { scope: pageRef }
   );
 
+
+
   /* ---------------------------------- UI ---------------------------------- */
   return (
     <div ref={pageRef} className="me-page relative z-[1] isolate bg-[#aa7a4f] pt-[72px]">
+      {/* HERO: left big slider + right two minis */}
       <div className="w-full bg-[#aa7a4f] py-8">
         <div className="max-w-[1600px] mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 me-hero">
@@ -364,10 +307,7 @@ export default function MembersExclusivePage() {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    transition={{
-                      x: { type: "spring", stiffness: 300, damping: 30 },
-                      opacity: { duration: 0.3 },
-                    }}
+                    transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.3 } }}
                     loading="eager"
                     decoding="async"
                     fetchpriority="high"
@@ -385,9 +325,7 @@ export default function MembersExclusivePage() {
                         type="button"
                         onClick={() => goToSlide(i)}
                         aria-label={`Go to slide ${i + 1}`}
-                        className={`relative h-2 rounded-full overflow-hidden transition-all ${
-                          isActive ? "w-8 bg-white/20" : "w-3 bg-white/40 hover:bg-white/60"
-                        }`}
+                        className={`relative h-2 rounded-full overflow-hidden transition-all ${isActive ? "w-8 bg-white/20" : "w-3 bg-white/40 hover:bg-white/60"}`}
                         style={{ WebkitTapHighlightColor: "transparent" }}
                       >
                         {isActive && (
@@ -406,39 +344,26 @@ export default function MembersExclusivePage() {
               </div>
             </div>
 
-            {/* RIGHT: Top Banner - mini slideshow */}
-          {/* RIGHT column: two stacked slides */}
-<div className="lg:col-span-1 space-y-6">
-  {/* top mini slide */}
-  <MiniCardSlider
-   
-    height={280}
-    className="bg-gradient-to-br from-[#fef9f3] to-[#fef5e7]"
-  />
-
-  {/* bottom mini slide */}
-  <MiniCardSliderBottom
-   
-    height={280}
-    className="bg-gradient-to-br from-[#d4e5a9] to-[#b8d67f]"
-  />
-</div>
-
+            {/* RIGHT column: two stacked mini slides */}
+            <div className="lg:col-span-1 space-y-6">
+              <MiniCardSlider />
+              <MiniCardSliderBottom />
+            </div>
           </div>
         </div>
 
-        {/* Most Loved Section (unchanged) */}
-        <div className="max-w-[1600px] mx-auto px-4 py-8 mt-6 me-loved-wrap">
+       
+
+        {/* CTA */}
+        <div className="max-w-[1600px] mx-auto px-4 py-8 mt-8 me-loved-wrap">
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-             
-              <h2 className="me-loved text-4xl lg:text-6xl font-bold text-[#b83428]" style={{ fontFamily: "serif" }}>
-                Most Loved
-              </h2>
+            <div className="me-para">
+              <h2 className="me-loved text-white text-4xl lg:text-6xl font-extrabold">हर परेशानी का समाधान—सेहत का ध्यान।</h2>
+              <p className="text-white/90 max-w-7xl font-semibold mt-2">Members get extra love: exclusive prices, bundles & seasonal hampers.</p>
             </div>
-            <button className="bg-[#b83428] hover:bg-[#a02d20] text-white px-8 lg:px-10 py-3 lg:py-4 rounded-xl text-lg lg:text-xl font-semibold shadow-lg transition-all">
+            <a href="#" className=" bg-[#b83428] hover:bg-[#a02d20] text-white px-8 lg:px-10 py-3 lg:py-4 rounded-xl text-lg lg:text-xl font-semibold transition-all">
               Shop More
-            </button>
+            </a>
           </div>
         </div>
       </div>
