@@ -133,7 +133,6 @@ const Select = ({ value, onValueChange, children }) => {
     onValueChange?.(val);
     setIsOpen(false);
   };
-  
 
   return (
     <div className="relative">
@@ -145,9 +144,7 @@ const Select = ({ value, onValueChange, children }) => {
             selectedValue
           });
         if (child.type === SelectContent && isOpen)
-          return React.cloneElement(child, {
-            onSelect: handleSelect
-          });
+          return React.cloneElement(child, { onSelect: handleSelect });
         return null;
       })}
     </div>
@@ -242,17 +239,17 @@ const Toast = ({ message, type = 'info' }) => {
 const ChipInput = ({ label, chips, onChange, placeholder }) => {
   const [input, setInput] = useState('');
   const addChip = () => {
-    if (input.trim() && !chips.includes(input.trim())) {
-      onChange([...chips, input.trim()]);
+    if (input.trim() && !(chips || []).includes(input.trim())) {
+      onChange([...(chips || []), input.trim()]);
       setInput('');
     }
   };
-  const removeChip = (index) => onChange(chips.filter((_, i) => i !== index));
+  const removeChip = (index) => onChange((chips || []).filter((_, i) => i !== index));
   return (
     <div>
       <Label>{label}</Label>
       <div className="flex flex-wrap gap-2 mb-2">
-        {chips.map((chip, index) => (
+        {(chips || []).map((chip, index) => (
           <Badge key={index} variant="default">
             {chip}
             <X className="ml-2 h-3 w-3 cursor-pointer" onClick={() => removeChip(index)} />
@@ -274,34 +271,45 @@ const ChipInput = ({ label, chips, onChange, placeholder }) => {
   );
 };
 
-/* ----------  REPEATABLE FIELD  ---------- */
-const RepeatableField = ({ label, fields, onChange, placeholder }) => {
-  const addField = () => onChange([...(fields || []), '']);
-  const removeField = (index) => onChange(fields.filter((_, i) => i !== index));
-  const updateField = (index, value) => {
-    const updated = [...fields];
-    updated[index] = value;
-    onChange(updated);
+/* ----------  REPEATABLE BI-LINGUAL FIELD (UI only; *Hi not submitted) ---------- */
+const RepeatableBiField = ({
+  label,
+  items = [],
+  onChange,
+  placeholderEn = 'English',
+  placeholderHi = 'हिंदी',
+}) => {
+  const add = () => onChange([...(items || []), { en: '', hi: '' }]);
+  const remove = (idx) => onChange((items || []).filter((_, i) => i !== idx));
+  const set = (idx, key, val) => {
+    const next = [...(items || [])];
+    next[idx] = { ...(next[idx] || {}), [key]: val };
+    onChange(next);
   };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <Label>{label}</Label>
-        <Button type="button" variant="outline" size="sm" onClick={addField}>
+        <Button type="button" variant="outline" size="sm" onClick={add}>
           <Plus className="h-4 w-4 mr-1" />
           Add
         </Button>
       </div>
       <div className="space-y-2">
-        {fields.map((field, index) => (
-          <div key={index} className="flex gap-2">
+        {(items || []).map((item, i) => (
+          <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
             <Input
-              value={field}
-              onChange={(e) => updateField(index, e.target.value)}
-              placeholder={placeholder}
-              className="flex-1"
+              value={item?.en || ''}
+              onChange={(e) => set(i, 'en', e.target.value)}
+              placeholder={placeholderEn}
             />
-            <Button type="button" variant="destructive" size="icon" onClick={() => removeField(index)}>
+            <Input
+              value={item?.hi || ''}
+              onChange={(e) => set(i, 'hi', e.target.value)}
+              placeholder={placeholderHi}
+            />
+            <Button type="button" variant="destructive" size="icon" onClick={() => remove(i)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -311,13 +319,17 @@ const RepeatableField = ({ label, fields, onChange, placeholder }) => {
   );
 };
 
-/* ----------  HERB FIELD (UI)  ---------- */
+/* ----------  HERB FIELD (structured EN/HI) ---------- */
 const HerbField = ({ herbs, onChange }) => {
-  const addHerb = () => onChange([...(herbs || []), { herbName: '', imgUrl: '' }]);
-  const removeHerb = (index) => onChange(herbs.filter((_, i) => i !== index));
+  const addHerb = () =>
+    onChange([
+      ...(herbs || []),
+      { herbTitleEn: '', herbTitleHi: '', herbDescEn: '', herbDescHi: '' },
+    ]);
+  const removeHerb = (index) => onChange((herbs || []).filter((_, i) => i !== index));
   const updateHerb = (index, field, value) => {
-    const updated = [...herbs];
-    updated[index] = { ...updated[index], [field]: value };
+    const updated = [...(herbs || [])];
+    updated[index] = { ...(updated[index] || {}), [field]: value };
     onChange(updated);
   };
   return (
@@ -330,29 +342,51 @@ const HerbField = ({ herbs, onChange }) => {
         </Button>
       </div>
       <div className="space-y-3">
-        {herbs.map((herb, index) => (
+        {(herbs || []).map((herb, index) => (
           <Card key={index}>
             <CardContent className="pt-4">
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Label className="text-xs">Herb Name</Label>
-                  <Input
-                    value={herb.herbName}
-                    onChange={(e) => updateHerb(index, 'herbName', e.target.value)}
-                    placeholder="Ashwagandha"
-                  />
+              <div className="flex flex-col gap-3">
+                <div className="text-right">
+                  <button type="button" onClick={() => removeHerb(index)}>
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <Label className="text-xs">Image URL (optional)</Label>
-                  <Input
-                    value={herb.imgUrl}
-                    onChange={(e) => updateHerb(index, 'imgUrl', e.target.value)}
-                    placeholder="https://..."
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Herb Title (EN)</Label>
+                    <Input
+                      value={herb.herbTitleEn || ''}
+                      onChange={(e) => updateHerb(index, 'herbTitleEn', e.target.value)}
+                      placeholder="Ashwagandha"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Herb Title (HI)</Label>
+                    <Input
+                      value={herb.herbTitleHi || ''}
+                      onChange={(e) => updateHerb(index, 'herbTitleHi', e.target.value)}
+                      placeholder="अश्वगंधा"
+                    />
+                  </div>
                 </div>
-                <Button type="button" variant="destructive" size="icon" onClick={() => removeHerb(index)}>
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Description (EN)</Label>
+                    <Input
+                      value={herb.herbDescEn || ''}
+                      onChange={(e) => updateHerb(index, 'herbDescEn', e.target.value)}
+                      placeholder="Add description..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Description (HI)</Label>
+                    <Input
+                      value={herb.herbDescHi || ''}
+                      onChange={(e) => updateHerb(index, 'herbDescHi', e.target.value)}
+                      placeholder="विवरण जोड़ें..."
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -429,31 +463,47 @@ const ProductSummary = ({ title, slug, mrp, sellingPrice, stock, status, isSubmi
 const isEmpty = (v) =>
   v === null ||
   v === undefined ||
-  (typeof v === "string" && v.trim() === "") ||
+  (typeof v === 'string' && v.trim() === '') ||
   (Array.isArray(v) && v.length === 0);
 
-const trimVal = (v) => (typeof v === "string" ? v.trim() : v);
+const trimVal = (v) => (typeof v === 'string' ? v.trim() : v);
 
+/** Matches ProductDto/Product exactly for new backend (no legacy keyherbs fields). */
 function buildProductPayload(formData) {
   const base = {
     slug: trimVal(formData.slug),
     status: formData.status,
-    productImg: trimVal(formData.productImg || ""),
-    indication: trimVal(formData.indication || ""),
+    productImg: trimVal(formData.productImg || ''),
+    indication: trimVal(formData.indication || ''),
+    indicationHi: trimVal(formData.indicationHi || ''),
+
     qtySize: Number(formData.qtySize ?? 0),
     qtyUnit: formData.qtyUnit,
     courseTime: formData.courseTime ? Number(formData.courseTime) : null,
     mrp: formData.mrp != null ? Number(formData.mrp) : null,
     sellingPrice: formData.sellingPrice != null ? Number(formData.sellingPrice) : null,
     stock: formData.stock != null ? Number(formData.stock) : 0,
+
+    // badges + tags
     tags: Array.isArray(formData.tags) ? formData.tags : [],
     tagsEn: (formData.tagsEn || []).map(trimVal).filter(Boolean),
-    labReport: trimVal(formData.labReport || ""),
-    title: trimVal(formData.title || ""),
-    subtitle: trimVal(formData.subtitle || ""),
-    tagline: trimVal(formData.tagline || ""),
-    longDesc: trimVal(formData.longDesc || ""),
+    tagsHi: (formData.tagsHi || []).map(trimVal).filter(Boolean),
 
+    labReport: trimVal(formData.labReport || ''),
+
+    // EN text
+    title: trimVal(formData.title || ''),
+    subtitle: trimVal(formData.subtitle || ''),
+    tagline: trimVal(formData.tagline || ''),
+    longDesc: trimVal(formData.longDesc || ''),
+
+    // HI text
+    titleHi: trimVal(formData.titleHi || ''),
+    subtitleHi: trimVal(formData.subtitleHi || ''),
+    taglineHi: trimVal(formData.taglineHi || ''),
+    longDescHi: trimVal(formData.longDescHi || ''),
+
+    // EN lists
     whyChoose: (formData.whyChoose || []).map(trimVal).filter(Boolean),
     keyBenefits: (formData.keyBenefits || []).map(trimVal).filter(Boolean),
     howItWorks: (formData.howItWorks || []).map(trimVal).filter(Boolean),
@@ -464,50 +514,81 @@ function buildProductPayload(formData) {
     trustBadges: (formData.trustBadges || []).map(trimVal).filter(Boolean),
     trustBadgestag: (formData.trustBadgestag || []).map(trimVal).filter(Boolean),
 
-    // Map UI herbs -> DTO (string list)
-    keyherbs: (formData.keyherbs || [])
-      .map((h) => trimVal(h?.herbName || ""))
-      .filter(Boolean),
+    // HI lists
+    whyChooseHi: (formData.whyChooseHi || []).map(trimVal).filter(Boolean),
+    keyBenefitsHi: (formData.keyBenefitsHi || []).map(trimVal).filter(Boolean),
+    howItWorksHi: (formData.howItWorksHi || []).map(trimVal).filter(Boolean),
+    safetyFirstHi: (formData.safetyFirstHi || []).map(trimVal).filter(Boolean),
+    idealForHi: (formData.idealForHi || []).map(trimVal).filter(Boolean),
+    usageHi: (formData.usageHi || []).map(trimVal).filter(Boolean),
+    precautionsWarningsHi: (formData.precautionsWarningsHi || []).map(trimVal).filter(Boolean),
+    trustBadgestagHi: (formData.trustBadgestagHi || []).map(trimVal).filter(Boolean),
 
+    // ---------- Herbs/rationale ----------
+    // Structured list: matches ProductDto.keyHerbsDetails
+    keyHerbsDetails: (formData.keyherbs || [])
+      .map(h => ({
+        herbTitleEn: trimVal(h?.herbTitleEn || ''),
+        herbDescEn: trimVal(h?.herbDescEn || ''),
+        herbTitleHi: trimVal(h?.herbTitleHi || ''),
+        herbDescHi: trimVal(h?.herbDescHi || ''),
+      }))
+      .filter(h => Object.values(h).some(v => !!(v && String(v).trim()))),
+
+    // Rationale lists
     whyherbs: (formData.whyherbs || []).map(trimVal).filter(Boolean),
+    whyherbsHi: (formData.whyherbsHi || []).map(trimVal).filter(Boolean),
 
+    // Relations
     categories: (formData.categories || [])
-      .map((c) => ({ categoryName: trimVal(c?.categoryName || "") }))
-      .filter((c) => !!c.categoryName),
+      .map(c => ({ categoryId: c.categoryId || null, categoryName: trimVal(c?.categoryName || '') }))
+      .filter(c => !!c.categoryName),
 
     variants: (formData.variants || [])
-      .map((v) => ({ form: trimVal(v?.form || "") }))
-      .filter((v) => !!v.form),
+      .map(v => ({ variantId: v.variantId || null, form: trimVal(v?.form || '') }))
+      .filter(v => !!v.form),
 
-    faqs: (formData.faqs || []).map((f) => ({
-      que: trimVal(f?.que || ""),
-      ans: trimVal(f?.ans || ""),
-    })).filter((f) => f.que && f.ans),
+    // Reviews (send only valid ones)
+    reviews: (formData.reviews || [])
+      .map(r => ({
+        rating: r?.rating != null ? Number(r.rating) : null,
+        name: trimVal(r?.name || ''),
+        age: r?.age != null && r?.age !== '' ? Number(r.age) : null,
+        review: trimVal(r?.review || ''),
+        photo: trimVal(r?.photo || ''),
+      }))
+      .filter(r => r.rating >= 1 && r.rating <= 5 && r.name && r.review),
 
-    reviews: (formData.reviews || []).map((r) => ({
-      rating: Number(r?.rating ?? 0),
-      name: trimVal(r?.name || ""),
-      age: r?.age != null ? Number(r.age) : null,
-      review: trimVal(r?.review || ""),
-    })).filter((r) => r.name && r.review),
+    // FAQs
+    faqs: (formData.faqs || [])
+      .map(f => ({
+        faqId: f.faqId || null,
+        que: trimVal(f?.que || ''),
+        ans: trimVal(f?.ans || ''),
+        queHi: trimVal(f?.queHi || ''),
+        ansHi: trimVal(f?.ansHi || ''),
+      }))
+      .filter(f => f.que && f.ans),
 
-    ingredients: (formData.ingredients || []).map((i) => ({
-      herbName: trimVal(i?.herbName || ""),
-      latinName: trimVal(i?.latinName || ""),
-      qtyGrams: i?.qtyGrams != null ? Number(i.qtyGrams) : null,
-    })).filter((i) => i.herbName && i.qtyGrams != null),
+    // Ingredients
+    ingredients: (formData.ingredients || [])
+      .map(i => ({
+        ingredientId: i.ingredientId || null,
+        herbName: trimVal(i?.herbName || ''),
+        herbNameHi: trimVal(i?.herbNameHi || ''),
+        latinName: trimVal(i?.latinName || ''),
+        qtyGrams: i?.qtyGrams != null ? Number(i.qtyGrams) : null,
+      }))
+      .filter(i => i.herbName && i.qtyGrams != null),
   };
 
   const cleaned = {};
-  Object.entries(base).forEach(([k, v]) => {
-    if (!isEmpty(v)) cleaned[k] = v;
-  });
-
+  Object.entries(base).forEach(([k, v]) => { if (!isEmpty(v)) cleaned[k] = v; });
   return cleaned;
 }
 
 /* =================================================================
-                           MAIN COMPONENT
+                          MAIN COMPONENT
 ================================================================= */
 export default function AddProduct() {
   const [formData, setFormData] = useState({
@@ -523,11 +604,13 @@ export default function AddProduct() {
     stock: 19,
     tags: ['BESTSELLER', 'TRENDING'],
     tagsEn: ['Chyawanprash', 'Immunity Booster'],
+
     labReport: '',
     title: 'Amrit Ayu Chyawanprash',
     subtitle: 'Nectar of holistic vitality and wellness',
     tagline: 'Strengthen your roots, shine with wellness.',
     longDesc: 'Premium Ayurvedic formulation for immunity and wellness',
+
     whyChoose: [],
     keyBenefits: [],
     howItWorks: [],
@@ -537,13 +620,38 @@ export default function AddProduct() {
     precautionsWarnings: [],
     trustBadges: [],
     trustBadgestag: [],
-    keyherbs: [],
+
+    // Structured key herbs (edited in UI under key 'keyherbs')
+    keyherbs: [
+      { herbTitleEn: '', herbTitleHi: '', herbDescEn: '', herbDescHi: '' }
+    ],
     whyherbs: [],
+
     categories: [{ categoryName: 'Immunity & General Wellness' }],
     variants: [{ form: 'AVALEH' }],
+
+    // Start with ONE empty review row
+    reviews: [{ rating: 5, name: '', age: null, review: '', photo: '' }],
+
     faqs: [],
-    reviews: [],
     ingredients: [],
+
+    // UI-only Hindi mirrors
+    titleHi: '',
+    subtitleHi: '',
+    taglineHi: '',
+    longDescHi: '',
+    indicationHi: '',
+    tagsHi: [],
+    whyChooseHi: [],
+    keyBenefitsHi: [],
+    howItWorksHi: [],
+    safetyFirstHi: [],
+    idealForHi: [],
+    usageHi: [],
+    precautionsWarningsHi: [],
+    trustBadgestagHi: [],
+    whyherbsHi: [],
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -553,7 +661,7 @@ export default function AddProduct() {
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 2500);
   };
 
   const updateField = (field, value) => {
@@ -582,6 +690,14 @@ export default function AddProduct() {
     if (url && url.startsWith('http')) setImagePreview(url.trim());
   };
 
+  const hasAtLeastOneValidReview = () => {
+    const list = formData.reviews || [];
+    return list.some((r) => {
+      const ratingOk = Number(r.rating) >= 1 && Number(r.rating) <= 5;
+      return ratingOk && (r.name?.trim()?.length > 0) && (r.review?.trim()?.length > 0);
+    });
+  };
+
   const validateForm = () => {
     const next = {};
     if (!formData.title) next.title = 'Title is required';
@@ -592,27 +708,33 @@ export default function AddProduct() {
     if (!formData.sellingPrice || formData.sellingPrice <= 0) next.sellingPrice = 'Valid price required';
     if (Number(formData.sellingPrice) > Number(formData.mrp)) next.sellingPrice = 'Price cannot exceed MRP';
     if (formData.stock === undefined || formData.stock < 0) next.stock = 'Valid stock required';
+
+    if (!hasAtLeastOneValidReview()) {
+      next.reviews = 'Please add at least one review with rating (1–5), name, and text.';
+    }
+
+    const kbCount = (formData.keyBenefits || []).filter(
+    (b) => (b || '').trim().length > 0
+  ).length;
+  if (kbCount < 4) {
+    next.keyBenefits = 'Please add at least 4 key benefits.';
+    showToast('Please add at least 4 key benefits before submitting.', 'error');
+  }
+
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  // ✅ UPDATED: Save to /api/products using `app`
+  // Save
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return showToast('Please fix form errors', 'error');
 
     try {
       setIsSubmitting(true);
-
       const payload = buildProductPayload(formData);
-      const res = await app.post("/products", payload); // -> {{baseUrl}}/api/products
-      // const created = res?.data?.data ?? res?.data;
-
+      await app.post('/products', payload);
       showToast('Product created successfully!', 'success');
-      
-      // (Optional) reset form after success:
-      // handleReset();
-
     } catch (err) {
       const msg =
         err?.response?.data?.data?.message ||
@@ -621,9 +743,7 @@ export default function AddProduct() {
         err?.message ||
         'Failed to create product';
       const serverErrors = err?.response?.data?.errors;
-      if (serverErrors && typeof serverErrors === 'object') {
-        setErrors(serverErrors);
-      }
+      if (serverErrors && typeof serverErrors === 'object') setErrors(serverErrors);
       showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -631,7 +751,8 @@ export default function AddProduct() {
   };
 
   const handleReset = () => {
-    setFormData({
+    setFormData((prev) => ({
+      ...prev,
       slug: 'amrit-ayu-chyawanprash',
       status: 'ACTIVE',
       productImg: '',
@@ -658,14 +779,38 @@ export default function AddProduct() {
       precautionsWarnings: [],
       trustBadges: [],
       trustBadgestag: [],
-      keyherbs: [],
+
+      // structured herbs
+      keyherbs: [
+        { herbTitleEn: '', herbTitleHi: '', herbDescEn: '', herbDescHi: '' }
+      ],
       whyherbs: [],
       categories: [{ categoryName: 'Immunity & General Wellness' }],
       variants: [{ form: 'AVALEH' }],
+
+      // Keep one empty review on reset
+      reviews: [{ rating: 5, name: '', age: null, review: '', photo: '' }],
+
       faqs: [],
-      reviews: [],
       ingredients: [],
-    });
+
+      // UI-only Hindi mirrors reset
+      titleHi: '',
+      subtitleHi: '',
+      taglineHi: '',
+      longDescHi: '',
+      indicationHi: '',
+      tagsHi: [],
+      whyChooseHi: [],
+      keyBenefitsHi: [],
+      howItWorksHi: [],
+      safetyFirstHi: [],
+      idealForHi: [],
+      usageHi: [],
+      precautionsWarningsHi: [],
+      trustBadgestagHi: [],
+      whyherbsHi: [],
+    }));
     setImagePreview('');
     setErrors({});
     showToast('Form reset to defaults', 'info');
@@ -679,6 +824,21 @@ export default function AddProduct() {
   ];
 
   const errorCount = Object.keys(errors).length;
+
+  /* helpers for Reviews UI */
+  const addEmptyReview = () =>
+    updateField('reviews', [
+      ...(formData.reviews || []),
+      { rating: 5, name: '', age: null, review: '', photo: '' },
+    ]);
+  const removeReviewAt = (idx) => {
+    const list = formData.reviews || [];
+    if (list.length <= 1) {
+      showToast('At least one review is required', 'error');
+      return;
+    }
+    updateField('reviews', list.filter((_, i) => i !== idx));
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -698,6 +858,7 @@ export default function AddProduct() {
                 There {errorCount === 1 ? 'is' : 'are'} {errorCount} error{errorCount > 1 ? 's' : ''} in the form
               </p>
               <p className="text-black text-xs mt-0.5">Please review and fix them before submitting.</p>
+              {errors.reviews && <p className="text-black text-xs mt-1">{errors.reviews}</p>}
             </div>
           </div>
         )}
@@ -720,6 +881,17 @@ export default function AddProduct() {
                       {errors.title && <p className="text-sm text-black mt-1">{errors.title}</p>}
                     </div>
 
+                    {/* UI-only Hindi Title (not submitted) */}
+                    <div className="col-span-2">
+                      <Label htmlFor="titleHi">Title (Hindi)</Label>
+                      <Input
+                        id="titleHi"
+                        value={formData.titleHi}
+                        onChange={(e) => updateField('titleHi', e.target.value)}
+                        placeholder="शीर्षक (हिंदी)"
+                      />
+                    </div>
+
                     <div>
                       <Label htmlFor="subtitle">Subtitle</Label>
                       <Input
@@ -731,12 +903,32 @@ export default function AddProduct() {
                     </div>
 
                     <div>
+                      <Label htmlFor="subtitleHi">Subtitle (Hindi)</Label>
+                      <Input
+                        id="subtitleHi"
+                        value={formData.subtitleHi}
+                        onChange={(e) => updateField('subtitleHi', e.target.value)}
+                        placeholder="उपशीर्षक (हिंदी)"
+                      />
+                    </div>
+
+                    <div>
                       <Label htmlFor="tagline">Tagline</Label>
                       <Input
                         id="tagline"
                         value={formData.tagline}
                         onChange={(e) => updateField('tagline', e.target.value)}
                         placeholder="Catchy tagline"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="taglineHi">Tagline (Hindi)</Label>
+                      <Input
+                        id="taglineHi"
+                        value={formData.taglineHi}
+                        onChange={(e) => updateField('taglineHi', e.target.value)}
+                        placeholder="टैगलाइन (हिंदी)"
                       />
                     </div>
 
@@ -806,6 +998,16 @@ export default function AddProduct() {
                         value={formData.indication}
                         onChange={(e) => updateField('indication', e.target.value)}
                         placeholder="Product indication"
+                      />
+                    </div>
+                    {/* UI-only Hindi (not submitted) */}
+                    <div className="col-span-2">
+                      <Label htmlFor="indicationHi">Indication (Hindi)</Label>
+                      <Input
+                        id="indicationHi"
+                        value={formData.indicationHi}
+                        onChange={(e) => updateField('indicationHi', e.target.value)}
+                        placeholder="संकेत (हिंदी)"
                       />
                     </div>
                   </div>
@@ -906,7 +1108,7 @@ export default function AddProduct() {
                   <div>
                     <Label>Product Tags</Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {['BESTSELLER', 'TRENDING', 'NEW', 'LIMITED'].map((tag) => (
+                      {['BESTSELLER', 'TRENDING', 'NEW', 'LIMITED', 'HOT_ITEM'].map((tag) => (
                         <Badge
                           key={tag}
                           variant={formData.tags?.includes(tag) ? 'default' : 'outline'}
@@ -931,10 +1133,18 @@ export default function AddProduct() {
                     onChange={(chips) => updateField('tagsEn', chips)}
                     placeholder="Add tag..."
                   />
+
+                  {/* UI-only Hindi tags (also submitted if you want) */}
+                  <ChipInput
+                    label="Hindi Tags"
+                    chips={formData.tagsHi || []}
+                    onChange={(chips) => updateField('tagsHi', chips)}
+                    placeholder="टैग जोड़ें ..."
+                  />
                 </CardContent>
               </Card>
 
-              {/* Content */}
+              {/* Content (EN + UI-only HI) */}
               <Card>
                 <CardHeader>
                   <CardTitle>Content</CardTitle>
@@ -952,53 +1162,95 @@ export default function AddProduct() {
                     {errors.longDesc && <p className="text-sm text-black mt-1">{errors.longDesc}</p>}
                   </div>
 
-                  <RepeatableField
+                  {/* UI-only Hindi long description */}
+                  <div>
+                    <Label htmlFor="longDescHi">Long Description (Hindi)</Label>
+                    <Textarea
+                      id="longDescHi"
+                      value={formData.longDescHi}
+                      onChange={(e) => updateField('longDescHi', e.target.value)}
+                      rows={4}
+                      placeholder="विस्तृत विवरण (हिंदी)"
+                    />
+                  </div>
+
+                  <RepeatableBiField
                     label="Why Choose"
-                    fields={formData.whyChoose || []}
-                    onChange={(fields) => updateField('whyChoose', fields)}
-                    placeholder="Reason to choose this product"
+                    items={(formData.whyChoose || []).map((en, i) => ({ en, hi: formData.whyChooseHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('whyChoose', rows.map((r) => r.en));
+                      updateField('whyChooseHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Reason (EN)"
+                    placeholderHi="कारण (HI)"
                   />
 
-                  <RepeatableField
-                    label="Key Benefits"
-                    fields={formData.keyBenefits || []}
-                    onChange={(fields) => updateField('keyBenefits', fields)}
-                    placeholder="Benefit description"
-                  />
+                 <RepeatableBiField
+  label="Key Benefits"
+  items={(formData.keyBenefits || []).map((en, i) => ({ en, hi: formData.keyBenefitsHi?.[i] || '' }))}
+  onChange={(rows) => {
+    updateField('keyBenefits', rows.map((r) => r.en));
+    updateField('keyBenefitsHi', rows.map((r) => r.hi));
+  }}
+  placeholderEn="Benefit (EN) "
+  placeholderHi="लाभ (HI)"
+/>
+{errors.keyBenefits && <p className="text-sm text-rose-600 mt-1">{errors.keyBenefits}</p>}
 
-                  <RepeatableField
+
+                  <RepeatableBiField
                     label="How It Works"
-                    fields={formData.howItWorks || []}
-                    onChange={(fields) => updateField('howItWorks', fields)}
-                    placeholder="Mechanism description"
+                    items={(formData.howItWorks || []).map((en, i) => ({ en, hi: formData.howItWorksHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('howItWorks', rows.map((r) => r.en));
+                      updateField('howItWorksHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Mechanism (EN)"
+                    placeholderHi="कार्यविधि (HI)"
                   />
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Safety First"
-                    fields={formData.safetyFirst || []}
-                    onChange={(fields) => updateField('safetyFirst', fields)}
-                    placeholder="Safety information"
+                    items={(formData.safetyFirst || []).map((en, i) => ({ en, hi: formData.safetyFirstHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('safetyFirst', rows.map((r) => r.en));
+                      updateField('safetyFirstHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Safety info (EN)"
+                    placeholderHi="सावधानी (HI)"
                   />
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Ideal For"
-                    fields={formData.idealFor || []}
-                    onChange={(fields) => updateField('idealFor', fields)}
-                    placeholder="Target audience"
+                    items={(formData.idealFor || []).map((en, i) => ({ en, hi: formData.idealForHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('idealFor', rows.map((r) => r.en));
+                      updateField('idealForHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Audience (EN)"
+                    placeholderHi="लक्षित उपयोगकर्ता (HI)"
                   />
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Usage Instructions"
-                    fields={formData.usage || []}
-                    onChange={(fields) => updateField('usage', fields)}
-                    placeholder="Usage instruction"
+                    items={(formData.usage || []).map((en, i) => ({ en, hi: formData.usageHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('usage', rows.map((r) => r.en));
+                      updateField('usageHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Usage (EN)"
+                    placeholderHi="उपयोग (HI)"
                   />
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Precautions & Warnings"
-                    fields={formData.precautionsWarnings || []}
-                    onChange={(fields) => updateField('precautionsWarnings', fields)}
-                    placeholder="Precaution or warning"
+                    items={(formData.precautionsWarnings || []).map((en, i) => ({ en, hi: formData.precautionsWarningsHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('precautionsWarnings', rows.map((r) => r.en));
+                      updateField('precautionsWarningsHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Precaution (EN)"
+                    placeholderHi="चेतावनी (HI)"
                   />
 
                   <div>
@@ -1023,11 +1275,15 @@ export default function AddProduct() {
                     </div>
                   </div>
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Trust Badge Tagline"
-                    fields={formData.trustBadgestag || []}
-                    onChange={(fields) => updateField('trustBadgestag', fields)}
-                    placeholder="Trust tagline"
+                    items={(formData.trustBadgestag || []).map((en, i) => ({ en, hi: formData.trustBadgestagHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('trustBadgestag', rows.map((r) => r.en));
+                      updateField('trustBadgestagHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Tagline (EN)"
+                    placeholderHi="पंक्ति (HI)"
                   />
                 </CardContent>
               </Card>
@@ -1040,147 +1296,16 @@ export default function AddProduct() {
                 <CardContent className="space-y-4">
                   <HerbField herbs={formData.keyherbs || []} onChange={(herbs) => updateField('keyherbs', herbs)} />
 
-                  <RepeatableField
+                  <RepeatableBiField
                     label="Why These Herbs"
-                    fields={formData.whyherbs || []}
-                    onChange={(fields) => updateField('whyherbs', fields)}
-                    placeholder="Herb rationale"
+                    items={(formData.whyherbs || []).map((en, i) => ({ en, hi: formData.whyherbsHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('whyherbs', rows.map((r) => r.en));
+                      updateField('whyherbsHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Rationale (EN)"
+                    placeholderHi="तर्क (HI)"
                   />
-                </CardContent>
-              </Card>
-
-              {/* Categories & Variants */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Categories & Variants</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>Categories</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          updateField('categories', [...formData.categories, { categoryName: '' }])
-                        }
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {formData.categories.map((cat, index) => {
-                        const predefined = [
-                          'Energy & Stamina',
-                          'Pain Relief',
-                          'Hair & Skin Care',
-                          'Digestive Health',
-                          "Men's Health",
-                          "Women's Health",
-                          'Weight Management',
-                          'Specialized Health',
-                          'Nutritional Supplements',
-                          'Immunity & General Wellness',
-                        ];
-
-                        return (
-                          <div key={index} className="flex gap-2">
-                            <Select
-                              value={cat.categoryName}
-                              onValueChange={(val) => {
-                                const updated = [...formData.categories];
-                                updated[index].categoryName = val;
-                                updateField('categories', updated);
-                              }}
-                            >
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Pick or type new category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {predefined.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>
-                                    {opt}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              onClick={() =>
-                                updateField(
-                                  'categories',
-                                  formData.categories.filter((_, i) => i !== index)
-                                )
-                              }
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label>Variants</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateField('variants', [...formData.variants, { form: 'AVALEH' }])}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {formData.variants.map((variant, index) => (
-                        <div key={index} className="flex gap-2">
-                          <Select
-                            value={variant.form}
-                            onValueChange={(value) => {
-                              const updated = [...formData.variants];
-                              updated[index].form = value;
-                              updateField('variants', updated);
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {['AVALEH', 'OIL', 'SEEDS', 'POWDER', 'RESIN', 'SYRUP', 'LIQUID', 'SHAMPOO', 'TABLETS', 'CREAM'].map(
-                                (form) => (
-                                  <SelectItem key={form} value={form}>
-                                    {form}
-                                  </SelectItem>
-                                )
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => {
-                              updateField(
-                                'variants',
-                                formData.variants.filter((_, i) => i !== index)
-                              );
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
 
@@ -1188,26 +1313,37 @@ export default function AddProduct() {
               <Card>
                 <CardHeader>
                   <CardTitle>FAQs</CardTitle>
+                  <CardDescription>Add common questions and answers (EN + optional HI)</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <Label>Frequently Asked Questions</Label>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>FAQ List</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => updateField('faqs', [...formData.faqs, { que: '', ans: '' }])}
+                      onClick={() =>
+                        updateField('faqs', [
+                          ...(formData.faqs || []),
+                          { que: '', ans: '', queHi: '', ansHi: '' },
+                        ])
+                      }
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add FAQ
                     </Button>
                   </div>
-                  <div className="space-y-4">
-                    {formData.faqs.map((faq, index) => (
+
+                  {(formData.faqs || []).length === 0 && (
+                    <p className="text-xs text-gray-500">No FAQs added yet.</p>
+                  )}
+
+                  <div className="space-y-3">
+                    {(formData.faqs || []).map((faq, index) => (
                       <Card key={index}>
                         <CardContent className="pt-6 space-y-3">
                           <div className="flex justify-between items-start">
-                            <Label>Question {index + 1}</Label>
+                            <Label>FAQ {index + 1}</Label>
                             <Button
                               type="button"
                               variant="ghost"
@@ -1215,32 +1351,69 @@ export default function AddProduct() {
                               onClick={() => {
                                 updateField(
                                   'faqs',
-                                  formData.faqs.filter((_, i) => i !== index)
+                                  (formData.faqs || []).filter((_, i) => i !== index)
                                 );
                               }}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
-                          <Input
-                            value={faq.que}
-                            onChange={(e) => {
-                              const updated = [...formData.faqs];
-                              updated[index].que = e.target.value;
-                              updateField('faqs', updated);
-                            }}
-                            placeholder="Question"
-                          />
-                          <Textarea
-                            value={faq.ans}
-                            onChange={(e) => {
-                              const updated = [...formData.faqs];
-                              updated[index].ans = e.target.value;
-                              updateField('faqs', updated);
-                            }}
-                            placeholder="Answer"
-                            rows={3}
-                          />
+
+                          {/* EN row */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Question (EN)</Label>
+                              <Input
+                                value={faq.que}
+                                onChange={(e) => {
+                                  const next = [...(formData.faqs || [])];
+                                  next[index].que = e.target.value;
+                                  updateField('faqs', next);
+                                }}
+                                placeholder="When should I take it?"
+                              />
+                            </div>
+                            <div>
+                              <Label>Answer (EN)</Label>
+                              <Input
+                                value={faq.ans}
+                                onChange={(e) => {
+                                  const next = [...(formData.faqs || [])];
+                                  next[index].ans = e.target.value;
+                                  updateField('faqs', next);
+                                }}
+                                placeholder="Take 1 tsp after breakfast."
+                              />
+                            </div>
+                          </div>
+
+                          {/* HI row */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Question (HI)</Label>
+                              <Input
+                                value={faq.queHi || ''}
+                                onChange={(e) => {
+                                  const next = [...(formData.faqs || [])];
+                                  next[index].queHi = e.target.value;
+                                  updateField('faqs', next);
+                                }}
+                                placeholder="इसे कब लें?"
+                              />
+                            </div>
+                            <div>
+                              <Label>Answer (HI)</Label>
+                              <Input
+                                value={faq.ansHi || ''}
+                                onChange={(e) => {
+                                  const next = [...(formData.faqs || [])];
+                                  next[index].ansHi = e.target.value;
+                                  updateField('faqs', next);
+                                }}
+                                placeholder="नाश्ते के बाद 1 चम्मच।"
+                              />
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -1248,98 +1421,101 @@ export default function AddProduct() {
                 </CardContent>
               </Card>
 
-              {/* Reviews */}
+              {/* Reviews — add/remove but keep at least one */}
               <Card>
                 <CardHeader>
                   <CardTitle>Customer Reviews</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-1">
                     <Label>Reviews</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => updateField('reviews', [...formData.reviews, { rating: 5, name: '', age: 0, review: '' }])}
+                      onClick={addEmptyReview}
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Review
                     </Button>
                   </div>
+                  <p className="text-[11px] text-gray-500 mb-4">
+                    At least one review with rating, name, and text is required.
+                  </p>
                   <div className="space-y-4">
-                    {formData.reviews.map((review, index) => (
-                      <Card key={index}>
-                        <CardContent className="pt-6 space-y-3">
-                          <div className="flex justify-between items-start">
-                            <Label>Review {index + 1}</Label>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                updateField(
-                                  'reviews',
-                                  formData.reviews.filter((_, i) => i !== index)
-                                );
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <Label>Rating (1-5)</Label>
-                              <Input
-                                type="number"
-                                min="1"
-                                max="5"
-                                value={review.rating}
-                                onChange={(e) => {
-                                  const updated = [...formData.reviews];
-                                  updated[index].rating = parseInt(e.target.value || 0, 10);
-                                  updateField('reviews', updated);
-                                }}
-                              />
+                    {formData.reviews.map((review, index) => {
+                      const canRemove = (formData.reviews?.length || 0) > 1;
+                      return (
+                        <Card key={index}>
+                          <CardContent className="pt-6 space-y-3">
+                            <div className="flex justify-between items-start">
+                              <Label>Review {index + 1}</Label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                disabled={!canRemove}
+                                onClick={() => removeReviewAt(index)}
+                                title={canRemove ? 'Remove review' : 'At least one review is required'}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <Label>Rating (1-5)</Label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="5"
+                                  value={review.rating}
+                                  onChange={(e) => {
+                                    const updated = [...formData.reviews];
+                                    updated[index].rating = parseInt(e.target.value || 0, 10);
+                                    updateField('reviews', updated);
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Label>Name</Label>
+                                <Input
+                                  value={review.name}
+                                  onChange={(e) => {
+                                    const updated = [...formData.reviews];
+                                    updated[index].name = e.target.value;
+                                    updateField('reviews', updated);
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <Label>Age</Label>
+                                <Input
+                                  type="number"
+                                  value={review.age ?? ''}
+                                  onChange={(e) => {
+                                    const updated = [...formData.reviews];
+                                    updated[index].age = e.target.value === '' ? null : parseInt(e.target.value || 0, 10);
+                                    updateField('reviews', updated);
+                                  }}
+                                />
+                              </div>
                             </div>
                             <div>
-                              <Label>Name</Label>
-                              <Input
-                                value={review.name}
+                              <Label>Review</Label>
+                              <Textarea
+                                value={review.review}
                                 onChange={(e) => {
                                   const updated = [...formData.reviews];
-                                  updated[index].name = e.target.value;
+                                  updated[index].review = e.target.value;
                                   updateField('reviews', updated);
                                 }}
+                                rows={3}
                               />
                             </div>
-                            <div>
-                              <Label>Age</Label>
-                              <Input
-                                type="number"
-                                value={review.age}
-                                onChange={(e) => {
-                                  const updated = [...formData.reviews];
-                                  updated[index].age = parseInt(e.target.value || 0, 10);
-                                  updateField('reviews', updated);
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <Label>Review</Label>
-                            <Textarea
-                              value={review.review}
-                              onChange={(e) => {
-                                const updated = [...formData.reviews];
-                                updated[index].review = e.target.value;
-                                updateField('reviews', updated);
-                              }}
-                              rows={3}
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -1356,66 +1532,83 @@ export default function AddProduct() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => updateField('ingredients', [...formData.ingredients, { herbName: '', latinName: '', qtyGrams: 0 }])}
+                      onClick={() =>
+                        updateField('ingredients', [...(formData.ingredients || []), { herbName: '', herbNameHi: '', latinName: '', qtyGrams: 0 }])
+                      }
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Add Ingredient
                     </Button>
                   </div>
                   <div className="space-y-3">
-                    {formData.ingredients.map((ingredient, index) => (
-                      <div key={index} className="flex gap-2 items-end">
-                        <div className="flex-1">
-                          <Label className="text-xs">Herb Name</Label>
+                    {(formData.ingredients || []).map((ingredient, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                        <div>
+                          <Label className="text-xs">Herb Name (EN)</Label>
                           <Input
                             value={ingredient.herbName}
                             onChange={(e) => {
-                              const updated = [...formData.ingredients];
+                              const updated = [...(formData.ingredients || [])];
                               updated[index].herbName = e.target.value;
                               updateField('ingredients', updated);
                             }}
                             placeholder="Amla"
                           />
                         </div>
-                        <div className="flex-1">
+                        {/* UI-only Hindi herb name (submitted too) */}
+                        <div>
+                          <Label className="text-xs">Herb Name (HI)</Label>
+                          <Input
+                            value={ingredient.herbNameHi || ''}
+                            onChange={(e) => {
+                              const updated = [...(formData.ingredients || [])];
+                              updated[index].herbNameHi = e.target.value;
+                              updateField('ingredients', updated);
+                            }}
+                            placeholder="आंवला"
+                          />
+                        </div>
+                        <div>
                           <Label className="text-xs">Latin Name</Label>
                           <Input
                             value={ingredient.latinName}
                             onChange={(e) => {
-                              const updated = [...formData.ingredients];
+                              const updated = [...(formData.ingredients || [])];
                               updated[index].latinName = e.target.value;
                               updateField('ingredients', updated);
                             }}
                             placeholder="Phyllanthus emblica"
                           />
                         </div>
-                        <div className="w-32">
-                          <Label className="text-xs">Qty (grams)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={ingredient.qtyGrams}
-                            onChange={(e) => {
-                              const updated = [...formData.ingredients];
-                              updated[index].qtyGrams = parseFloat(e.target.value || '0');
-                              updateField('ingredients', updated);
+                        <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                          <div>
+                            <Label className="text-xs">Qty (grams)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={ingredient.qtyGrams}
+                              onChange={(e) => {
+                                const updated = [...(formData.ingredients || [])];
+                                updated[index].qtyGrams = parseFloat(e.target.value || '0');
+                                updateField('ingredients', updated);
+                              }}
+                              placeholder="4.0"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => {
+                              updateField(
+                                'ingredients',
+                                (formData.ingredients || []).filter((_, i) => i !== index)
+                              );
                             }}
-                            placeholder="4.0"
-                          />
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => {
-                            updateField(
-                              'ingredients',
-                              formData.ingredients.filter((_, i) => i !== index)
-                            );
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
                       </div>
                     ))}
                   </div>
