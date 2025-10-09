@@ -181,9 +181,8 @@ if (email.trim() === "yash@gmail.com" && password === "123456") {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="sr-only"
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span className={`w-5 h-5 rounded border-2 transition-all duration-200 ${rememberMe ? "bg-blue-500 border-blue-500" : "border-gray-300 bg-white"}`} />
                 <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Remember me</span>
               </label>
 

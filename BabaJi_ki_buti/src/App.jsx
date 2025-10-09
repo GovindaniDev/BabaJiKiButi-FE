@@ -33,7 +33,6 @@ import PanchkarmaPage from "./page/panchkarma/PanchkarmaPage";
 import OPDPage from "./page/OPD/OPDPage";
 import NaadiPage from "./page/naadi/NaadiPage";
 
-
 import RemediosPage from "./page/service/remedios/RemediosPage";
 import TherapyPage from "./page/service/therapy/TherapyPage";
 import ProductCatalog from "./components/(admin)/src/component/catalog/ProductCatalog";
@@ -45,6 +44,8 @@ import PricingPage from "./page/admin/pricing/PricingPage";
 import OrderPage from "./page/admin/orders/OrderPage";
 import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
+import PDPpage from "./page/shopNow/products/PDPpage";
+
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -59,7 +60,7 @@ const App = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // ✅ Home page with smoother. Footer & NavBar live inside the scroll container.
+  // ✅ Home page with smoother. NavBar & Footer live inside the scroll container.
   const HomePage = () => {
     useGSAP(() => {
       const smoother = ScrollSmoother.create({
@@ -73,14 +74,15 @@ const App = () => {
 
     return (
       <div id="smooth-wrapper">
-        <div id="smooth-content"z>
+        <div id="smooth-content">
+         
           <HeroSection />
           <MessageSection />
           <FlavorSection />
           <NutritionSection />
           <BenefitSection />
           <TestimonialSection />
-          <FooterSection /> 
+          <FooterSection />
         </div>
       </div>
     );
@@ -88,7 +90,7 @@ const App = () => {
 
   return (
     <AuthProvider>
-     <Toaster  reverseOrder={false} />
+      <Toaster reverseOrder={false} />
       <main>
         {loading && <Loading label="Please wait..." />}
 
@@ -96,12 +98,9 @@ const App = () => {
         {!isAdmin && <NavBar />}
 
         <Routes>
+          {/* Public */}
           <Route path="/" element={<HomePage />} />
           <Route path="/shop" element={<Product />} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/sessions" element={<SessionsPage />} />
-          </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<SignUpPage />} />
           <Route path="/terms" element={<TermSection />} />
@@ -112,31 +111,37 @@ const App = () => {
           <Route path="/bmi" element={<BMIPage />} />
           <Route path="/dosha" element={<DoshaPage />} />
           <Route path="/opd" element={<OPDPage />} />
-
           <Route path="/service/nutrient" element={<NutrientPage />} />
           <Route path="/panchkarma" element={<PanchkarmaPage />} />
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
-          <Route path="/service/therapy" element={<TherapyPage />} />        
+          <Route path="/service/therapy" element={<TherapyPage />} />
 
-       
-     {/*  your existing guard  */}
-  <Route path="/admin" element={<AdminShell />}>
-    <Route index element={<DashboardBody />} />
-    <Route path="catalog" element={<CatalogPage />} />
-    <Route path="inventory" element={<InventoryPage />} />
-    <Route path="pricing" element={<PricingPage />} />
-    <Route path="orders" element={<OrderPage />} />
-    <Route path="catalog/AddProdPage" element={<AddProductPage/>}/>
-    {/*  more admin pages …  */}
-  </Route>
+          {/* Admin (guarded by AdminShell layout) */}
+          <Route path="/admin" element={<AdminShell />}>
+            <Route index element={<DashboardBody />} />
+            <Route path="catalog" element={<CatalogPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="pricing" element={<PricingPage />} />
+            <Route path="orders" element={<OrderPage />} />
+            <Route path="catalog/AddProdPage" element={<AddProductPage />} />
+            {/* more admin pages … */}
+          </Route>
 
+          {/* Authed-only */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/sessions" element={<SessionsPage />} />
+          </Route>
 
+          {/* Product Pages */}
+          <Route path="/products/:slug" element={<PDPpage />} />
 
-
+          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
 
+        {/* Global footer on non-home, non-admin pages */}
         {!isAdmin && !isHome && <FooterSection />}
       </main>
     </AuthProvider>

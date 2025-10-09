@@ -2,10 +2,12 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "ProximaNova, sans-serif";
-  src: url("/fonts/ProximaNova-Regular.otf");
+  font-family: Arial, sans-serif !important;
+  src: url("/fonts/arial.ttf");
 }
-
+html {
+  @apply font-sans;
+}
 @theme {
   --color-black: #222123;
   --color-main-bg: #232224;
@@ -19,7 +21,7 @@
   --color-red: #a02128;
   --color-milk: #faeade;
   --font-sans: "Antonio", sans-serif;
-  --font-paragraph: "ProximaNova, sans-serif";
+  --font-paragraph: "arial, sans-serif";
 }
 
 html,
