@@ -19,7 +19,7 @@ import SignUpPage from "./page/register/SignUpPage";
 import Loading from "./components/loading";
 import { useEffect, useState } from "react";
 import PrivacySection from "./page/privacy/PrivacyPage";
-import ReturnRefundSection from "./page/return/ReturnRefundPage";
+import ReturnRefundSection from "./page/returns/ReturnRefundPage";
 import TermSection from "./page/terms/TermPage";
 import ContactPage from "./page/contact/ContactPage";
 import AboutPage from "./page/about/AboutPage";
@@ -45,6 +45,7 @@ import OrderPage from "./page/admin/orders/OrderPage";
 import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
 import PDPpage from "./page/shopNow/products/PDPpage";
+import ReturnPage from "./page/admin/return/ReturnPage";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -125,6 +126,7 @@ const App = () => {
             <Route path="pricing" element={<PricingPage />} />
             <Route path="orders" element={<OrderPage />} />
             <Route path="catalog/AddProdPage" element={<AddProductPage />} />
+            <Route path="returns" element={<ReturnPage/>}/>
             {/* more admin pages … */}
           </Route>
 

@@ -265,7 +265,7 @@ export default function DoshaTest() {
       <MotionConfig reducedMotion="user">
         <div
         className="min-h-screen text-[17px] md:text-[18px] leading-relaxed"
-        style={{ backgroundColor: '#faeade', fontFamily: "'Arial', sans-serif" }}
+        style={{ backgroundColor: '#faeade' }}
       >
         {/* Hero with parallax for quiz page */}
         <motion.div
@@ -394,7 +394,7 @@ export default function DoshaTest() {
     <MotionConfig reducedMotion="user">
       <div
         className="min-h-screen text-[17px] md:text-[18px] leading-relaxed"
-        style={{ backgroundColor: '#faeade', fontFamily: "'Arial', sans-serif" }}
+        style={{ backgroundColor: '#faeade',  }}
       >
         {/* Hero with parallax for quiz page */}
         <motion.div
