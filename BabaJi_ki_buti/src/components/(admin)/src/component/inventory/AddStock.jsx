@@ -309,7 +309,7 @@ export default function AddStock() {
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md flex items-center justify-center gap-2"
                 >
                   <Package className="h-4 w-4" />
-                  Add Stock
+                  Add Stocks
                 </button>
               </div>
             )}
