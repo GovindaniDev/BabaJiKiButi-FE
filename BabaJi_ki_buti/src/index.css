@@ -1,13 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Antonio:wght@100..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Antonio:wght@100..700&display=swap"); 
 @import "tailwindcss";
 
-@font-face {
-  font-family: Arial, sans-serif !important;
-  src: url("/fonts/arial.ttf");
-}
-html {
-  @apply font-sans;
-}
+
 @theme {
   --color-black: #222123;
   --color-main-bg: #232224;
@@ -30,8 +24,8 @@ body {
   padding: 0;
   box-sizing: border-box;
   background-color: #faeade;
-  color: #523122;
-  font-family: "Antonio", sans-serif;
+  color: black;
+  font-family: "Arial", sans-serif;
   overflow-x: hidden;
   scroll-behavior: smooth;
   scrollbar-width: none; /* Firefox */
@@ -66,36 +60,69 @@ body::-webkit-scrollbar {
   }
 
   .hero-container {
-    @apply relative bg-milk w-screen h-dvh overflow-hidden;
+  color: #523122;
+  font-family: "Antonio", sans-serif;
+  @apply relative bg-milk w-screen h-dvh overflow-hidden;
 
-    .hero-content {
-      @apply relative z-10 w-full h-full flex flex-col 2xl:justify-center items-center translate-y-10 2xl:pt-0 md:pt-32 pt-24;
+  .hero-content {
+    @apply relative z-10 w-full h-full flex flex-col 2xl:justify-center items-center translate-y-10 2xl:pt-0 md:pt-32 pt-24;
 
-      .hero-title {
-        @apply text-dark-brown 2xl:text-[8.5rem] md:text-[6.5rem] text-[3.3rem] font-bold uppercase leading-[9vw] tracking-[-.35vw] 2xl:mb-0 mb-5;
+    /* HERO TITLE — smaller & tighter on mobile */
+    .hero-title {
+      @apply text-dark-brown font-bold uppercase tracking-[-.25vw];
+      font-size: clamp(1.8rem, 6vw, 6.5rem); /* responsive scale */
+      line-height: 1.05; /* keeps spacing tight */
+      margin-bottom: 1rem;
+    }
+
+    /* HERO SCROLL — reduced text size and spacing */
+    .hero-text-scroll {
+      @apply rotate-[-2deg] mb-6 border-[.4vw] border-milk;
+
+      .hero-subtitle {
+        @apply bg-mid-brown;
       }
 
-      .hero-text-scroll {
-        @apply rotate-[-3deg] mb-8 border-[.5vw] border-milk;
-
-        .hero-subtitle {
-          @apply bg-mid-brown;
-        }
-
-        h1 {
-          @apply uppercase 2xl:text-[8.5rem] md:text-[6.5rem] text-[3.3rem] font-bold text-[#fce1cd] leading-[9vw] tracking-[-.35vw] 2xl:px-[1.2vw] px-3 2xl:pb-[1vw] pb-5 2xl:py-0 py-3;
-        }
-      }
-
-      h2 {
-        @apply font-paragraph text-dark-brown text-center md:max-w-lg max-w-sm px-5 md:text-lg leading-[115%] mt-3;
-      }
-
-      .hero-button {
-        @apply md:mt-16 mt-10 text-dark-brown bg-light-brown uppercase font-bold text-lg rounded-full md:p-5 p-3 md:px-16 px-10;
+      h1 {
+        @apply uppercase font-bold text-[#fce1cd];
+        font-size: clamp(1.8rem, 7vw, 8.5rem); /* responsive scaling */
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        padding: clamp(0.5rem, 2vw, 1rem) clamp(0.8rem, 3vw, 1.2rem);
       }
     }
+
+    /* HERO PARAGRAPH TEXT */
+    h2 {
+      @apply font-paragraph text-dark-brown text-center md:max-w-lg max-w-sm px-5 md:text-lg text-base leading-[115%] mt-3;
+    }
+
+    /* HERO BUTTON — same size on desktop, smaller on phones */
+    .hero-button {
+      @apply text-dark-brown bg-light-brown uppercase font-bold rounded-full;
+      font-size: clamp(0.9rem, 1.8vw, 1.25rem);
+      padding: clamp(0.5rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2.5rem);
+      margin-top: clamp(1.5rem, 4vw, 4rem);
+    }
   }
+}
+
+/* Extra fine-tune for very small screens (≤ 400px width) */
+@media (max-width: 400px) {
+  .hero-container .hero-content .hero-title {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .hero-container .hero-content .hero-text-scroll h1 {
+    font-size: 2.4rem;
+  }
+
+  .hero-container .hero-content .hero-button {
+    font-size: 0.85rem;
+  }
+}
+
 
   .message-content {
     @apply bg-[#7f3b2d] text-milk min-h-dvh overflow-hidden flex justify-center items-center relative z-20;
@@ -127,9 +154,12 @@ body::-webkit-scrollbar {
     }
   }
 
-  .flavor-section {
+ .flavor-section {
+  
     @apply min-h-dvh bg-milk;
 
+    color: #523122;
+  font-family: "Antonio", sans-serif;
     .flavor-text-scroll {
       @apply rotate-[-3deg] md:translate-y-5 border-[.5vw] border-milk absolute z-10;
     }

@@ -11,7 +11,7 @@ export default function AdminShell() {
   const contentLeftClass = sidebarOpen ? "ml-54" : "ml-20"; // match sidebar width
 
   return (
-    <div className="min-h-screen bg-gray-50 font-semibold" style={{ fontFamily: "'Arial', sans-serif" }}>
+    <div className="min-h-screen bg-gray-50 font-semibold">
       {/* Fixed Sidebar (sticks to the left, full height) */}
       <aside className={`fixed inset-y-0 left-0 z-40 ${sideWidthClass} bg-white`}>
         {/* If your Sidebar doesn't accept a className, wrapping it like this is fine */}
