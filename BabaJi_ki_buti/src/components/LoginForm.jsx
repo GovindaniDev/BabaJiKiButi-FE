@@ -35,7 +35,7 @@ const handleSubmit = async (e) => {
     // Otherwise, run your normal login flow
     const res = await login(email.trim(), password, rememberMe);
 
-if (email.trim() === "yash@gmail.com" && password === "123456") {
+if (email.trim() === "admin@gmail.com" && password === "admin123") {
     toast.success("Welcome, Admin!", { duration: 4000 });
     //setUser({ email: "admin@gmail.com", role: "admin", name: "Admin" });
     navigate("/admin", { replace: true });

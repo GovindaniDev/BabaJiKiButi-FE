@@ -11,13 +11,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
        '/api': {
-        target: 'http://127.0.0.1:8090',   // <-- your Spring host:port
+        target: 'http://127.0.0.1:8080',   // <-- your Spring host:port
         changeOrigin: true,
         // ws: true,
         // rewrite: (path) => path,         // no rewrite needed
       },
       "/auth": {
-        target: "http://127.0.0.1:8090",       // ✅ host:port only
+        target: "http://127.0.0.1:8080",       // ✅ host:port only
         changeOrigin: true,
         secure: false,
         
