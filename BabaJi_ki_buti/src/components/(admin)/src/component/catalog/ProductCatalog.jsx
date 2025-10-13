@@ -1,308 +1,388 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Plus, 
-  Bell, 
-  Menu,
+// src/pages/ProductCatalog.jsx
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Search,
+  Plus,
   ChevronDown,
-  MoreVertical,
-  Filter,
+  Pencil,
+  Trash2,
   Package,
-  Eye,
-  TrendingUp,
-  DollarSign,
-  Box
+  X
 } from 'lucide-react';
+import { app } from '../../../../../auth/httpAPI';
 
 export default function ProductCatalog() {
+  // ------- UI state -------
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All Status');
-  const [categoryFilter, setCategoryFilter] = useState('All Categories');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('All Status'); // ACTIVE | INACTIVE | DRAFT
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
 
-  const [products, setProducts] = useState([
-    {
-      id: 1,
-      name: 'Ashwagandha Capsules',
-      code: 'ASH-CAP-500',
-      image: '/images/box.svg',
-      status: 'Published',
-      category: 'Capsules',
-      variants: 3,
-      priceRange: '₹450 - ₹850',
-      stock: 'High',
-      updated: new Date(Date.now() - 2 * 3600000)
-    },
-    {
-      id: 2,
-      name: 'Triphala Powder',
-      code: 'TRI-POW-100',
-      image: '/images/box.svg',
-      status: 'Draft',
-      category: 'Powders',
-      variants: 2,
-      priceRange: '₹280 - ₹520',
-      stock: 'Low',
-      updated: new Date(Date.now() - 24 * 3600000)
-    },
-    {
-      id: 3,
-      name: 'Brahmi Oil',
-      code: 'BRA-OIL-50',
-      image: '/images/box.svg',
-      status: 'Scheduled',
-      category: 'Oils',
-      variants: 1,
-      priceRange: '₹650',
-      stock: 'Medium',
-      updated: new Date(Date.now() - 3 * 3600000)
-    },
-    {
-      id: 4,
-      name: 'Triphala Powder',
-      code: 'TRI-POW-100',
-      image: '/images/box.svg',
-      status: 'Draft',
-      category: 'Powders',
-      variants: 2,
-      priceRange: '₹280 - ₹520',
-      stock: 'Low',
-      updated: new Date(Date.now() - 24 * 3600000)
-    },
-    {
-      id: 5,
-      name: 'Brahmi Oil',
-      code: 'BRA-OIL-50',
-      image: '/images/box.svg',
-      status: 'Scheduled',
-      category: 'Oils',
-      variants: 1,
-      priceRange: '₹650',
-      stock: 'Medium',
-      updated: new Date(Date.now() - 3 * 3600000)
-    }
-  ]);
+  // ------- Data -------
+  const [rows, setRows] = useState([]);
 
-  const stats = {
-    totalProducts: 247,
-    totalChange: '+12 from last month',
-    published: 189,
-    publishedPercent: '76% of total products',
-    lowStock: 23,
-    lowStockNote: 'Requires attention',
-    avgPrice: '₹485',
-    avgPriceNote: 'Across all variants'
-  };
-
-  const getRelativeTime = (date) => {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Published': return 'bg-green-100 text-green-700';
-      case 'Draft': return 'bg-gray-100 text-gray-700';
-      case 'Scheduled': return 'bg-orange-100 text-orange-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStockColor = (stock) => {
-    switch (stock) {
-      case 'High': return 'bg-green-100 text-green-700';
-      case 'Medium': return 'bg-orange-100 text-orange-700';
-      case 'Low': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         product.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All Status' || product.status === statusFilter;
-    const matchesCategory = categoryFilter === 'All Categories' || product.category === categoryFilter;
-    
-    return matchesSearch && matchesStatus && matchesCategory;
+  // ------- Edit modal state (only these 4 fields) -------
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    status: 'ACTIVE',
+    sellingPrice: '',
+    stock: '',
+    titleEn: ''
   });
+  const resetEdit = () => {
+    setEditOpen(false);
+    setEditingId(null);
+    setEditForm({ status: 'ACTIVE', sellingPrice: '', stock: '', titleEn: '' });
+  };
+
+  // ------- Helpers to normalize backend DTO fields -------
+  const normalize = (p) => {
+    const id = p.productId ?? p.id;
+    const title = p.titleEn ?? p.title ?? p.name ?? '—';
+    const price = p.price ?? p.mrp ?? p.listPrice ?? null;
+    const sellingPrice = p.sellingPrice ?? p.salePrice ?? null;
+    const stock = p.stock ?? p.availableStock ?? p.quantity ?? 0;
+    const status = p.status ?? p.productStatus ?? 'DRAFT';
+    return { ...p, _id: id, _title: title, _price: price, _sellingPrice: sellingPrice, _stock: stock, _status: status };
+  };
+
+  // ------- Loaders -------
+  const fetchAll = async () => {
+    setLoading(true); setErr('');
+    try {
+      const { data } = await app.get('/products/all');
+      const list = (data?.data ?? []).map(normalize);
+      setRows(list);
+    } catch (e) {
+      console.log('Request URL:', (e?.config?.baseURL || '') + (e?.config?.url || ''));
+      setErr(e?.response?.data?.message || e.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchByStatus = async (status) => {
+    setLoading(true); setErr('');
+    try {
+      const { data } = await app.get(`/products/status/${status}?page=0&size=200`);
+      const page = data?.data;
+      const list = (page?.content ?? []).map(normalize);
+      setRows(list);
+    } catch (e) {
+      console.log('Request URL:', (e?.config?.baseURL || '') + (e?.config?.url || ''));
+      setErr(e?.response?.data?.message || e.message || 'Failed to load by status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchApi = async (q) => {
+    setLoading(true); setErr('');
+    try {
+      const { data } = await app.get(`/products/search?q=${encodeURIComponent(q)}&page=0&size=200`);
+      const page = data?.data;
+      const list = (page?.content ?? []).map(normalize);
+      setRows(list);
+    } catch (e) {
+      console.log('Request URL:', (e?.config?.baseURL || '') + (e?.config?.url || ''));
+      setErr(e?.response?.data?.message || e.message || 'Failed to search products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ------- Effects -------
+  useEffect(() => { fetchAll(); }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const q = searchQuery.trim();
+      if (q.length > 0) {
+        searchApi(q);
+      } else {
+        if (statusFilter === 'All Status') fetchAll();
+        else fetchByStatus(statusFilterToEnum(statusFilter));
+      }
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  // Status filter changes
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (statusFilter === 'All Status') {
+      if (q) searchApi(q); else fetchAll();
+    } else {
+      fetchByStatus(statusFilterToEnum(statusFilter));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
+  // ------- Mapping for UI labels to enum path -------
+  function statusFilterToEnum(label) {
+    switch (label) {
+      case 'ACTIVE': return 'ACTIVE';
+      case 'INACTIVE': return 'INACTIVE';
+      case 'DRAFT': return 'DRAFT';
+      default: return 'ACTIVE';
+    }
+  }
+
+  // ------- Delete -------
+  const onDelete = async (row) => {
+    const id = row._id;
+    if (!id) return;
+    const ok = window.confirm(`Delete "${row._title}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await app.delete(`/products/${id}`);
+      setRows(prev => prev.filter(r => r._id !== id));
+    } catch (e) {
+      console.log('Request URL:', (e?.config?.baseURL || '') + (e?.config?.url || ''));
+      alert(e?.response?.data?.message || e.message || 'Delete failed');
+    }
+  };
+
+  // ------- Edit -------
+  const openEdit = (row) => {
+    setEditingId(row._id);
+    setEditForm({
+      status: row._status ?? 'ACTIVE',
+      sellingPrice: row._sellingPrice ?? '',
+      stock: row._stock ?? '',
+      titleEn: row._title ?? ''
+    });
+    setEditOpen(true);
+  };
+
+  const onEditSave = async () => {
+    if (!editingId) return;
+    const payload = {
+      status: editForm.status,
+      sellingPrice: Number(editForm.sellingPrice),
+      stock: Number(editForm.stock),
+      titleEn: editForm.titleEn
+    };
+
+    try {
+      const { data } = await app.put(`/products/${editingId}`, payload);
+      const updated = normalize(data?.data ?? {});
+      setRows(prev => prev.map(r => (r._id === editingId ? { ...r, ...updated } : r)));
+      resetEdit();
+    } catch (e) {
+      console.log('Request URL:', (e?.config?.baseURL || '') + (e?.config?.url || ''));
+      alert(e?.response?.data?.message || e.message || 'Update failed');
+    }
+  };
+
+  // ------- Derived (server does filtering) -------
+  const filtered = useMemo(() => rows, [rows]);
 
   return (
-   <>
-     <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Product Catalog</h1>
-            <p className="text-gray-600">Manage your Ayurveda products, variants, and inventory</p>
-          </div>
-          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2
-           font-medium transition-colors" onClick={()=>window.location.href="catalog/addProdPage"}>
-            <Plus className="w-5 h-5" />
-            <span>Add Product</span>
-          </button>
+    <>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">Product Catalog</h1>
+          <p className="text-gray-600">Manage products, pricing and stock</p>
+        </div>
+        <button
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-medium transition-colors"
+          onClick={() => (window.location.href = 'catalog/addProdPage')}
+        >
+          <Plus className="w-5 h-5" />
+          <span>Add Product</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex items-center gap-3">
+        <div className="flex items-center space-x-2 flex-1 max-w-xl bg-gray-50 px-3 py-2 rounded-lg">
+          <Search className="w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name, code, slug…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 outline-none text-sm text-gray-700 bg-transparent"
+          />
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-600">Total Products</span>
-              <Package className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.totalProducts}</div>
-            <div className="text-sm text-green-600">{stats.totalChange}</div>
-          </div>
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option>All Status</option>
+            <option>ACTIVE</option>
+            <option>INACTIVE</option>
+            <option>DRAFT</option>
+          </select>
+          <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+        </div>
+      </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-600">Published</span>
-              <Eye className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.published}</div>
-            <div className="text-sm text-gray-500">{stats.publishedPercent}</div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-600">Low Stock</span>
-              <Box className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.lowStock}</div>
-            <div className="text-sm text-red-600">{stats.lowStockNote}</div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-600">Avg. Price</span>
-              <DollarSign className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stats.avgPrice}</div>
-            <div className="text-sm text-gray-500">{stats.avgPriceNote}</div>
-          </div>
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">Products</h2>
         </div>
 
-        {/* Products Section */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          {/* Section Header */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Products</h2>
-            <p className="text-sm text-gray-600">Search and filter your product catalog</p>
-          </div>
+        {err && (
+          <div className="px-6 py-3 text-sm text-red-600 border-b border-gray-200">{err}</div>
+        )}
 
-          {/* Filters */}
-          <div className="p-4 border-b border-gray-200 flex items-center space-x-4">
-            <div className="flex items-center space-x-2 flex-1 max-w-md bg-gray-50 px-3 py-2 rounded-lg">
-              <Search className="w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 outline-none text-sm text-gray-600 bg-transparent"
-              />
-            </div>
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Selling Price</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
 
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option>All Status</option>
-                <option>Published</option>
-                <option>Draft</option>
-                <option>Scheduled</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option>All Categories</option>
-                <option>Capsules</option>
-                <option>Powders</option>
-                <option>Oils</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            <button className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Filter className="w-4 h-4" />
-              <span>More Filters</span>
-            </button>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Variants</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price Range</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Updated</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-2xl">
-                        <img src={product.image} alt="" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900">{product.name}</div>
-                      <div className="text-sm text-gray-500">{product.code}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                        {product.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{product.category}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{product.variants} variants</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{product.priceRange}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStockColor(product.stock)}`}>
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{getRelativeTime(product.updated)}</td>
-                    <td className="px-6 py-4">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreVertical className="w-4 h-4 text-gray-600" />
+          <tbody className="divide-y divide-gray-200">
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">Loading…</td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-12">
+                  <div className="text-center">
+                    <Package className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <div className="text-gray-600">No products found</div>
+                    <div className="text-sm text-gray-500">Try changing filters or search</div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filtered.map((row) => (
+                <tr key={row._id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-semibold text-gray-900">{row._title}</div>
+                    <div className="text-xs text-gray-500">ID: {row._id}</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{row._price != null ? `₹${row._price}` : '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{row._sellingPrice != null ? `₹${row._sellingPrice}` : '—'}</td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {row._stock ?? 0}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium
+                      ${row._status === 'ACTIVE' ? 'bg-green-100 text-green-700'
+                      : row._status === 'INACTIVE' ? 'bg-gray-200 text-gray-700'
+                      : 'bg-orange-100 text-orange-700'}`}>
+                      {row._status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 hover:bg-gray-100"
+                        onClick={() => openEdit(row)}
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Edit
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border border-red-200 text-red-700 hover:bg-red-50"
+                        onClick={() => onDelete(row)}
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          {/* Empty State */}
-          {filteredProducts.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">No products found</p>
-              <p className="text-sm text-gray-500">Try adjusting your search or filters</p>
+      {/* ------- Edit Modal ------- */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={resetEdit} />
+          <div className="relative bg-white w-full max-w-lg rounded-2xl shadow-xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Product</h3>
+              <button className="p-2 hover:bg-gray-100 rounded-lg" onClick={resetEdit}><X className="w-5 h-5" /></button>
             </div>
-          )}
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title (English)</label>
+                <input
+                  type="text"
+                  value={editForm.titleEn}
+                  onChange={(e) => setEditForm(f => ({ ...f, titleEn: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Amrit Ayu Chyawanprash (Updated)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                  <option value="DRAFT">DRAFT</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.sellingPrice}
+                    onChange={(e) => setEditForm(f => ({ ...f, sellingPrice: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="329.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                  <input
+                    type="number"
+                    value={editForm.stock}
+                    onChange={(e) => setEditForm(f => ({ ...f, stock: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="150"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button className="px-4 py-2 rounded-lg border hover:bg-gray-50" onClick={resetEdit}>Cancel</button>
+              <button
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={onEditSave}
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
-   </>
+      )}
+    </>
   );
 }

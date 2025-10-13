@@ -1,3 +1,4 @@
+// InventoryManagement.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Search,
@@ -9,18 +10,21 @@ import {
   Filter,
 } from "lucide-react";
 
-// If you already have an axios instance like in AddStock.jsx, reuse it:
+// ✅ use the axios instance that targets /api (as you shared)
 import { app } from '../../../../../auth/httpAPI';
 
 /**
- * Expected backend shape (one row per stock movement):
+ * Backend: GET /api/products/stock
+ * Response: ApiResponse<Page<StockInventoryDto>>
+ * StockInventoryDto:
  * {
  *   stockInventoryId: number,
- *   product: { productId, title, slug, sku }, // sku optional depending on your Product
+ *   productId: number,
+ *   productName: string,
  *   previousStock: number,
  *   addedStock: number,
  *   availableStock: number,
- *   statusAfter: "LOW" | "ADEQUATE" | "OUT_OF_STOCK" | ... (ProductStatus enum),
+ *   statusAfter: "DRAFT" | "ACTIVE" | "INACTIVE" | "LOW_STOCK",
  *   addedAt: "2025-10-06T12:34:56+05:30"
  * }
  */
@@ -31,27 +35,25 @@ export default function InventoryManagement() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // filters
+  // filters (client-side)
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [fromDate, setFromDate] = useState(""); // yyyy-mm-dd
   const [toDate, setToDate] = useState("");     // yyyy-mm-dd
 
-  // pagination (works even if your API returns a flat list)
+  // pagination (server-provided)
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [totalElements, setTotalElements] = useState(0);
 
   // -------- helpers --------
   const getId = (r) => r?.stockInventoryId ?? r?.id;
-  const getTitle = (r) =>
-    r?.product?.title ?? r?.product?.name ?? r?.productName ?? "—";
-  const getSku = (r) => r?.product?.sku ?? r?.product?.slug ?? "—";
+  const getTitle = (r) => r?.productName ?? "—";
+  const getSku = () => "—"; // DTO has no SKU; leave placeholder
 
   const formatDateTime = (iso) => {
     try {
       const d = new Date(iso);
-      // Show local date & time in a compact format
       return d.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
@@ -64,70 +66,48 @@ export default function InventoryManagement() {
     }
   };
 
+  // ✅ Status badge strictly per your enum; overall app uses green/black,
+  // and we use additional colors *only* for status as requested.
   const statusBadge = (status) => {
     const base =
-      "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium";
-    switch ((status || "").toUpperCase()) {
-      case "LOW":
-      case "LOW_STOCK":
-        return <span className={`${base} bg-red-100 text-red-800`}>Low</span>;
-      case "OUT_OF_STOCK":
-        return (
-          <span className={`${base} bg-gray-200 text-gray-800`}>
-            Out of stock
-          </span>
-        );
-      case "ADEQUATE":
-      case "IN_STOCK":
-      default:
-        return (
-          <span className={`${base} bg-green-100 text-green-800`}>
-            Adequate
-          </span>
-        );
+      "inline-flex items-center px-3 py-1 rounded-full text-xs md:text-sm font-medium";
+    const s = (status || "").toUpperCase();
+
+    if (s === "ACTIVE") {
+      return <span className={`${base} bg-green-100 text-green-800`}>ACTIVE</span>;
     }
+    if (s === "LOW_STOCK") {
+      return <span className={`${base} bg-red-100 text-red-800`}>LOW_STOCK</span>;
+    }
+    if (s === "INACTIVE") {
+      return <span className={`${base} bg-black text-white`}>INACTIVE</span>;
+    }
+    if (s === "DRAFT") {
+      return <span className={`${base} bg-gray-200 text-gray-800`}>DRAFT</span>;
+    }
+    return <span className={`${base} bg-black text-white`}>{status || "—"}</span>;
   };
 
   // -------- fetch from backend --------
   const fetchData = async () => {
     setLoading(true);
     setErr("");
-
     try {
-      // Adjust this endpoint to your actual mapping (examples):
-      // - GET /api/stock-inventory?page=0&size=20&status=LOW&from=2025-10-01&to=2025-10-07&search=ashwa
-      // - or GET /api/stock-inventory (flat list)
-      const params = {
-        page,
-        size,
-      };
+      const params = { page, size };
+      const { data } = await app.get("/products/stock", { params });
 
-      if (statusFilter && statusFilter !== "All Status") {
-        params.status = statusFilter;
-      }
-      if (fromDate) params.from = fromDate;
-      if (toDate) params.to = toDate;
-      if (searchQuery) params.search = searchQuery;
+      // ApiResponse<Page<StockInventoryDto>>
+      const content =
+        data?.data?.content ??
+        data?.content ??
+        (Array.isArray(data) ? data : []);
+      const total =
+        data?.data?.totalElements ??
+        data?.totalElements ??
+        content.length;
 
-      const { data } = await app.get("/api/stock-inventory", { params });
-
-      // Support both pageable and non-pageable responses
-      if (Array.isArray(data)) {
-        setRows(data);
-        setTotalElements(data.length);
-      } else if (Array.isArray(data?.content)) {
-        setRows(data.content);
-        setTotalElements(data.totalElements ?? data.content.length);
-      } else if (Array.isArray(data?.data?.content)) {
-        // if you wrap responses like { data: { content: [], totalElements: n } }
-        setRows(data.data.content);
-        setTotalElements(data.data.totalElements ?? data.data.content.length);
-      } else {
-        // last resort: assume { data: [] }
-        const list = Array.isArray(data?.data) ? data.data : [];
-        setRows(list);
-        setTotalElements(list.length);
-      }
+      setRows(Array.isArray(content) ? content : []);
+      setTotalElements(Number.isFinite(total) ? total : 0);
     } catch (e) {
       console.error(e);
       setErr(
@@ -157,23 +137,27 @@ export default function InventoryManagement() {
     return counts;
   }, [rows]);
 
+  const activeCount = statusCounts.ACTIVE ?? 0;
+  const lowStockCount = statusCounts.LOW_STOCK ?? 0;
+  const draftCount = statusCounts.DRAFT ?? 0;
+  const inactiveCount = statusCounts.INACTIVE ?? 0;
+
   // -------- client filters (on already loaded page) --------
   const filtered = rows.filter((r) => {
     const q = searchQuery.trim().toLowerCase();
+
     const matchSearch =
       !q ||
       getTitle(r).toLowerCase().includes(q) ||
-      String(getSku(r)).toLowerCase().includes(q);
+      String(r.productId ?? "").toLowerCase().includes(q);
 
     const matchStatus =
       statusFilter === "All Status" ||
       (r.statusAfter || "").toUpperCase() === statusFilter.toUpperCase();
 
     const addedDate = r.addedAt ? new Date(r.addedAt) : null;
-    const matchFrom = fromDate ? addedDate >= new Date(fromDate) : true;
-    const matchTo = toDate
-      ? addedDate <= new Date(`${toDate}T23:59:59`)
-      : true;
+    const matchFrom = fromDate ? (addedDate ? addedDate >= new Date(fromDate) : false) : true;
+    const matchTo = toDate ? (addedDate ? addedDate <= new Date(`${toDate}T23:59:59`) : false) : true;
 
     return matchSearch && matchStatus && matchFrom && matchTo;
   });
@@ -205,7 +189,7 @@ export default function InventoryManagement() {
               // Simple CSV export of currently filtered rows
               const header = [
                 "Product",
-                "SKU",
+                "ProductId",
                 "Previous",
                 "Added",
                 "Available",
@@ -217,7 +201,7 @@ export default function InventoryManagement() {
                 ...filtered.map((r) =>
                   [
                     `"${getTitle(r).replaceAll('"', '""')}"`,
-                    `"${String(getSku(r)).replaceAll('"', '""')}"`,
+                    r.productId ?? "",
                     r.previousStock ?? 0,
                     r.addedStock ?? 0,
                     r.availableStock ?? 0,
@@ -241,7 +225,7 @@ export default function InventoryManagement() {
           </button>
 
           <button
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-medium transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-medium transition-colors"
             onClick={() => (window.location.href = "catalog/addProdPage")}
           >
             <Plus className="w-5 h-5" />
@@ -280,24 +264,19 @@ export default function InventoryManagement() {
 
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600">Adequate</h3>
+            <h3 className="text-sm font-medium text-gray-600">ACTIVE</h3>
             <RefreshCw className="w-5 h-5 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {statusCounts.ADEQUATE ?? statusCounts.IN_STOCK ?? 0}
-          </div>
+          <div className="text-3xl font-bold text-gray-900">{activeCount}</div>
           <p className="text-sm text-gray-500 mt-1">Latest status after add</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600">Low / OOS</h3>
+            <h3 className="text-sm font-medium text-gray-600">LOW_STOCK</h3>
             <RefreshCw className="w-5 h-5 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
-            {(statusCounts.LOW ?? statusCounts.LOW_STOCK ?? 0) +
-              (statusCounts.OUT_OF_STOCK ?? 0)}
-          </div>
+          <div className="text-3xl font-bold text-gray-900">{lowStockCount}</div>
           <p className="text-sm text-gray-500 mt-1">Needs attention</p>
         </div>
       </div>
@@ -318,17 +297,17 @@ export default function InventoryManagement() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by product or SKU…"
+                placeholder="Search by product or ID…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-green-600"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
             >
               {statusOptions.map((s) => (
                 <option key={s} value={s}>
@@ -434,7 +413,9 @@ export default function InventoryManagement() {
                       <div className="font-medium text-gray-900">
                         {getTitle(r)}
                       </div>
-                      <div className="text-sm text-gray-500">{getSku(r)}</div>
+                      <div className="text-sm text-gray-500">
+                        ID: {r.productId ?? "—"} {getSku(r) !== "—" ? `• ${getSku(r)}` : ""}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-900 font-medium">
                       {r.previousStock ?? 0}
