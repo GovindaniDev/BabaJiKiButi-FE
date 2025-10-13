@@ -19,7 +19,7 @@ import SignUpPage from "./page/register/SignUpPage";
 import Loading from "./components/loading";
 import { useEffect, useState } from "react";
 import PrivacySection from "./page/privacy/PrivacyPage";
-import ReturnRefundSection from "./page/return/ReturnRefundPage";
+import ReturnRefundSection from "./page/returns/ReturnRefundPage";
 import TermSection from "./page/terms/TermPage";
 import ContactPage from "./page/contact/ContactPage";
 import AboutPage from "./page/about/AboutPage";
@@ -45,6 +45,8 @@ import OrderPage from "./page/admin/orders/OrderPage";
 import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
 import PDPpage from "./page/shopNow/products/PDPpage";
+import ReturnPage from "./page/admin/return/ReturnPage";
+
 import AddStockPage from "./page/admin/inventory/AddStockPage";
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -118,19 +120,21 @@ const App = () => {
           <Route path="/service/therapy" element={<TherapyPage />} />        
 
        
-     {/*  your existing guard  */}
-  <Route path="/admin" element={<AdminShell />}>
-    <Route index element={<DashboardBody />} />
-    <Route path="catalog" element={<CatalogPage />} />
-    <Route path="inventory" element={<InventoryPage />} />
-    <Route path="pricing" element={<PricingPage />} />
-    <Route path="orders" element={<OrderPage />} />
-    <Route path="catalog/AddProdPage" element={<AddProductPage/>}/>
-    <Route path="inventory/addStock" element={<AddStockPage/>}/>
-    {/*  more admin pages …  */}
-  </Route>
+ 
 
           
+          {/* Admin (guarded by AdminShell layout) */}
+          <Route path="/admin" element={<AdminShell />}>
+            <Route index element={<DashboardBody />} />
+            <Route path="catalog" element={<CatalogPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="pricing" element={<PricingPage />} />
+            <Route path="orders" element={<OrderPage />} />
+            <Route path="catalog/AddProdPage" element={<AddProductPage />} />
+            <Route path="returns" element={<ReturnPage/>}/>
+              <Route path="inventory/addStock" element={<AddStockPage/>}/>
+            {/* more admin pages … */}
+          </Route>
 
           {/* Authed-only */}
           <Route element={<ProtectedRoute />}>

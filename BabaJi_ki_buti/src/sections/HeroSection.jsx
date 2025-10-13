@@ -7,7 +7,7 @@ import { useMediaQuery } from "react-responsive";
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
 // News Ticker Component
-const InfiniteNewsTicker = () => {
+export const InfiniteNewsTicker = () => {
   const announcements = [
     "🚨 BREAKING NEWS!!! 💸 GST PRICE CUT UP TO 12% ON MRP",
     "🪔 Diwali Hampers & Snacks → 15% OFF with SHUDDH15",
@@ -17,7 +17,7 @@ const InfiniteNewsTicker = () => {
   ];
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 w-full bg-gradient-to-r from-[#d4a574] via-[#c69463] to-[#d4a574] overflow-hidden"  style={{ fontFamily: "'Arial', sans-serif" }}>
+    <div className="fixed top-0 left-0 right-0 z-40 w-full bg-gradient-to-r from-[#d4a574] via-[#c69463] to-[#d4a574] overflow-hidden" >
       {/* Gradient edges for fade effect */}
       <div className="absolute left-0 top-0 bottom-0 w-8 md:w-16 bg-gradient-to-r from-[#d4a574] to-transparent z-10 pointer-events-none"></div>
       <div className="absolute right-0 top-0 bottom-0 w-8 md:w-16 bg-gradient-to-l from-[#d4a574] to-transparent z-10 pointer-events-none"></div>

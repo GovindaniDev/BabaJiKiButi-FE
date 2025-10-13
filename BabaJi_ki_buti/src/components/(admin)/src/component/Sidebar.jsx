@@ -11,11 +11,11 @@ const navItems = [
   { title: 'Customers', url: '/admin/customers' },
   { title: 'Subscriptions & Loyalty', url: '/admin/subscriptions' },
   { title: 'Wallet & Referrals', url: '/admin/wallet' },
-  { title: 'Bundles & Recommendations', url: '/admin/bundles' },
+  // { title: 'Bundles & Recommendations', url: '/admin/bundles' },
   { title: 'Reviews & Q&A', url: '/admin/reviews' },
   { title: 'B2B', url: '/admin/b2b' },
   { title: 'Campaigns & Engagement', url: '/admin/campaigns' },
-  { title: 'Content', url: '/admin/content' },
+  //{ title: 'Content', url: '/admin/content' },
   { title: 'Reports', url: '/admin/reports' },
 ];
 
