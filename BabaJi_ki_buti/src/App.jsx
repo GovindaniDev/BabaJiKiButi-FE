@@ -120,7 +120,12 @@ const App = () => {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
+        
 
+       
+ 
+
+          
           {/* Admin (guarded by AdminShell layout) */}
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<DashboardBody />} />

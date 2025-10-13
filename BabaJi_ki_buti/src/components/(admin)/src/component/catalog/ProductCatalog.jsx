@@ -4,6 +4,7 @@ import { Search, Plus, ChevronDown, Filter, Package, Eye, DollarSign, Box, MoreV
 import { getAllProducts } from '../../../../../auth/product/products';
 
 export default function ProductCatalog() {
+  // ------- UI state -------
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
