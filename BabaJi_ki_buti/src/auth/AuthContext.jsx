@@ -1,4 +1,3 @@
-// src/auth/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -14,28 +13,75 @@ import {
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
 
+/* ------------------------------ helpers ------------------------------ */
+const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+
+const normalizeRoles = (claims) => {
+  const buckets = [
+    claims?.roles,
+    claims?.role,
+    claims?.authorities,
+    claims?.permissions,
+    claims?.scopes,
+    claims?.scope,
+    claims?.["cognito:groups"],
+    claims?.realm_access?.roles,
+    claims?.resource_access?.account?.roles,
+  ];
+
+  let raw = buckets
+    .flatMap((b) => {
+      if (!b) return [];
+      if (typeof b === "string") return b.split(/[,\s]+/);
+      return toArray(b);
+    })
+    .filter(Boolean)
+    .map(String);
+
+  const norm = raw.map((r) => r.trim().toLowerCase().replace(/^role[_: -]?/i, ""));
+  return Array.from(new Set(norm));
+};
+
+const resolveUserFromJWT = (access) => {
+  if (!access) return null;
+  try {
+    const p = jwtDecode(access);
+    const roles = normalizeRoles(p);
+    return {
+      id: p.sub,
+      email: p.email,
+      name: p.name || p.username || null,
+      roles,
+      exp: p.exp,
+      iat: p.iat,
+      jti: p.jti,
+    };
+  } catch {
+    return null;
+  }
+};
+
+/** Always write appSession to localStorage */
+const writeAppSession = (sessionId) => {
+  if (!sessionId || typeof window === "undefined") return;
+  localStorage.setItem(
+    "appSession",
+    JSON.stringify({
+      sessionId,
+      startedAtUtc: new Date().toISOString(),
+      startedAtLocal: new Date().toString(),
+      storage: "local", // fixed to local
+    })
+  );
+  window.dispatchEvent(new Event("appSession:updated"));
+};
+
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const resolveUserFromJWT = (access) => {
-    if (!access) return null;
-    try {
-      const p = jwtDecode(access);
-      return {
-        id: p.sub,
-        email: p.email,
-        name: p.name || p.username || null,
-        roles: p.roles || [],
-        exp: p.exp,
-        iat: p.iat,
-        jti: p.jti,
-      };
-    } catch {
-      return null;
-    }
-  };
-
+  // Boot: if no AT but have RT, refresh; token storage still honors remember,
+  // but appSession is ALWAYS stored in localStorage.
   useEffect(() => {
     (async () => {
       try {
@@ -47,25 +93,18 @@ export default function AuthProvider({ children }) {
             return;
           }
           try {
+            const hadLocalRT =
+              typeof window !== "undefined" && !!localStorage.getItem("refreshToken");
+            const rememberNow = hadLocalRT;
+
             const res = await api.post("/refresh", { refreshToken: rt });
             const payload = res?.data?.data ?? res?.data;
 
-            if (payload?.accessToken) setAccessToken(payload.accessToken, true);
-            if (payload?.refreshToken) setRefreshToken(payload.refreshToken, true);
+            if (payload?.accessToken) setAccessToken(payload.accessToken, rememberNow);
+            if (payload?.refreshToken) setRefreshToken(payload.refreshToken, rememberNow);
 
             if (payload?.sessionId) {
-              localStorage.setItem(
-                "appSession",
-                JSON.stringify({
-                  sessionId: payload.sessionId,
-                  startedAtUtc: new Date().toISOString(),
-                  startedAtLocal: new Date().toString(),
-                  storage: "local",
-                })
-              );
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new Event("appSession:updated"));
-              }
+              writeAppSession(payload.sessionId); // <-- always localStorage
             }
           } catch {
             setUser(null);
@@ -83,54 +122,7 @@ export default function AuthProvider({ children }) {
     })();
   }, []);
 
-  const safeString = (v) =>
-    typeof v === "string" ? v.trim() : "";
-
-  const pickServerMessage = (err) => {
-    const status = err?.response?.status ?? 0;
-    // Axios usually parses JSON; if not, we’ll check responseText below.
-    const data = err?.response?.data;
-
-    const fieldErrors =
-      safeString(err?.response?.data?.errors?.password) ||
-      safeString(err?.response?.data?.errors?.email) ||
-      "";
-
-    // Primary paths (nested ApiResponse → flat → "error" → field errors → raw string)
-    let msg =
-      safeString(data?.data?.message) ||
-      safeString(data?.message) ||
-      safeString(data?.error) ||
-      fieldErrors ||
-      safeString(data);
-
-    // Fallback: sometimes dev proxies keep body in request.responseText
-    if (!msg) {
-      const rt = err?.response?.request?.responseText;
-      if (rt && typeof rt === "string") {
-        try {
-          const parsed = JSON.parse(rt);
-          msg =
-            safeString(parsed?.data?.message) ||
-            safeString(parsed?.message) ||
-            safeString(parsed?.error) ||
-            safeString(rt);
-        } catch {
-          msg = safeString(rt);
-        }
-      }
-    }
-
-    // Final fallback so we never return an empty string
-    if (!msg) msg = "An error occurred.";
-
-    // Debug once (you can remove after verifying)
-    // eslint-disable-next-line no-console
-    console.debug("[auth.login] error debug:", { status, data, msg });
-
-    return { status, msg, data };
-  };
-
+  /* ------------------------------ API helpers ------------------------------ */
   const login = async (email, password, remember) => {
     try {
       const res = await api.post("/login", { email, password });
@@ -140,77 +132,56 @@ export default function AuthProvider({ children }) {
       if (payload?.refreshToken) setRefreshToken(payload.refreshToken, remember);
 
       if (payload?.sessionId) {
-        localStorage.setItem(
-          "appSession",
-          JSON.stringify({
-            sessionId: payload.sessionId,
-            startedAtUtc: new Date().toISOString(),
-            startedAtLocal: new Date().toString(),
-            storage: remember ? "local" : "session",
-          })
-        );
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("appSession:updated"));
-        }
+        writeAppSession(payload.sessionId); // <-- always localStorage
       }
 
       const u = resolveUserFromJWT(payload?.accessToken);
       setUser(u);
       return { ok: true, user: u };
     } catch (err) {
-      const { status, msg, data } = pickServerMessage(err);
+      const status = err?.response?.status ?? 0;
+      const data = err?.response?.data;
 
-      // Mirror the server message for each branch; only fallback when server message is truly absent
-      if (status === 401) {
+      const serverMsg =
+        (typeof data?.error?.message === "string" && data.error.message.trim()) ||
+        (typeof data?.data?.message === "string" && data.data.message.trim()) ||
+        (typeof data?.message === "string" && data.message.trim()) ||
+        (typeof data?.error === "string" && data.error.trim()) ||
+        (typeof data === "string" && data.trim()) ||
+        "";
+
+      if ([400, 401, 403, 404, 422, 423, 429].includes(status)) {
         return {
           ok: false,
           status,
-          message: msg,
-          fieldErrors: {
-            email: /email/i.test(msg) ? msg : "",
-            password: /password/i.test(msg) ? msg : "",
-          },
-          server: data ?? null,
+          message:
+            serverMsg ||
+            (status === 401
+              ? "Invalid email or password."
+              : status === 403
+              ? "You don't have access to this account."
+              : status === 404
+              ? "Account not found."
+              : status === 423
+              ? "Your account is locked. Please contact support."
+              : status === 429
+              ? "Too many attempts. Please wait a moment and try again."
+              : status === 422
+              ? "Some fields are invalid. Please fix and try again."
+              : "Please check your credentials and try again."),
+          fieldErrors: status === 422 && data?.errors ? data.errors : null,
         };
       }
 
-      if (status === 423) {
-        return { ok: false, status, message: msg, server: data ?? null };
-      }
-
-      if (status === 429) {
-        return { ok: false, status, message: msg, server: data ?? null };
-      }
-
-      if (status === 404) {
-        return { ok: false, status, message: msg, server: data ?? null };
-      }
-
-      if (status === 422) {
-        return {
-          ok: false,
-          status,
-          message: msg,
-          fieldErrors: (data && data.errors) || null,
-          server: data ?? null,
-        };
-      }
-
-      if (status === 400 || status === 403) {
-        return { ok: false, status, message: msg, server: data ?? null };
-      }
-
-      // Unknown/Network
       return {
         ok: false,
         status,
-        message: msg || "Something went wrong on our side. Please try again.",
-        server: data ?? null,
+        message: serverMsg || "We couldn’t sign you in. Please try again.",
       };
     }
   };
 
-   const signup = async ({ name, email, password }) => {
+  const signup = async ({ name, email, password }) => {
     try {
       const res = await api.post("/signup", { name, email, password });
       const payload = res?.data?.data ?? res?.data;
@@ -226,7 +197,6 @@ export default function AuthProvider({ children }) {
         (typeof data === "string" && data.trim()) ||
         "";
 
-      // Always surface server message; fallback only if empty
       if ([400, 401, 403, 404, 409, 422, 429].includes(status)) {
         return {
           ok: false,
@@ -269,7 +239,8 @@ export default function AuthProvider({ children }) {
     }
     clearAccessToken();
     clearRefreshToken();
-    localStorage.removeItem("appSession");
+    localStorage.removeItem("appSession");     // <-- session only in localStorage
+    sessionStorage.removeItem("appSession");   // harmless extra cleanup
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("appSession:updated"));
     }
@@ -289,6 +260,7 @@ export default function AuthProvider({ children }) {
   const value = {
     user,
     isAuthenticated: !!user,
+    isAdmin: !!user?.roles?.includes("admin"),
     login,
     signup,
     setUser,

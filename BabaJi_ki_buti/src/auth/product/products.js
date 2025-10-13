@@ -36,17 +36,23 @@ export async function getProductById(id) {
   }
 }
 
-/** GET /api/products/all  (newest first; your controller provides this) */
 export async function getAllProducts() {
   try {
     const res = await app.get(`/products/all`);
     const list = getPayload(res);
     return Array.isArray(list) ? list.map(toProduct) : [];
   } catch {
-    return [];
+    // Dev fallback: load from public/mock/products.json
+    try {
+      const res = await fetch(`/mock/products.json`, { cache: "no-store" });
+      const json = await res.json();
+      const list = json?.data ?? [];
+      return Array.isArray(list) ? list.map(toProduct) : [];
+    } catch {
+      return [];
+    }
   }
 }
-
 /** Paginated list: GET /api/products?page=&size=&sort= */
 export async function listProducts({ page = 0, size = 20, sort = "productId,desc" } = {}) {
   try {

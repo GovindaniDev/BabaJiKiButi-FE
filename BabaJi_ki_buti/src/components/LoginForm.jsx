@@ -1,8 +1,25 @@
-// src/pages/LoginPage.jsx
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
+import { useAuth } from "../auth/AuthContext";
+
+// Simple status→message helper (used only when server doesn't send a message)
+const statusToMessage = (status) => {
+  switch (status) {
+    case 401:
+      return "Invalid email or password.";
+    case 403:
+      return "You don't have access to this account.";
+    case 404:
+      return "Account not found.";
+    case 423:
+      return "Your account is locked. Please contact support.";
+    case 429:
+      return "Too many attempts. Please wait and try again.";
+    default:
+      return "We couldn’t sign you in. Please try again.";
+  }
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,7 +30,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const { isAuthenticated, loading, login, user,setUser } = useAuth();
+  const { isAuthenticated, loading, login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
@@ -25,40 +42,45 @@ const handleSubmit = async (e) => {
   setIsLoading(true);
 
   try {
-    // 🔐 Hard-coded admin check
-   // src/pages/LoginPage.jsx  (inside handleSubmit)
-
-
-
-
-
-    // Otherwise, run your normal login flow
     const res = await login(email.trim(), password, rememberMe);
 
-if (email.trim() === "admin@gmail.com" && password === "admin123") {
-    toast.success("Welcome, Admin!", { duration: 4000 });
-    //setUser({ email: "admin@gmail.com", role: "admin", name: "Admin" });
-    navigate("/admin", { replace: true });
-    setIsLoading(false);
-    return;
-  }
-
-
-
     if (res?.ok) {
-      const name = res.user?.name || res.user?.fullName || res.user?.email || "User";
+      const u = res.user || {};
+      const name = u.name || u.fullName || u.email || "User";
+      const roles = Array.isArray(u.roles) ? u.roles : [];
+
+      // 🧩 Hardcoded admin shortcut (email + password)
+      const isPredefinedAdmin =
+        email.trim().toLowerCase() === "yash@gmail.com" && password === "123456";
+
+      // ✅ Role-based OR hardcoded admin access
+      const isAdmin = isPredefinedAdmin || roles.includes("admin");
+
       toast.success(`Welcome, ${name}!`, { duration: 4000 });
-      navigate(from, { replace: true });
+      console.log("Roles:", roles);
+      console.log("isAdmin:", isAdmin);
+
+      // ✅ Redirect: Admin → /admin, Normal → from
+      navigate(isAdmin ? "/admin" : from, { replace: true });
     } else {
       if (res?.fieldErrors) setFieldErrors(res.fieldErrors);
-      const msg = res?.message || "Login failed";
-      setError(msg);
-      toast.error(msg, { duration: 3000 });
+      const friendly =
+        (typeof res?.message === "string" && res.message.trim()) ||
+        statusToMessage(res?.status);
+      setError(friendly);
+      toast.error(friendly, { duration: 3500 });
     }
-  } catch {
-    const msg = "Unable to login. Please try again.";
-    setError(msg);
-    toast.error(msg, { duration: 4000 });
+  } catch (err) {
+    const apiStatus = err?.status || err?.response?.status;
+    const apiMsg =
+      (typeof err?.message === "string" && err.message) ||
+      (typeof err?.response?.data?.message === "string" &&
+        err.response.data.message) ||
+      statusToMessage(apiStatus);
+
+    const friendly = apiMsg || "Network error. Please check your connection.";
+    setError(friendly);
+    toast.error(friendly, { duration: 3500 });
   } finally {
     setIsLoading(false);
   }

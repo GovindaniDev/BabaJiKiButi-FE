@@ -44,13 +44,12 @@ import PricingPage from "./page/admin/pricing/PricingPage";
 import OrderPage from "./page/admin/orders/OrderPage";
 import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
-<<<<<<< Updated upstream
 import PDPpage from "./page/shopNow/products/PDPpage";
 import ReturnPage from "./page/admin/return/ReturnPage";
-
-=======
+import CustomerPage from "./page/admin/users/CustomerPage";
+import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
->>>>>>> Stashed changes
+
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -120,24 +119,7 @@ const App = () => {
           <Route path="/panchkarma" element={<PanchkarmaPage />} />
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
-<<<<<<< Updated upstream
           <Route path="/service/therapy" element={<TherapyPage />} />
-=======
-          <Route path="/service/therapy" element={<TherapyPage />} />        
-
-       
-     {/*  your existing guard  */}
-  <Route path="/admin" element={<AdminShell />}>
-    <Route index element={<DashboardBody />} />
-    <Route path="catalog" element={<CatalogPage />} />
-    <Route path="inventory" element={<InventoryPage />} />
-    <Route path="pricing" element={<PricingPage />} />
-    <Route path="orders" element={<OrderPage />} />
-    <Route path="catalog/AddProdPage" element={<AddProductPage/>}/>
-    <Route path="inventory/addStock" element={<AddStockPage/>}/>
-    {/*  more admin pages …  */}
-  </Route>
->>>>>>> Stashed changes
 
           {/* Admin (guarded by AdminShell layout) */}
           <Route path="/admin" element={<AdminShell />}>
@@ -148,6 +130,9 @@ const App = () => {
             <Route path="orders" element={<OrderPage />} />
             <Route path="catalog/AddProdPage" element={<AddProductPage />} />
             <Route path="returns" element={<ReturnPage/>}/>
+            <Route path="users" element={<CustomerPage />} />
+            <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
+            <Route path="inventory/AddStockPage" element={<AddStockPage />} />
             {/* more admin pages … */}
           </Route>
 

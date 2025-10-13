@@ -290,8 +290,13 @@ export default function ProductPageAlt() {
   const howEnRaw = cleanArray(product?.howItWorks);
   const howHiRaw = cleanArray(product?.howItWorksHi);
   const khEnRaw = cleanArray(product?.keyherbs || product?.keyHerbs);
-  const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
-  const keyHerbsDetails = cleanArray(product?.keyHerbsDetails);
+const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
+  const keyHerbDetailsRaw = cleanArray(
+  product?.keyHerbDetails ||      // <-- matches your payload
+  product?.keyHerbsDetails ||     // <-- legacy/alternate
+  product?.keyherbdetails ||      // <-- ultra-defensive
+  product?.keyherbsdetails
+);
   const whyherbsEnRaw = cleanArray(product?.whyherbs || product?.whyHerbs);
   const whyherbsHiRaw = cleanArray(product?.whyherbsHi || product?.whyHerbsHi);
   const trustBadgesRaw = cleanArray(product?.trustBadges);
@@ -328,17 +333,16 @@ export default function ProductPageAlt() {
 
   // Key herbs with details fallback
   let keyherbs = mergeByIndex(khEnRaw, khHiRaw);
-  if (
-    (!hasItems(keyherbs) ||
-      keyherbs.every((k) => !isPresent(k?.en) && !isPresent(k?.hi))) &&
-    hasItems(keyHerbsDetails)
-  ) {
-    keyherbs = keyHerbsDetails.map((h) => ({
-      en: [h?.herbTitleEn, h?.herbDescEn].filter(isPresent).join(": "),
-      hi: [h?.herbTitleHi, h?.herbDescHi].filter(isPresent).join(": "),
-    }));
-  }
-  const keyherbsSafe = keyherbs.filter(nonEmptyPair);
+ if (
+  (!hasItems(keyherbs) || keyherbs.every(k => !isPresent(k?.en) && !isPresent(k?.hi))) &&
+  hasItems(keyHerbDetailsRaw)
+) {
+  keyherbs = keyHerbDetailsRaw.map(h => ({
+    en: [h?.herbTitleEn, h?.herbDescEn].filter(isPresent).join(": "),
+    hi: [h?.herbTitleHi, h?.herbDescHi].filter(isPresent).join(": "),
+  }));
+}
+  const keyherbsSafe =keyherbs.filter(nonEmptyPair);
 
   // Why herbs
   const whyherbs = [
@@ -448,7 +452,7 @@ export default function ProductPageAlt() {
       {/* HERO */}
       <section
         ref={heroRef}
-        className="max-w-7xl mx-auto px-4 py-29 grid grid-cols-1 lg:grid-cols-2 gap-25"
+        className="max-w-7xl mx-auto px-4 py-38 grid grid-cols-1 lg:grid-cols-2 gap-25"
       >
         {/* LEFT */}
         <aside className="self-start">
@@ -1202,7 +1206,7 @@ export default function ProductPageAlt() {
       </section>
 
       {/* FAQs */}
-      <section ref={faqsRef} id="faqs" className="max-w-7xl mx-auto px-4 pb-28">
+      <section ref={faqsRef} id="faqs" className="max-w-7xl mx-auto px-4 py-30">
         <div className="rounded-2xl ring-1 ring-emerald-100 bg-white p-5">
           <div className="flex items-center justify-between" data-gsap>
             <h3 className="text-lg font-bold">Frequently Asked Questions</h3>
