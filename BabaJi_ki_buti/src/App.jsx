@@ -46,8 +46,10 @@ import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
 import PDPpage from "./page/shopNow/products/PDPpage";
 import ReturnPage from "./page/admin/return/ReturnPage";
-
+import CustomerPage from "./page/admin/users/CustomerPage";
+import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
+
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -117,7 +119,8 @@ const App = () => {
           <Route path="/panchkarma" element={<PanchkarmaPage />} />
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
-          <Route path="/service/therapy" element={<TherapyPage />} />        
+          <Route path="/service/therapy" element={<TherapyPage />} />
+        
 
        
  
@@ -132,7 +135,9 @@ const App = () => {
             <Route path="orders" element={<OrderPage />} />
             <Route path="catalog/AddProdPage" element={<AddProductPage />} />
             <Route path="returns" element={<ReturnPage/>}/>
-              <Route path="inventory/addStock" element={<AddStockPage/>}/>
+            <Route path="users" element={<CustomerPage />} />
+            <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
+            <Route path="inventory/AddStockPage" element={<AddStockPage />} />
             {/* more admin pages … */}
           </Route>
 

@@ -162,15 +162,10 @@ export default function InventoryManagement() {
     return matchSearch && matchStatus && matchFrom && matchTo;
   });
 
-  const statusOptions = useMemo(() => {
-    const unique = new Set(
-      rows
-        .map((r) => (r.statusAfter || ""))
-        .filter(Boolean)
-        .map((s) => s.toUpperCase())
-    );
-    return ["All Status", ...Array.from(unique)];
-  }, [rows]);
+  const getLocations = () => {
+    const locations = ['All Locations', ...new Set(inventoryData.map(item => item.location))];
+    return locations;
+  };
 
   return (
     <div>
@@ -249,17 +244,19 @@ export default function InventoryManagement() {
             <h3 className="text-sm font-medium text-gray-600">Total Movements</h3>
             <Package className="w-5 h-5 text-gray-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{totalMovements}</div>
-          <p className="text-sm text-gray-500 mt-1">Rows loaded</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-600">Units Added</h3>
-            <TrendingUp className="w-5 h-5 text-gray-400" />
+          <div className="flex gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button 
+              onClick={() => {setShowAddModal(true), window.location.href="inventory/AddStockPage"}}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              Add Stock
+            </button>
           </div>
-          <div className="text-3xl font-bold text-gray-900">{totalAddedUnits}</div>
-          <p className="text-sm text-gray-500 mt-1">Sum of addedStock</p>
         </div>
 
         <div className="bg-white p-6 rounded-lg border border-gray-200">
@@ -303,6 +300,9 @@ export default function InventoryManagement() {
                 className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-green-600"
               />
             </div>
+            <div className="text-3xl font-bold text-gray-900">₹{totalStockValue.toFixed(2)}L</div>
+            <p className="text-sm text-gray-500 mt-1">Total inventory value</p>
+          </div>
 
             <select
               value={statusFilter}
@@ -331,84 +331,64 @@ export default function InventoryManagement() {
                 className="px-3 py-2 border border-gray-200 rounded-lg"
               />
             </div>
-
-            <button
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              onClick={() => {
-                setPage(0);
-                fetchData();
-              }}
-            >
-              <Filter className="w-4 h-4" />
-              Apply
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <select
-              value={size}
-              onChange={(e) => {
-                setPage(0);
-                setSize(Number(e.target.value) || 20);
-              }}
-              className="px-3 py-2 border border-gray-200 rounded-lg"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n} / page
-                </option>
-              ))}
-            </select>
+            <div className="text-3xl font-bold text-gray-900">{pendingReorders}</div>
+            <p className="text-sm text-gray-500 mt-1">Need supplier approval</p>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          {err && (
-            <div className="p-4 text-red-700 bg-red-50 border-b border-red-200">
-              {err}
-            </div>
-          )}
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Previous
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Added
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Available
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Status After
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Added At
-                </th>
-              </tr>
-            </thead>
+        {/* Inventory Table Section */}
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Inventory Levels</h2>
+            <p className="text-sm text-gray-500 mt-1">Monitor stock levels and manage thresholds</p>
+          </div>
 
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
+          {/* Search and Filters */}
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search inventory..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {getLocations().map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <Filter className="w-4 h-4" />
+              More Filters
+            </button>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td className="px-6 py-6 text-gray-500" colSpan={6}>
-                    Loading…
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">On Hand</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reserved</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Available</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Threshold</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td className="px-6 py-6 text-gray-500" colSpan={6}>
-                    No rows match your filters.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((r) => (
-                  <tr key={getId(r)} className="hover:bg-gray-50">
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredInventory.map(item => (
+                  <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="font-medium text-gray-900">
                         {getTitle(r)}
@@ -420,50 +400,34 @@ export default function InventoryManagement() {
                     <td className="px-6 py-4 text-gray-900 font-medium">
                       {r.previousStock ?? 0}
                     </td>
-                    <td className="px-6 py-4 text-gray-900 font-semibold">
-                      {r.addedStock ?? 0}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
+                        {item.location}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-900 font-semibold">
-                      {r.availableStock ?? 0}
-                    </td>
-                    <td className="px-6 py-4">{statusBadge(r.statusAfter)}</td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {formatDateTime(r.addedAt)}
+                    <td className="px-6 py-4 text-gray-900 font-medium">{item.onHand}</td>
+                    <td className="px-6 py-4 text-gray-600">{item.reserved}</td>
+                    <td className="px-6 py-4 text-gray-900 font-semibold">{item.available}</td>
+                    <td className="px-6 py-4 text-gray-600">{item.threshold}</td>
+                    <td className="px-6 py-4">
+                      {item.status === 'adequate' ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                          Adequate
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                          Low Stock
+                        </span>
+                      )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
-            Page <span className="font-medium">{page + 1}</span>{" "}
-            of{" "}
-            <span className="font-medium">
-              {Math.max(1, Math.ceil(totalElements / size))}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="px-3 py-1.5 border rounded disabled:opacity-50"
-              disabled={page <= 0}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-            >
-              Prev
-            </button>
-            <button
-              className="px-3 py-1.5 border rounded disabled:opacity-50"
-              disabled={(page + 1) * size >= totalElements}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-    </div>
   );
-}
+};
+
+export default InventoryManagement;

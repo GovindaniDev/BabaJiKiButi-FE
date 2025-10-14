@@ -51,7 +51,7 @@ const StyledWrapper = styled.div`
     --border-radius: 20px;
     --padding: 4px;
     --transition: 0.4s;
-    --button-color: #faeade80; /* base soft peach */
+    --button-color: #faeade90; /* base soft peach */
     --highlight-color-hue: 20deg; /* gentle warm hue for light glow */
 
     user-select: none;

@@ -526,7 +526,7 @@ function buildProductPayload(formData) {
 
     // ---------- Herbs/rationale ----------
     // Structured list: matches ProductDto.keyHerbsDetails
-    keyHerbsDetails: (formData.keyherbs || [])
+    keyHerbDetails: (formData.keyherbs || [])
       .map(h => ({
         herbTitleEn: trimVal(h?.herbTitleEn || ''),
         herbDescEn: trimVal(h?.herbDescEn || ''),

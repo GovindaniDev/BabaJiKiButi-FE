@@ -8,7 +8,7 @@ const navItems = [
   { title: 'Pricing & Promotions', url: '/admin/pricing' },
   { title: 'Orders', url: '/admin/orders' },
   { title: 'Returns', url: '/admin/returns' },
-  { title: 'Customers', url: '/admin/customers' },
+  { title: 'Customers', url: '/admin/users' },
   { title: 'Subscriptions & Loyalty', url: '/admin/subscriptions' },
   { title: 'Wallet & Referrals', url: '/admin/wallet' },
   // { title: 'Bundles & Recommendations', url: '/admin/bundles' },
