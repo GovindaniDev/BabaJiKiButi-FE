@@ -32,7 +32,6 @@ import NutrientPage from "./page/service/Nutrient/NutrientPage";
 import PanchkarmaPage from "./page/panchkarma/PanchkarmaPage";
 import OPDPage from "./page/OPD/OPDPage";
 import NaadiPage from "./page/naadi/NaadiPage";
-
 import RemediosPage from "./page/service/remedios/RemediosPage";
 import TherapyPage from "./page/service/therapy/TherapyPage";
 import ProductCatalog from "./components/(admin)/src/component/catalog/ProductCatalog";
@@ -49,6 +48,9 @@ import ReturnPage from "./page/admin/return/ReturnPage";
 import CustomerPage from "./page/admin/users/CustomerPage";
 import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
+import CartPage from "./components/cart/CartPage";
+import AccountPage from "./page/profile/AccountPage";
+import RequireAdmin from "./auth/RequireAuth";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -57,14 +59,13 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isHome = location.pathname === "/";
-  const isAdmin = location.pathname.startsWith("/admin");
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // ✅ Home page with smoother. NavBar & Footer live inside the scroll container.
   const HomePage = () => {
     useGSAP(() => {
       const smoother = ScrollSmoother.create({
@@ -73,13 +74,12 @@ const App = () => {
         smooth: 2.3,
         effects: true,
       });
-      return () => smoother.kill(); // cleanup on route change
+      return () => smoother.kill();
     }, []);
 
     return (
       <div id="smooth-wrapper">
         <div id="smooth-content">
-         
           <HeroSection />
           <MessageSection />
           <FlavorSection />
@@ -98,8 +98,8 @@ const App = () => {
       <main>
         {loading && <Loading label="Please wait..." />}
 
-        {/* Show global NavBar/Footer on non-home pages only */}
-        {!isAdmin && <NavBar />}
+        {/* Hide global NavBar on admin layout */}
+        {!isAdminRoute && <NavBar />}
 
         <Routes>
           {/* Public */}
@@ -120,28 +120,28 @@ const App = () => {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
-        
+          <Route path="/cart" element={<CartPage />} />
+          {/* User Account */}
+          <Route path="/profile" element={<AccountPage />} />
 
-       
- 
-
-          
-          {/* Admin (guarded by AdminShell layout) */}
-          <Route path="/admin" element={<AdminShell />}>
-            <Route index element={<DashboardBody />} />
-            <Route path="catalog" element={<CatalogPage />} />
-            <Route path="inventory" element={<InventoryPage />} />
-            <Route path="pricing" element={<PricingPage />} />
-            <Route path="orders" element={<OrderPage />} />
-            <Route path="catalog/AddProdPage" element={<AddProductPage />} />
-            <Route path="returns" element={<ReturnPage/>}/>
-            <Route path="users" element={<CustomerPage />} />
-            <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
-            <Route path="inventory/AddStockPage" element={<AddStockPage />} />
-            {/* more admin pages … */}
+          {/* Admin (role-restricted) */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/admin" element={<AdminShell />}>
+              <Route index element={<DashboardBody />} />
+              <Route path="catalog" element={<CatalogPage />} />
+              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="pricing" element={<PricingPage />} />
+              <Route path="orders" element={<OrderPage />} />
+              <Route path="catalog/AddProdPage" element={<AddProductPage />} />
+              <Route path="returns" element={<ReturnPage />} />
+              <Route path="users" element={<CustomerPage />} />
+              <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
+              <Route path="inventory/AddStockPage" element={<AddStockPage />} />
+              {/* more admin pages … */}
+            </Route>
           </Route>
 
-          {/* Authed-only */}
+          {/* Authed-only (non-admin) */}
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/sessions" element={<SessionsPage />} />
@@ -155,7 +155,7 @@ const App = () => {
         </Routes>
 
         {/* Global footer on non-home, non-admin pages */}
-        {!isAdmin && !isHome && <FooterSection />}
+        {!isAdminRoute && !isHome && <FooterSection />}
       </main>
     </AuthProvider>
   );

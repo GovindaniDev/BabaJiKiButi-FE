@@ -156,14 +156,14 @@ function MiniCardSliderBottom() {
   );
 }
 
-/* ------------------------- Icon (Shop by Need) row ------------------------- */
+  /* ------------------------- Icon (Shop by Need) row ------------------------- */
 
 
-/* --------------------------- Product Card (4x) ---------------------------- */
+  /* --------------------------- Product Card (4x) ---------------------------- */
 
 
 
-/* -------------------------- Ayurveda feature strip ------------------------- */
+  /* -------------------------- Ayurveda feature strip ------------------------- */
 
 /* ------------------------------ MAIN PAGE --------------------------------- */
 export default function MembersExclusivePage() {
@@ -289,6 +289,17 @@ export default function MembersExclusivePage() {
   /* ---------------------------------- UI ---------------------------------- */
   return (
     <div ref={pageRef} className="me-page relative z-[1] isolate bg-[#aa7a4f] pt-[72px]">
+      <div className="max-w-[1600px] mx-auto px-4 py-6 mt-6 me-loved-wrap">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="me-para">
+              <h2 className="me-loved text-white text-4xl lg:text-5xl font-extrabold">हर परेशानी का समाधान—सेहत का ध्यान।</h2>
+              <p className="text-white/90 max-w-7xl font-semibold mt-2">Members get extra love: exclusive prices, bundles & seasonal hampers.</p>
+            </div>
+            <a href="#" className=" bg-[#b83428] hover:bg-[#a02d20] text-white px-8 lg:px-10 py-3 lg:py-4 rounded-xl text-lg lg:text-xl font-semibold transition-all">
+              Shop More
+            </a>
+          </div>
+        </div>
       {/* HERO: left big slider + right two minis */}
       <div className="w-full bg-[#aa7a4f] py-8">
         <div className="max-w-[1600px] mx-auto px-4">
@@ -355,17 +366,7 @@ export default function MembersExclusivePage() {
        
 
         {/* CTA */}
-        <div className="max-w-[1600px] mx-auto px-4 py-8 mt-8 me-loved-wrap">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="me-para">
-              <h2 className="me-loved text-white text-4xl lg:text-6xl font-extrabold">हर परेशानी का समाधान—सेहत का ध्यान।</h2>
-              <p className="text-white/90 max-w-7xl font-semibold mt-2">Members get extra love: exclusive prices, bundles & seasonal hampers.</p>
-            </div>
-            <a href="#" className=" bg-[#b83428] hover:bg-[#a02d20] text-white px-8 lg:px-10 py-3 lg:py-4 rounded-xl text-lg lg:text-xl font-semibold transition-all">
-              Shop More
-            </a>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

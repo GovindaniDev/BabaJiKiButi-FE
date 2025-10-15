@@ -20,10 +20,14 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
-// ⚡ Framer Motion (used for drawer/backdrop + small interactions)
+// ⚡ Framer Motion
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Button from "../ui/Button";
 import Loader from "../ui/Loader";
+
+// CART
+import { cartApi } from "../../auth/cart/cartApi";
+import { guestCart } from "../../auth/cart/guestCart";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -55,7 +59,6 @@ const getReviewCount = (p) => {
 };
 
 /* -------------------------- motion variants -------------------------- */
-// Keep FM separate from GSAP props (avoid opacity/y on the same elements GSAP animates)
 const backdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -103,9 +106,12 @@ export default function ShopNow() {
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
 
+  // If you have auth, compute userId; else leave null for guest
+  const userId = null;
+
   useEffect(() => {
     let mounted = true;
-    const MIN_LOADER_MS = 1000; // ⏱ Minimum loader visible time (2 seconds)
+    const MIN_LOADER_MS = 1000;
     const start = Date.now();
 
     (async () => {
@@ -128,7 +134,8 @@ export default function ShopNow() {
       mounted = false;
     };
   }, []);
-  // header animation (GSAP)
+
+  // header animation
   useEffect(() => {
     if (!headerRef.current) return;
     const ctx = gsap.context(() => {
@@ -143,7 +150,7 @@ export default function ShopNow() {
     return () => ctx.revert();
   }, []);
 
-  // card reveal animation (GSAP)
+  // card reveal animation
   useEffect(() => {
     if (!gridRef.current) return;
     const ctx = gsap.context(() => {
@@ -171,7 +178,6 @@ export default function ShopNow() {
       : { min: 0, max: 0 };
   }, [products]);
 
-  // derive category & tag options (needed by FiltersPanel)
   const categoryOptions = useMemo(() => {
     const set = new Set();
     products.forEach((p) => {
@@ -204,17 +210,13 @@ export default function ShopNow() {
         (p.productName || p.name || "").toLowerCase().includes(q)
       );
 
-    // stock
     if (inStockOnly) list = list.filter((p) => Number(p?.stock ?? 0) > 0);
-    // rating
     if (ratingAtLeast > 0) list = list.filter((p) => getRating(p) >= ratingAtLeast);
-    // price range
     list = list.filter((p) => {
       const price = Number(p?.sellingPrice || p?.price || 0);
       return price >= minPrice && price <= maxPrice;
     });
 
-    // sort (basic)
     if (sort === "price_low")
       list.sort(
         (a, b) =>
@@ -251,10 +253,7 @@ export default function ShopNow() {
   const visible = filtered.slice((safePage - 1) * perPage, safePage * perPage);
 
   /* ------------------------------ render ------------------------------ */
-  if (loading)
-    return (
-    <Loader/>
-    );
+  if (loading) return <Loader />;
 
   if (error)
     return (
@@ -278,7 +277,7 @@ export default function ShopNow() {
         <InfiniteNewsTicker />
       </div>
 
-      {/* Header section (GSAP handles reveal) */}
+      {/* Header */}
       <section
         ref={headerRef}
         className="relative pt-16 sm:pt-20 pb-10 overflow-hidden text-center sm:text-right"
@@ -305,11 +304,10 @@ export default function ShopNow() {
             Curated range inspired by ancient wisdom, crafted for modern wellness.
           </p>
 
-          {/* Search (Framer Motion subtle scale only) */}
           <motion.div
             data-stagger
-            whileHover={!prefersReducedMotion ? hoverScale : undefined}
-            whileTap={!prefersReducedMotion ? tapScale : undefined}
+            whileHover={!useReducedMotion ? hoverScale : undefined}
+            whileTap={!useReducedMotion ? tapScale : undefined}
             className="mt-6 sm:mt-8 flex flex-wrap justify-center sm:justify-end gap-3"
           >
             <div className="relative w-full sm:w-2/3 md:w-1/2">
@@ -330,7 +328,7 @@ export default function ShopNow() {
         </div>
       </section>
 
-      {/* Main content */}
+      {/* Main */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
           {/* Sidebar */}
@@ -365,12 +363,12 @@ export default function ShopNow() {
             </div>
           </aside>
 
-          {/* Products grid */}
+          {/* Products */}
           <div className="md:col-span-3">
-            {/* Mobile filter toggle (Framer Motion on button tap) */}
+            {/* Mobile Filters */}
             <div className="flex justify-between items-center mb-4 md:hidden">
               <motion.button
-                whileTap={!prefersReducedMotion ? tapScale : undefined}
+                whileTap={!useReducedMotion ? tapScale : undefined}
                 onClick={() => setShowFilters(true)}
                 className="flex items-center gap-2 px-3 py-2 border border-amber-300 rounded-lg bg-white text-sm"
               >
@@ -381,11 +379,10 @@ export default function ShopNow() {
               </p>
             </div>
 
-            {/* Mobile Filters Drawer (AnimatePresence) */}
+            {/* Mobile Filters Drawer */}
             <AnimatePresence>
               {showFilters && (
                 <>
-                  {/* Backdrop */}
                   <motion.div
                     key="backdrop"
                     className="fixed inset-0 z-40 bg-black/40 md:hidden pt-8"
@@ -394,7 +391,6 @@ export default function ShopNow() {
                     exit="exit"
                     variants={backdropVariants}
                   />
-                  {/* Drawer panel */}
                   <motion.div
                     key="drawer"
                     className="fixed left-0 top-0 z-50 h-full w-[85%] max-w-sm bg-white md:hidden"
@@ -409,7 +405,7 @@ export default function ShopNow() {
                           <SlidersHorizontal className="w-4 h-4" /> Filters
                         </h3>
                         <motion.button
-                          whileTap={!prefersReducedMotion ? tapScale : undefined}
+                          whileTap={!useReducedMotion ? tapScale : undefined}
                           onClick={() => setShowFilters(false)}
                           className="p-2 rounded hover:bg-gray-100"
                         >
@@ -454,7 +450,11 @@ export default function ShopNow() {
               className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-10 sm:gap-y-14 pt-8"
             >
               {visible.map((p) => (
-                <ProductCard key={p.id || p.slug || p.productName} product={p} />
+                <ProductCard
+                  key={p.id || p.slug || p.productName}
+                  product={p}
+                  userId={userId}
+                />
               ))}
             </div>
 
@@ -462,7 +462,7 @@ export default function ShopNow() {
             {totalPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-2 flex-wrap">
                 <motion.button
-                  whileTap={!prefersReducedMotion ? tapScale : undefined}
+                  whileTap={!useReducedMotion ? tapScale : undefined}
                   onClick={() => setPage((n) => clamp(n - 1, 1, totalPages))}
                   className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                   disabled={safePage === 1}
@@ -474,7 +474,7 @@ export default function ShopNow() {
                   const active = num === safePage;
                   return (
                     <motion.button
-                      whileTap={!prefersReducedMotion ? tapScale : undefined}
+                      whileTap={!useReducedMotion ? tapScale : undefined}
                       key={num}
                       onClick={() => setPage(num)}
                       className={`h-9 w-9 rounded-full border flex items-center justify-center text-sm ${
@@ -488,7 +488,7 @@ export default function ShopNow() {
                   );
                 })}
                 <motion.button
-                  whileTap={!prefersReducedMotion ? tapScale : undefined}
+                  whileTap={!useReducedMotion ? tapScale : undefined}
                   onClick={() => setPage((n) => clamp(n + 1, 1, totalPages))}
                   className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                   disabled={safePage === totalPages}
@@ -519,10 +519,9 @@ function Stars({ value = 0, size = 16 }) {
   );
 }
 
-function ProductCard({ product: p }) {
+function ProductCard({ product: p, userId }) {
   const imgSrc = p?.productImg || p?.image || p?.image1 || PLACEHOLDER;
   const title = p?.productName || p?.name || p?.title || p?.product_title || "Untitled Product";
-
   const mrp = Number(p?.mrp || p?.price || 0);
   const selling = Number(p?.sellingPrice || p?.price || 0);
   const hasDiscount = mrp > selling && mrp > 0;
@@ -533,14 +532,15 @@ function ProductCard({ product: p }) {
   const imgWrapRef = useRef(null);
   const cartPillRef = useRef(null);
 
-  // Keep GSAP hover for cart pill
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const productId = p?.productId || p?.id;
+
   useEffect(() => {
     if (!imgWrapRef.current || !cartPillRef.current) return;
     gsap.set(cartPillRef.current, { y: 16, opacity: 0 });
-    const enter = () =>
-      gsap.to(cartPillRef.current, { y: 0, opacity: 1, duration: 0.25 });
-    const leave = () =>
-      gsap.to(cartPillRef.current, { y: 16, opacity: 0, duration: 0.25 });
+    const enter = () => gsap.to(cartPillRef.current, { y: 0, opacity: 1, duration: 0.25 });
+    const leave = () => gsap.to(cartPillRef.current, { y: 16, opacity: 0, duration: 0.25 });
     const node = imgWrapRef.current;
     node.addEventListener("mouseenter", enter);
     node.addEventListener("mouseleave", leave);
@@ -550,56 +550,69 @@ function ProductCard({ product: p }) {
     };
   }, []);
 
+  const handleAddToCart = async () => {
+    try {
+      setAdding(true);
+      if (userId) {
+        await cartApi.addItem(userId, productId, 1);
+      } else {
+        guestCart.addItem(p, 1);
+      }
+      setAdded(true);
+      window.dispatchEvent(new CustomEvent("cart:changed"));
+      setTimeout(() => setAdded(false), 1500);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAdding(false);
+    }
+  };
+
   return (
-    // Framer Motion scale for the whole card on hover/tap (no opacity/y here to avoid GSAP conflict)
     <motion.article
       className="shop-card flex flex-col"
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: "tween", duration: 0.15 }}
     >
-      <div
-        ref={imgWrapRef}
-        className="relative rounded-xl overflow-hidden p-2"
-      >
+      <div ref={imgWrapRef} className="relative rounded-xl overflow-hidden p-2">
         <Link to={`/products/${p?.slug || p?.id}`} className="block">
           <motion.img
             src={imgSrc}
             alt={title}
             onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
             className="w-full h-48 sm:h-56 md:h-64 object-contain"
-            // gentle FM hover scale (image-level) that complements GSAP scroll reveal
             whileHover={{ scale: 1.02 }}
             transition={{ type: "tween", duration: 0.2 }}
           />
         </Link>
-        <button ref={cartPillRef} className="absolute bottom-3 right-3 opacity-0 ">
-          {/* Your existing animated Button component */}
-          <Button />
-        </button>
+
+        <div ref={cartPillRef} className="absolute bottom-3 right-3 opacity-0">
+          <button
+            onClick={handleAddToCart}
+            disabled={adding}
+            className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-sm font-semibold hover:bg-amber-300 disabled:opacity-60"
+            title="Add to Cart"
+          >
+            {adding ? "Adding..." : added ? "Added ✓" : "Add to Cart"}
+          </button>
+        </div>
       </div>
+
       <div className="mt-3 text-center">
         <Link to={`/products/${p?.slug || p?.id}`}>
-          <h3 className="text-[15px] md:text-[16px] font-semibold leading-snug">
-            {title}
-          </h3>
+          <h3 className="text-[15px] md:text-[16px] font-semibold leading-snug">{title}</h3>
         </Link>
         <div className="mt-1 flex justify-center items-center gap-1">
           <Stars value={ratingVal} size={14} />
           <span className="text-xs text-gray-500">({reviewCount})</span>
         </div>
         <div className="mt-2 flex justify-center items-center gap-2">
-          <span className="font-semibold text-sm sm:text-base">
-            {formatINR(selling)}
-          </span>
+          <span className="font-semibold text-sm sm:text-base">{formatINR(selling)}</span>
           {hasDiscount && (
             <>
-              <span className="line-through text-gray-400 text-xs">
-                {formatINR(mrp)}
-              </span>
-              <span className="text-emerald-600 text-xs font-semibold">
-                Save {savePct}%
-              </span>
+              <span className="line-through text-gray-400 text-xs">{formatINR(mrp)}</span>
+              <span className="text-emerald-600 text-xs font-semibold">Save {savePct}%</span>
             </>
           )}
         </div>
@@ -610,7 +623,6 @@ function ProductCard({ product: p }) {
 
 /* --------------------------- Filters Panel --------------------------- */
 function FiltersPanel(props) {
-  // Safe defaults (no UI change)
   const {
     categoryOptions = [],
     selectedCategories = [],
@@ -630,18 +642,14 @@ function FiltersPanel(props) {
     resetAll = () => {},
   } = props || {};
 
-  // Collapsed by default
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
 
-  // IDs for a11y
   const summaryId = "filters-summary";
   const panelId = "filters-panel";
 
-  // Normalize price bounds
   const psMin = Number(priceStats?.min ?? 0);
   const psMax = Number(priceStats?.max ?? 0);
 
-  // Helpers
   const toggleCategory = (c, checked) =>
     setSelectedCategories((prev = []) =>
       checked ? [...prev, c] : prev.filter((x) => x !== c)
@@ -652,7 +660,6 @@ function FiltersPanel(props) {
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     );
 
-  // Clamp price changes
   const handleMinChange = (v) => {
     const n = Number(v);
     if (Number.isNaN(n)) return;
@@ -666,7 +673,6 @@ function FiltersPanel(props) {
 
   return (
     <div className="space-y-5">
-      {/* Header row */}
       <div className="flex items-center justify-between py-4 sm:py-6">
         <button
           type="button"
@@ -692,10 +698,8 @@ function FiltersPanel(props) {
         )}
       </div>
 
-      {/* Body */}
       {open && (
         <div id={panelId} aria-labelledby={summaryId} className="space-y-4">
-          {/* Selected chips */}
           {(selectedCategories.length > 0 ||
             selectedTags.length > 0 ||
             inStockOnly ||
@@ -732,7 +736,6 @@ function FiltersPanel(props) {
             </div>
           )}
 
-          {/* Category */}
           {Array.isArray(categoryOptions) && categoryOptions.length > 0 && (
             <details className="bg白 rounded-xl border border-neutral-200 p-4 sm:p-5" open>
               <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
@@ -753,13 +756,11 @@ function FiltersPanel(props) {
             </details>
           )}
 
-          {/* Price */}
           <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
             <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
               <BadgePercent className="w-4 h-4" /> Price
             </summary>
 
-            {/* Dual inputs */}
             <div className="mt-3 sm:mt-4 flex items-center gap-3">
               <input
                 type="number"
@@ -780,7 +781,6 @@ function FiltersPanel(props) {
               />
             </div>
 
-            {/* Sliders */}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className="flex items-center gap-2">
                 <input
@@ -815,7 +815,6 @@ function FiltersPanel(props) {
             </p>
           </details>
 
-          {/* Ratings */}
           <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
             <summary className="cursor-pointer list-none font-medium">
               Customer Reviews
@@ -850,7 +849,6 @@ function FiltersPanel(props) {
             </div>
           </details>
 
-          {/* Availability */}
           <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
             <summary className="cursor-pointer list-none font-medium">
               Availability
@@ -867,7 +865,6 @@ function FiltersPanel(props) {
             </div>
           </details>
 
-          {/* Tags */}
           {Array.isArray(tagOptions) && tagOptions.length > 0 && (
             <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5">
               <summary className="cursor-pointer list-none font-medium">
@@ -880,7 +877,9 @@ function FiltersPanel(props) {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => toggleTag(t)}
+                      onClick={() => setSelectedTags(
+                        active ? selectedTags.filter((x) => x !== t) : [...selectedTags, t]
+                      )}
                       className={`px-3 py-1.5 rounded-full text-xs border ${
                         active
                           ? "bg-neutral-900 text-white border-neutral-900"

@@ -87,29 +87,25 @@ function Card({ p, isMember }) {
 
   return (
     <div className="pc-card shrink-0 px-3 w-1/2 md:w-1/3 lg:w-1/4">
-      <div className="pc-cardBox group h-full flex flex-col overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-0.5 hover:shadow-xl">
+      <div className="pc-cardBox group h-120 w-full flex flex-col overflow-hidden rounded-xl bg-white shadow-md transition hover:-translate-y-0.5 hover:shadow-xl">
         <Link
           to={productHref}
-          className="relative block w-full h-[280px] overflow-hidden rounded-xl bg-white ring-1 ring-black/5 cursor-pointer"
+          className="relative block w-full h-[240px] overflow-hidden rounded-xl bg-white ring-1 ring-black/5 cursor-pointer"
           onMouseEnter={onEnter}
           onMouseLeave={onEnter}
           onTouchStart={onEnter}
           aria-label={`${p.title} product page`}
           onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
         >
-          <img src={src} alt={p.title} className="h-full w-full object-contain" />
+          <img src={src} alt={p.title} className="h-55 w-full object-contain" />
           <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
-            {p.badge && (
-              <span className={`rounded-full px-3 py-1 text-[12px] font-extrabold shadow ${BADGE_CLASS(p.badge)}`}>
-                {p.badge}
-              </span>
-            )}
+            
             {!!discountPct && (
-              <span className="rounded-full bg-emerald-600 px-3 py-1 text-[12px] font-extrabold text-white shadow">
+              <span className="rounded-full bg-emerald-600/80 px-2 py-1 mb-4 text-[12px] font-extrabold text-white ">
                 -{discountPct}%
               </span>
             )}
-            <button
+            {/* <button
               type="button"
               aria-label="Add to wishlist"
               className="grid h-9 w-9 place-items-center rounded-full bg-white shadow transition-transform hover:scale-105"
@@ -123,12 +119,12 @@ function Card({ p, isMember }) {
                   strokeWidth="2"
                 />
               </svg>
-            </button>
+            </button> */}
           </div>
         </Link>
 
-        <div className="pc-details flex flex-1 flex-col gap-2 p-4">
-          <h3 className="min-h-[48px] line-clamp-2 text-[16px] font-bold leading-snug text-gray-900">
+        <div className="pc-details flex flex-1 flex-col p-2">
+          <h3 className="min-h-[40px] line-clamp-2 text-[16px] font-bold leading-snug text-gray-900">
             {p.title}
           </h3>
           {p.subtitle && <div className="text-sm text-gray-500">{p.subtitle}</div>}

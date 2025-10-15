@@ -16,18 +16,24 @@ const statusToMessage = (status) => {
   }
 };
 
-const validateClient = ({ name, email, password, confirm, agree }) => {
+const validateClient = ({ name, email,phone, password, confirm, agree }) => {
   if (!name.trim()) return "Please enter your full name.";
   if (!/^\S+@\S+\.\S+$/.test(email)) return "Please enter a valid email address.";
   if (password.length < 6) return "Password must be at least 6 characters.";
   if (password !== confirm) return "Passwords do not match.";
   if (!agree) return "Please accept Terms & Privacy.";
+   const phoneRegex = /^[+\d\s\-\(\)]{7,15}$/;
+  if (phone && !phoneRegex.test(phone.trim())) {
+    return "Please enter a valid mobile number (7–15 digits).";
+  }
+
   return null;
 };
 
 export default function SignUpForm() {
   const [name, setFullName]       = useState("");
   const [email, setEmail]         = useState("");
+   const [phone, setPhone]   = useState(0);
   const [password, setPassword]   = useState("");
   const [confirm, setConfirm]     = useState("");
   const [showPwd, setShowPwd]     = useState(false);
@@ -45,7 +51,7 @@ export default function SignUpForm() {
     setError("");
     setFieldErrors({}); // clear per-submit
 
-    const clientErr = validateClient({ name, email, password, confirm, agree });
+    const clientErr = validateClient({ name, email, phone, password, confirm, agree });
     if (clientErr) {
       setError(clientErr);
       toast.error(clientErr, { duration: 3500 });
@@ -54,7 +60,7 @@ export default function SignUpForm() {
 
     setIsLoading(true);
     try {
-      const res = await signup({ name, email, password });
+      const res = await signup({ name, email,phone, password });
 
       if (res?.ok) {
         toast.success("Signed up successfully!", { duration: 4000 });
@@ -149,6 +155,26 @@ export default function SignUpForm() {
               />
               <FieldError msg={fieldErrors?.email} />
             </div>
+
+          {/* Mobile Number */}
+          <div className="group">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+               Mobile Number
+              </label>
+              <input
+                type="number"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Enter your Mobile Number"
+                className={`block w-full h-12 rounded-xl border-2 px-4 text-gray-800 bg-white/50
+                  placeholder:text-gray-400 transition-all duration-200
+                  focus:outline-none focus:bg-white hover:border-gray-300
+                  ${fieldErrors?.phone ? "border-red-400 focus:border-red-500" : "border-gray-200 focus:border-blue-500"}`}
+              />
+              <FieldError msg={fieldErrors?.phone} />
+            </div>
+          
 
             {/* Password */}
             <div className="group">

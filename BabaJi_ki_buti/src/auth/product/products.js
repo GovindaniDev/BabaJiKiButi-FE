@@ -1,4 +1,4 @@
-import { app } from "../httpAPI";
+import { app } from "../http";
 
 /** Small helper: unwrap your ApiResponse<T> */
 const getPayload = (res) => res?.data?.data ?? res?.data ?? null;

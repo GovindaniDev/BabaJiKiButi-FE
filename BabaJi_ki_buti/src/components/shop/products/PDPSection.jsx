@@ -1,6 +1,5 @@
-// src/pages/ProductPageAlt.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Star, Shield, Sparkles, Clock, Award, Heart,
   ChevronDown, Tag, FileText, BadgeCheck, Pill as PillIcon,
@@ -99,10 +98,227 @@ function IconStat({ Icon, label, value }) {
   );
 }
 
+/* ---------- AMAZON/FLIPKART-STYLE HELPERS ---------- */
+function toTrail(categories = []) {
+  const safe = (Array.isArray(categories) ? categories : [])
+    .map(c => typeof c === "string" ? c : (c?.categoryName || c?.name || ""))
+    .filter(Boolean);
+  return safe;
+}
+
+function toVariantOptions(variants = [], basePrice = null, baseMrp = null) {
+  return (Array.isArray(variants) ? variants : []).map((v, i) => {
+    if (typeof v === "string") {
+      return { id: i, label: v, price: basePrice, mrp: baseMrp, stock: null, raw: v };
+    }
+    const label = v?.label || v?.name || v?.form || v?.title || `Variant ${i+1}`;
+    return {
+      id: v?.id ?? i,
+      label,
+      price: v?.price ?? v?.sellingPrice ?? basePrice ?? null,
+      mrp: v?.mrp ?? baseMrp ?? null,
+      stock: v?.stock ?? v?.qty ?? null,
+      raw: v
+    };
+  });
+}
+
+// Build multi-attribute matrix like Amazon/Flipkart
+function deriveVariantDimensions(rawVariants = []) {
+  const list = Array.isArray(rawVariants) ? rawVariants : [];
+  const skipKeys = new Set(["id","_id","price","sellingPrice","mrp","stock","qty","image","images","sku","barcode","ean","upc"]);
+  // collect keys
+  const keySet = new Set();
+  list.forEach(v => {
+    if (v && typeof v === "object") {
+      Object.keys(v).forEach(k => {
+        const lk = k.toLowerCase();
+        if (!skipKeys.has(k) && !skipKeys.has(lk)) keySet.add(k);
+      });
+    }
+  });
+  // normalize a few common keys to human labels
+  const pretty = (k) => {
+    const m = {
+      form: "Form",
+      size: "Size",
+      pack: "Pack",
+      packsize: "Pack",
+      packs: "Pack",
+      weight: "Weight",
+      flavor: "Flavor",
+      colour: "Color",
+      color: "Color",
+      variant: "Variant",
+      volume: "Volume",
+    };
+    return m[k?.toLowerCase?.()] || k?.charAt(0)?.toUpperCase() + k?.slice(1);
+  };
+  const dimensions = Array.from(keySet);
+  const order = dimensions.sort((a, b) => {
+    // preferred order
+    const pref = ["form","size","pack","weight","flavor","color","variant","volume"];
+    const ia = pref.indexOf(a.toLowerCase());
+    const ib = pref.indexOf(b.toLowerCase());
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+  const values = {};
+  order.forEach(k => {
+    values[k] = Array.from(new Set(list.map(v => v?.[k]).filter(isPresent)));
+  });
+
+  // map of combinations -> variant index
+  const keyOf = (obj, keys) => keys.map(k => String(obj?.[k] ?? "")).join("||");
+  const comboMap = new Map();
+  list.forEach((v, idx) => {
+    comboMap.set(keyOf(v, order), idx);
+  });
+
+  return {
+    order, // raw keys
+    labels: Object.fromEntries(order.map(k => [k, pretty(k)])),
+    values, // { key: [vals] }
+    comboMap,
+    list
+  };
+}
+
+function clampTags(list = [], max = 10) {
+  const arr = (Array.isArray(list) ? list : []).filter(Boolean);
+  return { head: arr.slice(0, max), tail: arr.slice(max) };
+}
+
+function objToQuery(obj) {
+  const params = new URLSearchParams();
+  Object.entries(obj || {}).forEach(([k, v]) => {
+    if (isPresent(v)) params.append(`variant[${k}]`, String(v));
+  });
+  return params.toString();
+}
+
+function queryToObj(searchParams) {
+  const out = {};
+  for (const [k, v] of searchParams.entries()) {
+    const m = k.match(/^variant\[(.+)\]$/);
+    if (m) out[m[1]] = v;
+  }
+  return out;
+}
+
+/* ---------- AMAZON/FLIPKART-STYLE UI ATOMS ---------- */
+function Breadcrumb({ items = [], onClick }) {
+  if (!items.length) return null;
+  return (
+    <nav className="text-sm text-emerald-900/70 mb-2">
+      <ol className="flex flex-wrap items-center gap-1">
+        <li><Link to="/products" className="hover:underline">All</Link></li>
+        {items.map((t, i) => (
+          <li key={i} className="flex items-center gap-1">
+            <span>›</span>
+            {onClick ? (
+              <button onClick={() => onClick(t)} className="hover:underline">
+                {t}
+              </button>
+            ) : (
+              <span className="text-emerald-900/90">{t}</span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function TagBlock({ title, icon: Icon, items = [], max = 10, onClick }) {
+  if (!items?.length) return null;
+  const { head, tail } = clampTags(items, max);
+  const [open, setOpen] = React.useState(false);
+  const shown = open ? [...head, ...tail] : head;
+  return (
+    <div className="rounded-xl ring-1 ring-emerald-100 bg-white p-3">
+      <div className="flex items-center gap-2 text-[13px] font-semibold mb-2">
+        {Icon ? <Icon className="w-4 h-4" /> : null}
+        <span>{title}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {shown.map((t, i) => (
+          <button
+            key={`${t}-${i}`}
+            onClick={() => onClick?.(t)}
+            className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium 
+                       bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-100"
+          >
+            {t}
+          </button>
+        ))}
+        {tail.length > 0 && !open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="text-[11px] underline underline-offset-2 ml-1"
+          >
+            +{tail.length} more
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Multi-dimension variant selector (Amazon-style)
+function VariantSelectorPro({ matrix, selection, setSelection, resolveDisabled }) {
+  if (!matrix?.order?.length) return null;
+  return (
+    <div className="space-y-4">
+      {matrix.order.map((key) => {
+        const label = matrix.labels[key] || key;
+        const values = matrix.values[key] || [];
+        const current = selection[key];
+        return (
+          <div key={key} className="space-y-2">
+            <div className="text-sm font-semibold">{label}</div>
+            <div className="flex flex-wrap gap-2">
+              {values.map((val) => {
+                const active = current === val;
+                const disabled = resolveDisabled(key, val);
+                return (
+                  <button
+                    key={String(val)}
+                    disabled={disabled}
+                    onClick={() =>
+                      setSelection((prev) => ({
+                        ...prev,
+                        [key]: prev[key] === val ? undefined : val, // toggle like Amazon
+                      }))
+                    }
+                    className={cn(
+                      "px-3 py-2 rounded-lg text-sm ring-1 transition",
+                      active
+                        ? "bg-emerald-600 text-white ring-emerald-700"
+                        : "bg-white ring-emerald-200 hover:bg-emerald-50",
+                      disabled && "opacity-50 pointer-events-none"
+                    )}
+                    title={String(val)}
+                  >
+                    {String(val)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* --------------------------------- page --------------------------------- */
 export default function ProductPageAlt() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [product, setProduct] = useState(null);
   const [qty, setQty] = useState(1);
@@ -125,7 +341,7 @@ export default function ProductPageAlt() {
   const reviewsRef = useRef(null);
   const faqsRef = useRef(null);
 
-  // Prefer reduced-motion users (GSAP + FM will respect this)
+  // Prefer reduced-motion users
   const prefersReduced = useMemo(
     () =>
       typeof window !== "undefined"
@@ -155,13 +371,12 @@ export default function ProductPageAlt() {
     };
   }, [slug]);
 
-  /* ---------- GSAP page animations (play nicely with Framer Motion) ---------- */
+  /* ---------- GSAP page animations ---------- */
   useEffect(() => {
-    if (prefersReduced) return; // opt-out
+    if (prefersReduced) return;
     if (!rootRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Parallax on hero image
       if (heroRef.current) {
         const img = heroRef.current.querySelector("[data-hero-img]");
         if (img) {
@@ -180,8 +395,6 @@ export default function ProductPageAlt() {
             }
           );
         }
-
-        // Stagger in icon stats & chips
         gsap.from("[data-animate='iconstat']", {
           y: 16,
           opacity: 0,
@@ -200,7 +413,6 @@ export default function ProductPageAlt() {
         });
       }
 
-      // Generic section reveal — only touches [data-gsap] nodes (never motion.*)
       const reveal = (el) => {
         if (!el) return;
         const targets = el.querySelectorAll("[data-gsap]");
@@ -228,7 +440,6 @@ export default function ProductPageAlt() {
       reveal(reviewsRef.current);
       reveal(faqsRef.current);
 
-      // One soft refresh to align triggers after layout settles
       ScrollTrigger.refresh({ soft: true });
     }, rootRef);
 
@@ -250,7 +461,7 @@ export default function ProductPageAlt() {
   const img =
     product?.productImg ||
     product?.image ||
-    "https://placehold.co/800x600?text=No+Image";
+    "https://placehold.co/800x600?text=No+Image ";
 
   const indication = product?.indication;
   const indicationHi = product?.indicationHi;
@@ -290,13 +501,13 @@ export default function ProductPageAlt() {
   const howEnRaw = cleanArray(product?.howItWorks);
   const howHiRaw = cleanArray(product?.howItWorksHi);
   const khEnRaw = cleanArray(product?.keyherbs || product?.keyHerbs);
-const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
+  const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
   const keyHerbDetailsRaw = cleanArray(
-  product?.keyHerbDetails ||      // <-- matches your payload
-  product?.keyHerbsDetails ||     // <-- legacy/alternate
-  product?.keyherbdetails ||      // <-- ultra-defensive
-  product?.keyherbsdetails
-);
+    product?.keyHerbDetails ||
+    product?.keyHerbsDetails ||
+    product?.keyherbdetails ||
+    product?.keyherbsdetails
+  );
   const whyherbsEnRaw = cleanArray(product?.whyherbs || product?.whyHerbs);
   const whyherbsHiRaw = cleanArray(product?.whyherbsHi || product?.whyHerbsHi);
   const trustBadgesRaw = cleanArray(product?.trustBadges);
@@ -333,16 +544,16 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
 
   // Key herbs with details fallback
   let keyherbs = mergeByIndex(khEnRaw, khHiRaw);
- if (
-  (!hasItems(keyherbs) || keyherbs.every(k => !isPresent(k?.en) && !isPresent(k?.hi))) &&
-  hasItems(keyHerbDetailsRaw)
-) {
-  keyherbs = keyHerbDetailsRaw.map(h => ({
-    en: [h?.herbTitleEn, h?.herbDescEn].filter(isPresent).join(": "),
-    hi: [h?.herbTitleHi, h?.herbDescHi].filter(isPresent).join(": "),
-  }));
-}
-  const keyherbsSafe =keyherbs.filter(nonEmptyPair);
+  if (
+    (!hasItems(keyherbs) || keyherbs.every(k => !isPresent(k?.en) && !isPresent(k?.hi))) &&
+    hasItems(keyHerbDetailsRaw)
+  ) {
+    keyherbs = keyHerbDetailsRaw.map(h => ({
+      en: [h?.herbTitleEn, h?.herbDescEn].filter(isPresent).join(": "),
+      hi: [h?.herbTitleHi, h?.herbDescHi].filter(isPresent).join(": "),
+    }));
+  }
+  const keyherbsSafe = keyherbs.filter(nonEmptyPair);
 
   // Why herbs
   const whyherbs = [
@@ -389,16 +600,109 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
       )
     : 0;
 
+  /* ---------- AMAZON/FLIPKART-STYLE DERIVED ---------- */
+  const categoryTrail = toTrail(product?.categories);
+
+  // Multi-attribute matrix from raw product.variants (not just form)
+  const variantMatrix = useMemo(() => deriveVariantDimensions(product?.variants || []), [product]);
+
+  // Selection restored from URL then clamped to available values
+  const [selection, setSelection] = useState({});
+  useEffect(() => {
+    const fromUrl = queryToObj(searchParams);
+    if (Object.keys(fromUrl).length && variantMatrix.order?.length) {
+      // keep only known keys
+      const clamped = {};
+      variantMatrix.order.forEach(k => {
+        const v = fromUrl[k];
+        if (isPresent(v) && variantMatrix.values[k]?.includes(v)) clamped[k] = v;
+      });
+      setSelection(clamped);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variantMatrix.order?.join("|")]);
+
+  // Which variant is currently resolved by selection?
+  const resolvedVariant = useMemo(() => {
+    if (!variantMatrix.order?.length) return null;
+    const keys = variantMatrix.order;
+    // Try exact match
+    const exactKey = keys.map(k => String(selection[k] ?? "")).join("||");
+    const idx = variantMatrix.comboMap.get(exactKey);
+    if (typeof idx === "number") return variantMatrix.list[idx];
+
+    // Try best effort: if user hasn't chosen all, pick the first available that matches chosen subset
+    const subsetKeys = keys.filter(k => isPresent(selection[k]));
+    const match = variantMatrix.list.find(v =>
+      subsetKeys.every(k => String(v?.[k]) === String(selection[k]))
+    );
+    return match || null;
+  }, [selection, variantMatrix]);
+
+  // Disable logic for each option based on partial selection (Amazon-like)
+  const resolveDisabled = (key, val) => {
+    const tentative = { ...selection, [key]: val };
+    const keys = variantMatrix.order || [];
+    const candidate = variantMatrix.list.find(v =>
+      keys.every(k => {
+        const want = tentative[k];
+        return want == null || String(v?.[k]) === String(want);
+      })
+    );
+    return !candidate || Number(candidate?.stock ?? candidate?.qty ?? 0) === 0;
+  };
+
+  // Keep URL in sync with selection
+  useEffect(() => {
+    if (!variantMatrix.order?.length) return;
+    const q = objToQuery(selection);
+    const base = new URLSearchParams(searchParams);
+    // clear old variant[...] keys
+    Array.from(base.keys()).forEach(k => { if (k.startsWith("variant[")) base.delete(k); });
+    // apply new
+    const fresh = new URLSearchParams(q);
+    for (const [k, v] of fresh.entries()) base.set(k, v);
+    setSearchParams(base, { replace: true });
+  }, [selection, setSearchParams, searchParams, variantMatrix.order?.length]);
+
+  // Fallback simple variant list for left-side “Variants” TagBlock
+  const variantOptions = toVariantOptions(product?.variants, price, mrp);
+
+  // Effective price/mrp/stock from resolved variant else product-level
+  const vPrice = resolvedVariant?.price ?? resolvedVariant?.sellingPrice ?? price;
+  const vMrp = resolvedVariant?.mrp ?? mrp;
+  const vStock = Number(
+    resolvedVariant?.stock ?? resolvedVariant?.qty ?? stock ?? 0
+  );
+  const effectivePrice = vPrice;
+  const effectiveMrp = vMrp;
+  const effectiveStock = vStock;
+  const effectivePriceText = effectivePrice != null ? formatINR(effectivePrice) : null;
+  const effectiveMrpText = effectiveMrp != null ? formatINR(effectiveMrp) : null;
+  const effectiveDiscountPct =
+    effectivePrice != null && effectiveMrp != null && effectiveMrp > effectivePrice
+      ? Math.round(((effectiveMrp - effectivePrice) / effectiveMrp) * 100)
+      : null;
+
   /* --------------------------------- actions -------------------------------- */
   const inc = () => setQty((q) => Math.min(99, q + 1));
   const dec = () => setQty((q) => Math.max(1, q - 1));
   const addToCart = () => {
     if (!product) return;
-    alert(`Added ${qty} x ${title || "Item"} to cart`);
+    const dims = variantMatrix.order?.map(k => selection[k]).filter(isPresent) || [];
+    const vLabel = dims.length ? ` (${dims.join(" / ")})` : "";
+    alert(`Added ${qty} x ${(title || "Item") + vLabel} to cart`);
   };
   const buyNow = () => {
     addToCart();
     navigate("/checkout");
+  };
+
+  // PLP navigation on tag/category click
+  const goToPLP = (params = {}) => {
+    const usp = new URLSearchParams();
+    Object.entries(params).forEach(([k,v]) => usp.set(k, v));
+    navigate(`/products?${usp.toString()}`);
   };
 
   /* --------------------------------- states -------------------------------- */
@@ -468,23 +772,52 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
             variants={fade}
           />
 
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3">
             <IconStat Icon={Truck} label="Shipping" value="Free & Fast" />
             <IconStat Icon={Repeat2} label="Returns" value="Easy Returns" />
             <IconStat Icon={ShieldCheck} label="Secure" value="100% Payment" />
           </div>
 
-          {/* Variants / Categories / Tags */}
-          <div className="mt-6 space-y-2">
-            <ChipRow items={variants} icon={BadgeCheck} />
-            <ChipRow items={categories} icon={Tag} />
-            <ChipRow items={tagsEn} icon={Sparkles} />
-            <ChipRow items={tagsHi} icon={Sparkles} />
+          {/* Amazon-like compact tag blocks */}
+          <div className="mt-6 grid grid-cols-1 gap-3">
+            <TagBlock
+              title="Categories"
+              icon={Tag}
+              items={categoryTrail}
+              onClick={(cat) => goToPLP({ category: cat })}
+            />
+            <TagBlock
+              title="Variants"
+              icon={BadgeCheck}
+              items={(toVariantOptions(product?.variants, price, mrp) || []).map(v => v.label)}
+              onClick={(label) => {
+                // Quick jump: try to select the variant that matches this label in any dimension
+                // (commonly "Form")
+                const key = (variantMatrix.order || []).find(k =>
+                  (variantMatrix.values[k] || []).some(v => String(v) === String(label))
+                );
+                if (key) setSelection(s => ({ ...s, [key]: label }));
+              }}
+            />
+            <TagBlock
+              title="Tags (EN)"
+              icon={Sparkles}
+              items={tagsEn}
+              onClick={(t) => goToPLP({ tag: t })}
+            />
+            <TagBlock
+              title="Tags (HI)"
+              icon={Sparkles}
+              items={tagsHi}
+              onClick={(t) => goToPLP({ tag: t })}
+            />
           </div>
         </aside>
 
         {/* RIGHT */}
         <section className="self-start" data-gsap>
+       
+
           <motion.h1
             className="text-3xl font-extrabold leading-tight"
             variants={fadeUp}
@@ -556,6 +889,8 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
             ) : null}
           </div>
 
+         
+
           {/* Quick badges row: Course time & Lab report */}
           <div className="mt-6 flex flex-wrap items-center gap-2" data-gsap>
             <Badge variant="default" className="gap-2">
@@ -579,27 +914,38 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
             </Badge>
           </div>
 
+          {/* Price area — MRP / Deal Price / You Save */}
           <div className="mt-6 space-y-2" data-gsap>
-            <div className="text-emerald-800/70 text-sm">Our Price:</div>
+            <div className="text-emerald-800/70 text-sm">Deal Price:</div>
             <div className="flex items-end gap-3">
-              {mrpText && priceText && mrp > (price ?? 0) && (
+              {effectiveMrpText && effectivePriceText && effectiveMrp > (effectivePrice ?? 0) && (
                 <span className="text-gray-400 line-through text-lg">
-                  {mrpText}
+                  {effectiveMrpText}
                 </span>
               )}
-              {priceText ? (
+              {effectivePriceText ? (
                 <span className="text-3xl font-extrabold text-emerald-900">
-                  {priceText}
+                  {effectivePriceText}
                 </span>
               ) : (
                 <span className="italic text-emerald-900/70">No data added</span>
               )}
-              {discountPct != null && (
+              {effectiveDiscountPct != null && (
                 <span className="rounded-full bg-[#faeade] px-3 py-1 text-xs font-bold text-emerald-900 ring-1 ring-[#f3cdbf]">
-                  - {discountPct}%
+                  - {effectiveDiscountPct}%
                 </span>
               )}
             </div>
+            {(effectiveMrp != null && effectivePrice != null && effectiveMrp > effectivePrice) && (
+              <div className="text-sm font-bold text-emerald-900/80">
+                You Save:{" "}
+                <b>
+                  {formatINR(effectiveMrp - effectivePrice)} ({effectiveDiscountPct}%)
+                </b>
+              </div>
+            )}
+            <div className="text-xs text-emerald-900/70">Inclusive of all taxes</div>
+
             {weightText ? (
               <div className="text-emerald-900/80 text-sm">
                 Weight: {weightText}
@@ -609,18 +955,39 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
                 Weight: No data added
               </div>
             )}
+
             <div className="mt-3">
-              {stock > 0 ? (
+              {Number(effectiveStock) > 0 ? (
                 <span className="text-xs px-3 py-1 rounded bg-emerald-600 text-white">
-                  {stock} in stock
+                  {effectiveStock} in stock
                 </span>
               ) : (
                 <span className="text-xs px-3 py-1 rounded bg-rose-100 ">
-                  {stock === 0 ? "Out of stock" : "No data added"}
+                  {Number(effectiveStock) === 0 ? "Out of stock" : "No data added"}
                 </span>
               )}
             </div>
           </div>
+
+          {/* Offers strip (simple) */}
+          <div className="mt-4 space-y-2" data-gsap>
+            <div className="text-sm font-semibold">Offers</div>
+            <ul className="text-sm list-disc pl-5 space-y-1">
+              {hasItems(product?.offers)
+                ? product.offers.map((o, i) => <li key={i}>{o}</li>)
+                : (
+                  <>
+                    <li>Bank Offer: 10% instant discount on selected cards</li>
+                    <li>No Cost EMI available on orders above ₹3,000</li>
+                    <li>Combo Offer: Buy 2 & save extra 5%</li>
+                  </>
+                )
+              }
+            </ul>
+          </div>
+
+          {/* Pincode delivery checker (local) */}
+          <PincodeCheck />
 
           {/* CTAs */}
           <div className="mt-8 flex flex-wrap items-center gap-3" data-gsap>
@@ -646,7 +1013,7 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
               whileTap={{ scale: 0.97 }}
               whileHover={{ y: -1 }}
               onClick={addToCart}
-              disabled={stock <= 0}
+              disabled={Number(effectiveStock) <= 0}
               className="bg-[#faeade] hover:bg-[#f6d7c9] text-emerald-900 font-semibold px-6 py-3 rounded inline-flex items-center gap-2 disabled:opacity-50 ring-1 ring-[#f3cdbf]"
             >
               <ShoppingCart className="w-4 h-4" /> ADD TO CART
@@ -656,7 +1023,7 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
               whileTap={{ scale: 0.97 }}
               whileHover={{ y: -1 }}
               onClick={buyNow}
-              disabled={stock <= 0}
+              disabled={Number(effectiveStock) <= 0}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded inline-flex items-center gap-2 disabled:opacity-50"
             >
               BUY NOW — ONE CLICK
@@ -715,7 +1082,7 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
       </section>
 
       {/* Why Choose */}
-      <section ref={whyRef} className="max-w-7xl mx-auto px-4 py-36">
+      <section ref={whyRef} className="max-w-7xl mx-auto px-4 py-38">
         <div className="text-center mb-23" data-gsap>
           <h3 className="text-2xl md:text-3xl font-extrabold">
             Why Choose {title || "No data added"}?
@@ -1163,47 +1530,92 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
       </section>
 
       {/* Reviews */}
-      <section ref={reviewsRef} id="reviews" className="max-w-7xl mx-auto px-4 py-30">
-        <div className="rounded-2xl ring-1 ring-emerald-100 bg-white p-6">
-          <div className="flex items-center justify-center gap-5" data-gsap>
-            <h3 className="text-lg font-bold ">What Our Customers Say</h3>
-            <RatingStars value={averageRating} />
-          </div>
-          {hasItems(reviews) ? (
-            <div className="mt-4 grid md:grid-cols-2 gap-6" data-gsap>
-              {reviews.map((r, i) => (
-                <motion.div
-                  key={i}
-                  className="bg-[#fffaf5] p-5 rounded-xl ring-1 ring-emerald-100"
-                  variants={fadeUp}
-                  initial="hidden"
-                  whileInView="show"
-                  viewport={{ once: true, amount: 0.2 }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold">
-                      {r?.name || "Verified Buyer"}
-                    </div>
-                    <RatingStars value={r?.rating} />
+     <section ref={reviewsRef} id="reviews" className="max-w-7xl mx-auto px-4 py-30">
+  <div className="rounded-2xl bg-[#fffaf5] p-6 md:p-10">
+    {/* Header */}
+    <motion.div
+      className="text-center mb-12"
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.25 }}
+    >
+      <div className="mb-2">
+        <span className="text-xs tracking-wider uppercase text-emerald-700/80">
+          Reviews & Opinions
+        </span>
+      </div>
+      <h3 className="text-2xl md:text-3xl font-bold text-emerald-900">
+        Customers Feedback
+      </h3>
+      <p className="text-emerald-900/70 max-w-2xl mx-auto mt-3">
+        Hear what our valued customers have to say about their wellness journey with Baba Ji Ki Buti.
+      </p>
+    </motion.div>
+
+    {/* Grid */}
+    {hasItems(reviews) ? (
+      <motion.div
+        className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        {reviews.map((r, i) => (
+          <motion.div
+            key={i}
+            className="group"
+            variants={fadeUp}
+            whileHover={{ y: -6 }}
+            transition={{ type: "spring", stiffness: 220, damping: 18 }}
+          >
+            <div className="bg-white border border-emerald-100 rounded-2xl p-8 shadow-sm
+                            hover:border-emerald-300 hover:shadow-md transition-all duration-300 h-full flex flex-col justify-between">
+              {/* Stars */}
+              <div className="flex items-center mb-4">
+                {Array.from({ length: r?.rating || 0 }).map((_, i) => (
+                  <svg
+                    key={i}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    className="h-5 w-5 text-emerald-500"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.16 3.58a1 1 0 00.95.69h3.78c.969 0 1.371 1.24.588 1.81l-3.06 2.22a1 1 0 00-.364 1.118l1.16 3.58c.3.921-.755 1.688-1.54 1.118l-3.06-2.22a1 1 0 00-1.175 0l-3.06 2.22c-.785.57-1.84-.197-1.54-1.118l1.16-3.58a1 1 0 00-.364-1.118L2.57 9.007c-.783-.57-.38-1.81.588-1.81h3.78a1 1 0 00.95-.69l1.16-3.58z" />
+                  </svg>
+                ))}
+              </div>
+
+              {/* Review text */}
+              <p className="text-emerald-900/90 leading-relaxed italic mb-6">
+                “{r?.review || ""}”
+              </p>
+
+              {/* Author */}
+              <div className="border-t border-emerald-100 pt-4 flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-emerald-900">
+                    {r?.name || "Verified Buyer"}
+                     {r?.age ? <span className="text-sm text-emerald-900/70 text-right right-30">, {r.age} yrs</span> : null}
                   </div>
-                  {r?.age != null ? (
-                    <div className="text-xs text-emerald-900/70 mb-2">
-                      Age: {r.age}
-                    </div>
-                  ) : null}
-                  <p className="text-emerald-900/90 whitespace-pre-line">
-                    {r?.review || ""}
-                  </p>
-                </motion.div>
-              ))}
+                  
+                  
+                </div>
+          
+              </div>
             </div>
-          ) : (
-            <p className="mt-3 text-emerald-900/70 italic" data-gsap>
-              There are no reviews yet.
-            </p>
-          )}
-        </div>
-      </section>
+          </motion.div>
+        ))}
+      </motion.div>
+    ) : (
+      <p className="mt-3 text-emerald-900/70 italic text-center">
+        There are no reviews yet.
+      </p>
+    )}
+  </div>
+</section>
+
 
       {/* FAQs */}
       <section ref={faqsRef} id="faqs" className="max-w-7xl mx-auto px-4 py-30">
@@ -1212,7 +1624,7 @@ const khHiRaw = cleanArray(product?.keyherbsHi || product?.keyHerbsHi);
             <h3 className="text-lg font-bold">Frequently Asked Questions</h3>
             <span className="text-emerald-800/70">→</span>
           </div>
-          {hasItems(faqs) ? (
+        {hasItems(faqs) ? (
             <div className="mt-4 divide-y divide-emerald-100" data-gsap>
               {faqs.map((f, idx) => (
                 <details key={idx} className="group">
@@ -1348,5 +1760,51 @@ function Badge({ children, className, variant = "default", ...props }) {
     >
       {children}
     </span>
+  );
+}
+
+/* ------------------------- tiny local widget ------------------------- */
+function PincodeCheck() {
+  const [pin, setPin] = useState("");
+  const [eta, setEta] = useState(null);
+  const [invalid, setInvalid] = useState(false);
+
+  const calc = (p) => {
+    // simple local calc: 3-5 business days
+    const days = 3 + (Number(p?.slice(-1)) % 3); // 3,4,5
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  };
+
+  const onCheck = () => {
+    if (!/^\d{6}$/.test(pin)) {
+      setInvalid(true); setEta(null); return;
+    }
+    setInvalid(false);
+    setEta(calc(pin));
+  };
+
+  return (
+    <div className="mt-5 flex items-center gap-2" data-gsap>
+      <input
+        value={pin}
+        onChange={(e) => setPin(e.target.value)}
+        maxLength={6}
+        placeholder="Enter delivery pincode"
+        className="h-10 px-3 rounded-md ring-1 ring-emerald-200 focus:ring-2 focus:ring-emerald-400 outline-none"
+      />
+      <button
+        onClick={onCheck}
+        className="h-10 px-4 rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+      >
+        Check
+      </button>
+      {invalid ? (
+        <span className="text-xs text-rose-600">Enter a valid 6-digit pincode</span>
+      ) : eta ? (
+        <span className="text-xs text-emerald-800">Delivery by <b>{eta}</b></span>
+      ) : null}
+    </div>
   );
 }
