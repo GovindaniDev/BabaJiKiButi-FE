@@ -223,6 +223,8 @@ body::-webkit-scrollbar {
   }
 
   .benefit-section {
+    color: #523122;
+  font-family: "Antonio", sans-serif;
     @apply min-h-dvh bg-[#222123] overflow-hidden relative;
 
     p {

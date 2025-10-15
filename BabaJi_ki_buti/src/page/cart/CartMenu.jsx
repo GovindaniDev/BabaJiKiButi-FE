@@ -1,21 +1,86 @@
-// CartMenu.jsx
-import React, { useState, useRef } from "react";
+// src/components/CartMenu.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-// If you're on Next.js instead, use:
-// import { useRouter } from "next/navigation";
+import { cartApi } from "../../auth/cart/cartApi";
+import { guestCart } from "../../auth/cart/guestCart";
 
-export default function CartMenu({ cartItems = [] }) {
+export default function CartMenu({ userId, cartItems = [] }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cart, setCart] = useState(null);
   const wrapperRef = useRef(null);
-
-  const navigate = useNavigate();             // React Router
-  // const router = useRouter();              // Next.js
+  const navigate = useNavigate();
 
   const open = () => setIsCartOpen(true);
   const close = () => setIsCartOpen(false);
 
-  const count = cartItems.reduce((n, it) => n + (it.qty || 1), 0);
-  const subtotal = cartItems.reduce((sum, it) => sum + (it.price || 0) * (it.qty || 1), 0);
+  // Fetch on open
+  useEffect(() => {
+    if (!isCartOpen) return;
+    let ignore = false;
+    (async () => {
+      try {
+        if (userId) {
+          const c = await cartApi.getCart(userId);
+          if (!ignore) setCart(c);
+        } else {
+          if (!ignore) setCart(guestCart.get());
+        }
+      } catch (e) {
+        console.error("mini-cart load failed", e);
+      }
+    })();
+    return () => { ignore = true; };
+  }, [isCartOpen, userId]);
+
+  // Refresh on cart change
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        if (userId) {
+          const c = await cartApi.getCart(userId);
+          setCart(c);
+        } else {
+          setCart(guestCart.get());
+        }
+      } catch (e) { /* ignore */ }
+    };
+    window.addEventListener("cart:changed", handler);
+    return () => window.removeEventListener("cart:changed", handler);
+  }, [userId]);
+
+  // Adapt to menu items
+  const menuItems = useMemo(() => {
+    if (cart?.items?.length) {
+      return cart.items.map((it) => ({
+        id: it.cartItemId,
+        name: it.productName,
+        image: it.productImg,
+        qty: it.qty,
+        price: Number(it.unitPrice || 0),
+        total: Number(it.unitPrice || 0) * (it.qty || 1),
+      }));
+    }
+    return (cartItems || []).map((it) => ({
+      id: it.id,
+      name: it.name,
+      image: it.image,
+      qty: it.qty || 1,
+      price: Number(it.price || 0),
+      total: Number(it.price || 0) * (it.qty || 1),
+    }));
+  }, [cart, cartItems]);
+
+  const count = useMemo(
+    () => (cart?.totalQty ?? menuItems.reduce((n, it) => n + (it.qty || 1), 0)),
+    [cart, menuItems]
+  );
+  const subtotal = useMemo(
+    () =>
+      cart?.subtotal != null
+        ? Number(cart.subtotal)
+        : menuItems.reduce((sum, it) => sum + (it.total || 0), 0),
+    [cart, menuItems]
+  );
 
   return (
     <div
@@ -30,11 +95,7 @@ export default function CartMenu({ cartItems = [] }) {
         aria-label="Cart"
         aria-haspopup="dialog"
         aria-expanded={isCartOpen}
-        onClick={() => {
-          // Go to cart page on click
-          navigate("/cart");                // React Router
-          // router.push("/cart");          // Next.js
-        }}
+        onClick={() => navigate("/cart")}
       >
         {/* Cart icon */}
         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -51,10 +112,10 @@ export default function CartMenu({ cartItems = [] }) {
 
       {isCartOpen && (
         <div className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg">
-          {cartItems.length > 0 ? (
+          {menuItems.length > 0 ? (
             <>
               <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
-                {cartItems.slice(0, 6).map((item) => (
+                {menuItems.slice(0, 6).map((item) => (
                   <li key={item.id} className="flex gap-3 p-3">
                     <img
                       src={item.image || "/images/placeholder.png"}
@@ -70,7 +131,7 @@ export default function CartMenu({ cartItems = [] }) {
                       </p>
                     </div>
                     <div className="text-sm font-semibold text-gray-800">
-                      ₹{(((item.price || 0) * (item.qty || 1)) || 0).toFixed(2)}
+                      ₹{(item.total || 0).toFixed(2)}
                     </div>
                   </li>
                 ))}
@@ -78,22 +139,17 @@ export default function CartMenu({ cartItems = [] }) {
 
               <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100">
                 <span className="text-sm text-gray-600">Subtotal</span>
-                <span className="text-sm font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
+                <span className="text-sm font-semibold text-gray-900">₹{Number(subtotal || 0).toFixed(2)}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 p-3">
                 <button
                   className="inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
-                  onClick={() => navigate("/cart")}           // router.push("/cart") for Next.js
+                  onClick={() => navigate("/cart")}
                 >
                   View Cart
                 </button>
-                <button
-                  className="inline-flex items-center justify-center rounded-md bg-yellow-500 text-white px-3 py-2 text-sm hover:bg-yellow-600"
-                  onClick={() => navigate("/checkout")}       // router.push("/checkout")
-                >
-                  Checkout
-                </button>
+               
               </div>
             </>
           ) : (

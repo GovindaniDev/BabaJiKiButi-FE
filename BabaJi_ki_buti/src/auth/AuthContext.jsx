@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import {
   api,
+  app, // used to fetch /api/users/me
   getAccessToken,
   setAccessToken,
   clearAccessToken,
@@ -15,7 +16,6 @@ export const useAuth = () => useContext(AuthCtx);
 
 /* ------------------------------ helpers ------------------------------ */
 const toArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
-
 const normalizeRoles = (claims) => {
   const buckets = [
     claims?.roles,
@@ -28,7 +28,6 @@ const normalizeRoles = (claims) => {
     claims?.realm_access?.roles,
     claims?.resource_access?.account?.roles,
   ];
-
   let raw = buckets
     .flatMap((b) => {
       if (!b) return [];
@@ -37,7 +36,6 @@ const normalizeRoles = (claims) => {
     })
     .filter(Boolean)
     .map(String);
-
   const norm = raw.map((r) => r.trim().toLowerCase().replace(/^role[_: -]?/i, ""));
   return Array.from(new Set(norm));
 };
@@ -70,18 +68,17 @@ const writeAppSession = (sessionId) => {
       sessionId,
       startedAtUtc: new Date().toISOString(),
       startedAtLocal: new Date().toString(),
-      storage: "local", // fixed to local
+      storage: "local",
     })
   );
   window.dispatchEvent(new Event("appSession:updated"));
 };
 
 export default function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // we will keep backend's UserDto here
   const [loading, setLoading] = useState(true);
 
-  // Boot: if no AT but have RT, refresh; token storage still honors remember,
-  // but appSession is ALWAYS stored in localStorage.
+  // Boot: if no AT but have RT, refresh; then try to fetch /users/me
   useEffect(() => {
     (async () => {
       try {
@@ -93,27 +90,28 @@ export default function AuthProvider({ children }) {
             return;
           }
           try {
-            const hadLocalRT =
-              typeof window !== "undefined" && !!localStorage.getItem("refreshToken");
-            const rememberNow = hadLocalRT;
-
             const res = await api.post("/refresh", { refreshToken: rt });
             const payload = res?.data?.data ?? res?.data;
-
-            if (payload?.accessToken) setAccessToken(payload.accessToken, rememberNow);
-            if (payload?.refreshToken) setRefreshToken(payload.refreshToken, rememberNow);
-
-            if (payload?.sessionId) {
-              writeAppSession(payload.sessionId); // <-- always localStorage
-            }
+            if (payload?.accessToken) setAccessToken(payload.accessToken, true);
+            if (payload?.refreshToken) setRefreshToken(payload.refreshToken, true);
+            if (payload?.sessionId) writeAppSession(payload.sessionId);
           } catch {
             setUser(null);
             return;
           }
         }
-        const accessNow = getAccessToken?.();
-        const u = resolveUserFromJWT(accessNow);
-        setUser(u);
+
+        // Try to fetch authoritative profile
+        try {
+          const meRes = await app.get("/users/me");
+          const me = meRes?.data?.data ?? meRes?.data;
+          setUser(me || null);
+        } catch {
+          // Fallback to claims if /me fails (optional)
+          const accessNow = getAccessToken?.();
+          const u = resolveUserFromJWT(accessNow);
+          setUser(u);
+        }
       } catch {
         setUser(null);
       } finally {
@@ -130,14 +128,20 @@ export default function AuthProvider({ children }) {
 
       if (payload?.accessToken) setAccessToken(payload.accessToken, remember);
       if (payload?.refreshToken) setRefreshToken(payload.refreshToken, remember);
+      if (payload?.sessionId) writeAppSession(payload.sessionId);
 
-      if (payload?.sessionId) {
-        writeAppSession(payload.sessionId); // <-- always localStorage
+      // Fetch authoritative profile to get real name/email/phone/role/status
+      let me = null;
+      try {
+        const meRes = await app.get("/users/me");
+        me = meRes?.data?.data ?? meRes?.data;
+      } catch {
+        // As a last resort, decode (not used for role guarding ideally)
+        me = resolveUserFromJWT(payload?.accessToken) || null;
       }
 
-      const u = resolveUserFromJWT(payload?.accessToken);
-      setUser(u);
-      return { ok: true, user: u };
+      setUser(me);
+      return { ok: true, user: me };
     } catch (err) {
       const status = err?.response?.status ?? 0;
       const data = err?.response?.data;
@@ -181,9 +185,9 @@ export default function AuthProvider({ children }) {
     }
   };
 
-  const signup = async ({ name, email, password }) => {
+  const signup = async ({ name, email, phone, password }) => {
     try {
-      const res = await api.post("/signup", { name, email, password });
+      const res = await api.post("/signup", { name, email, phone, password });
       const payload = res?.data?.data ?? res?.data;
       return { ok: true, data: payload };
     } catch (err) {
@@ -239,8 +243,8 @@ export default function AuthProvider({ children }) {
     }
     clearAccessToken();
     clearRefreshToken();
-    localStorage.removeItem("appSession");     // <-- session only in localStorage
-    sessionStorage.removeItem("appSession");   // harmless extra cleanup
+    localStorage.removeItem("appSession");
+    sessionStorage.removeItem("appSession");
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("appSession:updated"));
     }
@@ -260,7 +264,8 @@ export default function AuthProvider({ children }) {
   const value = {
     user,
     isAuthenticated: !!user,
-    isAdmin: !!user?.roles?.includes("admin"),
+    // 🔑 backend returns enum: "ADMIN" | "USER"
+    isAdmin: (user?.role || "").toUpperCase() === "ADMIN",
     login,
     signup,
     setUser,
@@ -272,3 +277,4 @@ export default function AuthProvider({ children }) {
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
+  

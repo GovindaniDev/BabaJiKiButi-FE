@@ -3,6 +3,7 @@ import { flavorlists } from "../constants";
 import gsap from "gsap";
 import { useRef } from "react";
 import { useMediaQuery } from "react-responsive";
+import { Link } from "react-router-dom"; // ⬅️ added
 
 const FlavorSlider = () => {
   const sliderRef = useRef();
@@ -66,32 +67,55 @@ const FlavorSlider = () => {
   return (
     <div ref={sliderRef} className="slider-wrapper">
       <div className="flavors">
-        {flavorlists.map((flavor) => (
-          <div
-            key={flavor.name}
-            className={`relative z-30 lg:w-[50vw] w-96 lg:h-[70vh] md:w-[90vw] md:h-[50vh] h-80 flex-none ${flavor.rotation}`}
-          >
-            <img
-              src={`/images/${flavor.product}-bg.svg`}
-              alt=""
-              className="absolute bottom-0"
-            />
+        {flavorlists.map((flavor) => {
+          const to = `/product/${flavor.slug || flavor.product}`; // fallback if slug not present
+          return (
+            <div
+              key={flavor.name}
+              className={`relative z-30 lg:w-[50vw] w-96 lg:h-[70vh] md:w-[90vw] md:h-[50vh] h-80 flex-none ${flavor.rotation}`}
+            >
+              {/* background decorative */}
+              <img
+                src={`/images/${flavor.product}-bg.svg`}
+                alt=""
+                className="absolute bottom-0"
+              />
 
-            <img
-              src={`/images/${flavor.product}-prodbg.webp`}
-              alt=""
-              className="drinks"
-            />
+              {/* product image */}
+              <img
+                src={`/images/${flavor.product}-prodbg.webp`}
+                alt=""
+                className="drinks"
+              />
 
-            <img
-              src={`/images/${flavor.color}-elements.webp`}
-              alt=""
-              className="elements"
-            />
+              {/* floating elements */}
+              <img
+                src={`/images/${flavor.color}-elements.webp`}
+                alt=""
+                className="elements"
+              />
 
-            <h1>{flavor.name}</h1>
-          </div>
-        ))}
+              {/* product name */}
+              <h1>{flavor.name}</h1>
+
+              {/* BUY NOW button */}
+           <div className="absolute bottom-10 right-10 z-40">
+  <Link
+    to={to}
+    className="btn-golden-glow inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-lg tracking-wider
+               bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500
+               text-black shadow-[0_0_20px_rgba(255,215,0,0.5)]
+               hover:shadow-[0_0_35px_rgba(255,215,0,0.8)]
+               transition-all duration-300 hover:scale-110 border border-yellow-400"
+  >
+    Buy Now
+  </Link>
+</div>
+
+
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -17,6 +17,8 @@ import {
   Shield,
   Award,
   Heart,
+  Check,      // ⬅️ added
+  Crown       // ⬅️ added
 } from "lucide-react";
 import { motion } from "framer-motion";
 import CountUp from "react-countup";
@@ -114,6 +116,212 @@ const TypeLine = ({ segments = [], className = "" }) => {
     </span>
   );
 };
+
+/* -------------------------- Subscription Plans -------------------------- */
+const included = (text) => (
+  <li className="flex items-start gap-3">
+    <span className="mt-0.5 rounded-md bg-yellow-300/15 p-1">
+      <Check className="h-4 w-4 text-yellow-300" />
+    </span>
+    <span className="text-white/85">{text}</span>
+  </li>
+);
+
+const PlanCard = ({
+  title,
+  subtitle,
+  priceMonthly,
+  priceYearly,
+  highlight = false,
+  badge,
+  perks = [],
+  cta = "Subscribe",
+  onClick,
+  billing = "monthly",
+}) => {
+  const price = billing === "yearly" ? priceYearly : priceMonthly;
+  const unit = billing === "yearly" ? "/year" : "/month";
+  return (
+    <motion.div
+      variants={fadeUp}
+      whileHover={{ y: -6 }}
+      transition={{ type: "spring", stiffness: 240, damping: 18 }}
+      className={[
+        "relative h-full rounded-2xl border p-8 backdrop-blur-md",
+        highlight
+          ? "border-yellow-300/40 bg-yellow-300/10 shadow-lg shadow-yellow-300/10"
+          : "border-white/10 bg-black/30",
+      ].join(" ")}
+    >
+      {badge && (
+        <div className="absolute -top-3 left-8 inline-flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-black">
+          {badge === "Best Value" && <Crown className="h-4 w-4" />}
+          {badge}
+        </div>
+      )}
+
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold">{title}</h3>
+        <p className="text-sm text-white/70">{subtitle}</p>
+      </div>
+
+      <div className="mb-6">
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-extrabold text-yellow-300">{price}</span>
+          <span className="text-white/60">{unit}</span>
+        </div>
+      </div>
+
+      <ul className="mb-8 space-y-3 text-sm">{perks.map((p, i) => <React.Fragment key={i}>{included(p)}</React.Fragment>)}</ul>
+
+      <Button
+        onClick={onClick}
+        className={[
+          "w-full justify-center",
+          highlight ? "bg-yellow-300 text-black hover:bg-yellow-200" : "bg-transparent border-white/20 hover:bg-white/5",
+        ].join(" ")}
+        variant={highlight ? undefined : "outline"}
+        size="lg"
+      >
+        {cta}
+      </Button>
+
+      {/* Small trust footer */}
+      <div className="mt-4 text-[11px] text-white/60">Secure payment • Cancel anytime</div>
+    </motion.div>
+  );
+};
+
+const SubscriptionPlans = () => {
+  const [billing, setBilling] = useState("monthly"); // 'monthly' | 'yearly'
+
+  const plans = [
+    {
+      title: "Starter",
+      subtitle: "For casual shoppers",
+      priceMonthly: "₹199",
+      priceYearly: "₹1,999",
+      perks: [
+        "5% member-only discount",
+        "Early access to sales",
+        "₹50 delivery fee credit / order",
+        "Earn 1.5× loyalty points",
+      ],
+    },
+    {
+      title: "Plus",
+      subtitle: "For repeat buyers",
+      priceMonthly: "₹499",
+      priceYearly: "₹4,999",
+      highlight: true,
+      badge: "Best Value",
+      perks: [
+        "10% member-only discount",
+        "Free shipping on orders ₹499+",
+        "Priority support & returns",
+        "Earn 2× loyalty points",
+        "Early access to limited drops",
+      ],
+    },
+    {
+      title: "Elite",
+      subtitle: "For power users & families",
+      priceMonthly: "₹999",
+      priceYearly: "₹9,999",
+      perks: [
+        "15% member-only discount",
+        "Free shipping on all orders",
+        "VIP concierge support",
+        "Earn 3× loyalty points",
+        "Monthly surprise samples",
+      ],
+    },
+  ];
+
+  return (
+    <section id="plans" className="py-20 bg-black/40">
+      <motion.div
+        className="container mx-auto px-4"
+        variants={container}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.25 }}
+      >
+        <motion.div className="text-center mb-10" variants={fadeUp}>
+          <span className="text-yellow-300 text-sm font-medium tracking-wide uppercase">Membership</span>
+          <h2 className="mt-3 text-3xl md:text-4xl font-bold">Choose Your Plan</h2>
+          <p className="mt-3 text-white/70">
+            Save more on every order and unlock fast delivery, exclusive discounts, and priority support.
+          </p>
+        </motion.div>
+
+        {/* Billing Toggle */}
+        <motion.div className="mb-10 flex items-center justify-center gap-3" variants={fadeUp}>
+          <Button
+            variant={billing === "monthly" ? undefined : "outline"}
+            className={billing === "monthly" ? "" : "text-white/80"}
+            onClick={() => setBilling("monthly")}
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={billing === "yearly" ? undefined : "outline"}
+            className={billing === "yearly" ? "" : "text-white/80"}
+            onClick={() => setBilling("yearly")}
+          >
+            Yearly <span className="ml-2 rounded-full bg-yellow-300/20 px-2 py-0.5 text-[10px] text-yellow-30">Save 20%</span>
+          </Button>
+        </motion.div>
+
+        {/* Plans Grid */}
+        <motion.div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto" variants={container}>
+          {plans.map((p, idx) => (
+            <PlanCard
+              key={idx}
+              {...p}
+              billing={billing}
+              onClick={() => {
+                // hook up to your checkout / cart flow
+                // e.g., navigate(`/checkout?plan=${p.title.toLowerCase()}&billing=${billing}`)
+                console.log("Subscribe:", p.title, billing);
+              }}
+              cta={p.highlight ? "Start Plus" : `Choose ${p.title}`}
+            />
+          ))}
+        </motion.div>
+
+        {/* Benefits strip */}
+        <motion.div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4" variants={container}>
+          {[
+            { icon: Leaf, label: "Ayurvedic Goodness", desc: "Member-only wellness tips & samples" },
+            { icon: Shield, label: "Hassle-free Returns", desc: "Extended return window for members" },
+            { icon: Star, label: "Priority Support", desc: "Skip the queue for faster help" },
+          ].map((b, i) => {
+            const Icon = b.icon;
+            return (
+              <motion.div
+                key={i}
+                variants={fadeUp}
+                className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="rounded-xl bg-yellow-300/15 p-2">
+                    <Icon className="h-5 w-5 text-yellow-300" />
+                  </span>
+                  <div>
+                    <div className="font-semibold">{b.label}</div>
+                    <div className="text-sm text-white/70">{b.desc}</div>0
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+};
+/* ----------------------- /Subscription Plans ----------------------- */
 
 const AboutUsSection = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -467,6 +675,9 @@ const AboutUsSection = () => {
             </motion.div>
           </motion.div>
         </section>
+
+        {/* ⬇️ NEW: Subscription Plans (directly after Reviews) */}
+        <SubscriptionPlans />
       </main>
     </div>
   );
