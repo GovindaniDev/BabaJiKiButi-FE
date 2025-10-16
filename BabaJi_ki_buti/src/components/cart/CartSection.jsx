@@ -1,108 +1,76 @@
 // src/components/cart/CartPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { cartApi } from "../../auth/cart/cartApi";
-import { guestCart } from "../../auth/cart/guestCart";
+import { useCart } from "../../auth/cart/useCart";
 
-/* ------------------------------ helpers ------------------------------ */
-const formatINR = (num) =>
+const DBG_CART = true;
+const dlog = (...a) => DBG_CART && console.log("[CartSection]", ...a);
+
+/* helpers */
+const formatINR = (n) =>
   new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(Number(num || 0));
+  }).format(Number(n || 0));
 
-/** Flipkart-ish delivery rule for demo */
-const DELIVERY_THRESHOLD = 500; // free delivery above this
+const DELIVERY_THRESHOLD = 500;
 const DELIVERY_FEE = 40;
 
-/* ------------------------------- Page -------------------------------- */
-export default function CartPage({ userId }) {
-  const [cart, setCart] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function CartSection({ userId }) {
+  const { cart, loading, update, remove, clear, userId: resolvedUserId } = useCart(userId);
   const [updatingId, setUpdatingId] = useState(null);
   const [coupon, setCoupon] = useState("");
   const [pin, setPin] = useState("");
   const [applyingCoupon, setApplyingCoupon] = useState(false);
-
   const navigate = useNavigate();
 
-  /* ------------------------------- data ------------------------------- */
-  const refresh = async () => {
-    if (userId) {
-      const c = await cartApi.getCart(userId);
-      setCart(c);
-    } else {
-      setCart(guestCart.get());
-    }
-  };
+  const getItemId = (it) => it?.cartItemId ?? it?.id ?? it?.itemId ?? it?.key;
+
+  // 🔍 Observe cart changes & important UI decisions
+  useEffect(() => {
+    dlog("render cart snapshot", { loading, cart });
+  }, [loading, cart]);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
+    if (!loading && (!cart || (cart.items?.length ?? 0) === 0)) {
+      dlog("UI path -> EmptyCart", { userId: resolvedUserId, cart });
+      // Also dump localStorage guest cart for sanity
       try {
-        await refresh();
-      } finally {
-        setLoading(false);
+        const ls = localStorage.getItem("guest_cart_v1");
+        dlog("guest_cart_v1 LS ->", ls);
+      } catch (e) {
+        dlog("LS read error", e);
       }
-    })();
-  }, [userId]);
-
-  /* ------------------------------ actions ----------------------------- */
-  const mutate = async (fn) => {
-    await fn();
-    await refresh();
-    window.dispatchEvent(new CustomEvent("cart:changed"));
-  };
+    }
+  }, [loading, cart, resolvedUserId]);
 
   const inc = async (item) => {
-    setUpdatingId(item.cartItemId);
-    await mutate(async () => {
-      if (userId) await cartApi.updateQty(userId, item.cartItemId, (item.qty || 1) + 1);
-      else guestCart.updateQty(item.cartItemId, (item.qty || 1) + 1);
-    });
+    setUpdatingId(getItemId(item));
+    await update(item, (item.qty || 1) + 1);
     setUpdatingId(null);
   };
-
   const dec = async (item) => {
     const next = Math.max(1, (item.qty || 1) - 1);
-    setUpdatingId(item.cartItemId);
-    await mutate(async () => {
-      if (userId) await cartApi.updateQty(userId, item.cartItemId, next);
-      else guestCart.updateQty(item.cartItemId, next);
-    });
+    setUpdatingId(getItemId(item));
+    await update(item, next);
     setUpdatingId(null);
   };
-
-  const remove = async (item) => {
-    setUpdatingId(item.cartItemId);
-    await mutate(async () => {
-      if (userId) await cartApi.removeItem(userId, item.cartItemId);
-      else guestCart.removeItem(item.cartItemId);
-    });
+  const onRemove = async (item) => {
+    setUpdatingId(getItemId(item));
+    await remove(item);
     setUpdatingId(null);
   };
-
-  const clear = async () => {
-    await mutate(async () => {
-      if (userId) await cartApi.clear(userId);
-      else guestCart.clear();
-    });
-  };
-
   const goCheckout = () => {
-    if (!userId) {
-      navigate("/login?next=/checkout");
+    if (!resolvedUserId) {
+      navigate("/login?next=/address");
       return;
     }
-    navigate("/checkout");
+    navigate("/address");
   };
 
-  /* ------------------------- computed totals -------------------------- */
-  // We use MRP subtotal vs selling subtotal to show Discount & Savings (Flipkart style)
   const summary = useMemo(() => {
     const items = cart?.items || [];
-
     const sellingSubtotal = items.reduce(
       (s, it) => s + Number(it.unitPrice || 0) * (it.qty || 1),
       0
@@ -114,41 +82,36 @@ export default function CartPage({ userId }) {
       0
     );
     const discount = Math.max(0, mrpSubtotal - sellingSubtotal);
-
-    const s = Number(cart?.subtotal || sellingSubtotal || 0); // safety
-    const deliveryCharge = s > 0 && s < DELIVERY_THRESHOLD ? DELIVERY_FEE : 0;
-    const total = sellingSubtotal + deliveryCharge;
-
-    const count = items.reduce((n, it) => n + (it.qty || 1), 0);
-
-    return {
-      count,
+    const s = Number(cart?.subtotal || sellingSubtotal || 0);
+    const delivery = s > 0 && s < DELIVERY_THRESHOLD ? DELIVERY_FEE : 0;
+    const out = {
+      count: items.reduce((n, it) => n + (it.qty || 1), 0),
       mrpSubtotal,
-      sellingSubtotal,
       discount,
-      delivery: deliveryCharge,
-      total,
-      youSave: discount, // product savings only (like Flipkart green line)
+      delivery,
+      total: sellingSubtotal + delivery,
+      youSave: discount,
     };
+    dlog("summary recompute", out);
+    return out;
   }, [cart]);
 
-  /* ------------------------------ render ------------------------------ */
   if (loading) {
+    dlog("UI path -> Skeleton");
     return (
       <div className="max-w-6xl mx-auto px-4 py-20">
         <Skeleton />
       </div>
     );
   }
-
   if (!cart || (cart.items?.length ?? 0) === 0) {
+    dlog("UI path -> EmptyCart (render)");
     return <EmptyCart />;
   }
 
   return (
     <div className="bg-[#faeade] min-h-screen">
       <div className="max-w-6xl mx-auto px-3 md:px-4 py-30">
-        {/* Header strip */}
         <div className="hidden md:flex items-center gap-2 text-sm text-[#6f4d3b] mb-4">
           <span className="font-semibold text-[#5b3b2b]">Your Cart</span>
           <span>›</span>
@@ -156,9 +119,7 @@ export default function CartPage({ userId }) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left column: items */}
           <div className="lg:col-span-2">
-            {/* Address / Pincode bar */}
             <div className="bg-[#fff7f0] rounded-md shadow-sm border border-amber-200 p-4 mb-3">
               <p className="text-sm text-[#5b3b2b]">
                 Deliver to{" "}
@@ -176,36 +137,32 @@ export default function CartPage({ userId }) {
                   }
                   className="px-3 py-2 border border-amber-300 rounded text-sm w-40 bg-white text-[#4a2f24] placeholder:text-amber-700/50"
                 />
-                <button
-                  className="px-4 py-2 bg-[#cc5f29] text-white rounded text-sm hover:bg-[#b95726]"
-                  onClick={() => {}}
-                >
+                <button className="px-4 py-2 bg-[#cc5f29] text-white rounded text-sm hover:bg-[#b95726]">
                   Check
                 </button>
               </div>
             </div>
 
-            {/* Items list */}
             <div className="bg-white rounded-md shadow-sm border border-amber-200 overflow-hidden">
               {(cart.items || []).map((it, idx) => (
                 <div
-                  key={it.cartItemId}
+                  key={getItemId(it)}
                   className="p-4 border-b border-amber-100 last:border-0"
                 >
                   <CartItemRow
                     item={it}
-                    updating={updatingId === it.cartItemId}
+                    updating={updatingId === getItemId(it)}
                     onInc={() => inc(it)}
                     onDec={() => dec(it)}
-                    onRemove={() => remove(it)}
+                    onRemove={() => onRemove(it)}
                   />
-
-                  {/* Delivery message */}
                   {idx === 0 && (
                     <div className="mt-3 text-xs text-amber-800">
                       Delivery by{" "}
-                      <span className="text-[#4a2f24] font-medium">3–5 days</span>{" "}
-                      • ₹{summary.delivery === 0 ? 0 : DELIVERY_FEE} delivery fee
+                      <span className="text-[#4a2f24] font-medium">
+                        3–5 days
+                      </span>{" "}
+                      • ₹{summary.delivery === 0 ? 0 : 40}
                       {summary.delivery === 0 && (
                         <span className="ml-1 text-emerald-700 font-medium">
                           (Free)
@@ -217,7 +174,6 @@ export default function CartPage({ userId }) {
               ))}
             </div>
 
-            {/* Coupon box */}
             <div className="bg-[#fff7f0] rounded-md shadow-sm border border-amber-200 p-4 mt-3">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -237,7 +193,7 @@ export default function CartPage({ userId }) {
                   />
                   <button
                     disabled={applyingCoupon || coupon.trim().length === 0}
-                    onClick={async () => {
+                    onClick={() => {
                       setApplyingCoupon(true);
                       setTimeout(() => setApplyingCoupon(false), 600);
                     }}
@@ -249,7 +205,6 @@ export default function CartPage({ userId }) {
               </div>
             </div>
 
-            {/* Actions bottom (mobile) */}
             <div className="lg:hidden mt-3 flex justify-between items-center">
               <button
                 onClick={clear}
@@ -266,7 +221,6 @@ export default function CartPage({ userId }) {
             </div>
           </div>
 
-          {/* Right column: price summary */}
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-20">
               <PriceDetails
@@ -277,7 +231,6 @@ export default function CartPage({ userId }) {
                 total={summary.total}
                 youSave={summary.youSave}
               />
-
               <div className="hidden lg:block mt-3">
                 <button
                   onClick={goCheckout}
@@ -286,7 +239,6 @@ export default function CartPage({ userId }) {
                   Place Order
                 </button>
               </div>
-
               <div className="hidden lg:block mt-2">
                 <button
                   onClick={clear}
@@ -295,21 +247,6 @@ export default function CartPage({ userId }) {
                   Clear Cart
                 </button>
               </div>
-
-              {/* Free delivery hint */}
-              {summary.sellingSubtotal > 0 &&
-                summary.sellingSubtotal < DELIVERY_THRESHOLD && (
-                  <div className="mt-3 text-xs text-[#5b3b2b] bg-[#fff7f0] border border-amber-200 rounded-md shadow-sm p-3">
-                    Add items worth{" "}
-                    <span className="font-semibold">
-                      {formatINR(DELIVERY_THRESHOLD - summary.sellingSubtotal)}
-                    </span>{" "}
-                    more to get{" "}
-                    <span className="text-emerald-700 font-medium">
-                      Free Delivery
-                    </span>.
-                  </div>
-                )}
             </div>
           </div>
         </div>
@@ -318,27 +255,17 @@ export default function CartPage({ userId }) {
   );
 }
 
-/* -------------------------- child components -------------------------- */
-
+/* === child components (unchanged) === */
 function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
-  const {
-    productImg,
-    productName,
-    qty,
-    unitPrice,
-  } = item || {};
-
-  // Prefer Hindi title if available in guest meta; fallback to productName
+  const { productImg, productName, qty, unitPrice } = item || {};
   const displayTitle =
     item?.meta?.titleHi || item?.meta?.title || productName || "Product";
-
   const mrp = Number((item?.mrp ?? item?.meta?.mrp ?? unitPrice) || 0);
   const selling = Number(unitPrice || 0);
   const savingPerUnit = Math.max(0, mrp - selling);
   const saved = savingPerUnit * (qty || 1);
   const discountPct = mrp > 0 ? Math.round(((mrp - selling) / mrp) * 100) : 0;
   const lineTotal = selling * (qty || 1);
-
   const sizeText = (() => {
     const size = item?.qtySize ?? item?.meta?.qtySize;
     const unit = item?.qtyUnit ?? item?.meta?.qtyUnit;
@@ -348,7 +275,6 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
 
   return (
     <div className="flex gap-4">
-      {/* Image */}
       <div className="w-24 h-24 flex-shrink-0 bg-white border border-amber-200 rounded overflow-hidden">
         <img
           src={productImg || "/images/placeholder.png"}
@@ -357,22 +283,17 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
           onError={(e) => (e.currentTarget.src = "/images/placeholder.png")}
         />
       </div>
-
-      {/* Content */}
       <div className="flex-1">
         <div className="flex justify-between gap-4">
           <div className="pr-2">
-            {/* Title (Hindi preferred) */}
             <h3 className="text-sm font-medium text-[#4a2f24] leading-5 line-clamp-2">
               {displayTitle}
             </h3>
-
-            {/* Variant / pack size */}
             {sizeText && (
-              <div className="mt-1 text-xs text-[#7b5a47]">Pack: {sizeText}</div>
+              <div className="mt-1 text-xs text-[#7b5a47]">
+                Pack: {sizeText}
+              </div>
             )}
-
-            {/* Price cluster with MRP, Selling, % Off */}
             <div className="mt-2 flex items-center gap-2 flex-wrap">
               {mrp > selling && mrp > 0 && (
                 <span className="text-[#8c6a57] line-through text-sm">
@@ -388,16 +309,12 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
                 </span>
               )}
             </div>
-
-            {/* You save ... */}
             {saved > 0 && (
               <div className="mt-1 text-xs text-emerald-700 font-medium">
                 You save {formatINR(saved)} on this item
               </div>
             )}
           </div>
-
-          {/* Right-aligned: line total */}
           <div className="hidden sm:block text-right">
             <div className="text-sm text-[#7b5a47]">Item total</div>
             <div className="text-base font-semibold text-[#3c281f]">
@@ -405,16 +322,12 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
             </div>
           </div>
         </div>
-
-        {/* Controls */}
         <div className="mt-3 flex items-center gap-4">
-          {/* Qty stepper */}
           <div className="inline-flex items-center border border-amber-300 rounded bg-white">
             <button
               onClick={onDec}
               disabled={updating || (qty || 1) <= 1}
               className="w-8 h-8 text-lg leading-8 text-[#4a2f24] disabled:opacity-40"
-              aria-label="Decrease quantity"
             >
               –
             </button>
@@ -425,13 +338,10 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
               onClick={onInc}
               disabled={updating}
               className="w-8 h-8 text-lg leading-8 text-[#4a2f24] disabled:opacity-40"
-              aria-label="Increase quantity"
             >
               +
             </button>
           </div>
-
-          {/* Actions */}
           <button
             onClick={onRemove}
             disabled={updating}
@@ -439,7 +349,6 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
           >
             Remove
           </button>
-
           <button
             disabled
             className="text-sm font-medium text-amber-700/50 cursor-not-allowed"
@@ -448,13 +357,9 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
             Save for later
           </button>
         </div>
-
-        {/* Mobile line total */}
         <div className="sm:hidden mt-2 text-sm text-[#5b3b2b]">
           Total: <span className="font-semibold">{formatINR(lineTotal)}</span>
         </div>
-
-        {/* Updating indicator */}
         {updating && (
           <div className="mt-2 text-xs text-amber-700/80">Updating…</div>
         )}
@@ -462,8 +367,6 @@ function CartItemRow({ item, updating, onInc, onDec, onRemove }) {
     </div>
   );
 }
-
-/* ------------------------ right card components ----------------------- */
 
 function PriceDetails({ count, mrpSubtotal, discount, delivery, total, youSave }) {
   return (
@@ -505,7 +408,6 @@ function PriceDetails({ count, mrpSubtotal, discount, delivery, total, youSave }
     </div>
   );
 }
-
 function Row({ label, value }) {
   return (
     <div className="flex items-center justify-between">
@@ -514,9 +416,6 @@ function Row({ label, value }) {
     </div>
   );
 }
-
-/* ---------------------------- misc bits ---------------------------- */
-
 function EmptyCart() {
   return (
     <div className="bg-[#faeade] min-h-[70vh]">
@@ -530,17 +429,16 @@ function EmptyCart() {
           Your cart is empty
         </h2>
         <p className="mt-1 text-sm text-[#6f4d3b]">Add items to it now.</p>
-        <Link
-          to="/shop"
+        <a
+          href="/shop"
           className="inline-flex items-center mt-6 px-6 py-2 bg-[#e46c2f] text-white rounded hover:bg-[#cc5f29]"
         >
           Shop Now
-        </Link>
+        </a>
       </div>
     </div>
   );
 }
-
 function Skeleton() {
   return (
     <div className="animate-pulse">

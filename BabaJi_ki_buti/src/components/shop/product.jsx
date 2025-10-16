@@ -28,6 +28,7 @@ import Loader from "../ui/Loader";
 // CART
 import { cartApi } from "../../auth/cart/cartApi";
 import { guestCart } from "../../auth/cart/guestCart";
+import { emitCartChanged } from "../../auth/cart/cartBus";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -551,22 +552,37 @@ function ProductCard({ product: p, userId }) {
   }, []);
 
   const handleAddToCart = async () => {
-    try {
-      setAdding(true);
-      if (userId) {
-        await cartApi.addItem(userId, productId, 1);
-      } else {
+  try {
+    setAdding(true);
+
+    // p = your product object; productId prop is optional
+    const pid =
+      productId ?? p?.productId ?? p?.id ?? p?.sku ?? null;
+
+    if (userId) {
+      if (!pid) {
+        console.warn("AddToCart: missing product id for server add", { p, productId });
+        // Optional: also add to guest so user still sees it if id is missing
         guestCart.addItem(p, 1);
+      } else {
+        await cartApi.addItem(userId, pid, 1);
       }
-      setAdded(true);
-      window.dispatchEvent(new CustomEvent("cart:changed"));
-      setTimeout(() => setAdded(false), 1500);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setAdding(false);
+    } else {
+      // guest path needs the full product so identity key is stable
+      guestCart.addItem(p, 1);
     }
-  };
+
+    // tell Navbar & Cart page to refresh (and other tabs too)
+    emitCartChanged("button:add");
+
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  } catch (e) {
+    console.error("AddToCart failed", e);
+  } finally {
+    setAdding(false);
+  }
+}
 
   return (
     <motion.article
