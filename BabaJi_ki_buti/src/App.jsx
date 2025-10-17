@@ -48,24 +48,30 @@ import ReturnPage from "./page/admin/return/ReturnPage";
 import CustomerPage from "./page/admin/users/CustomerPage";
 import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
-import CartPage from "./components/cart/CartPage";
 import AccountPage from "./page/profile/AccountPage";
 import RequireAdmin from "./auth/RequireAuth";
+import AddressPage from "./page/address/AddressPage";
+import CartPage from "./page/cart/CartPage";
+import { useMe } from "./auth/user/useMe"; 
+// register once
 import PaymentPage from "./components/payment/paymentsection";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
-const App = () => {
+/* --------------------------- Inner app (under provider) --------------------------- */
+function AppInner() {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isHome = location.pathname === "/";
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const { me } = useMe(); // ✅ safe here because we are UNDER <AuthProvider>
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
+
 
   const HomePage = () => {
     useGSAP(() => {
@@ -94,7 +100,7 @@ const App = () => {
   };
 
   return (
-    <AuthProvider>
+    <>
       <Toaster reverseOrder={false} />
       <main>
         {loading && <Loading label="Please wait..." />}
@@ -121,11 +127,23 @@ const App = () => {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
+
+  
           <Route path="/cart" element={<CartPage />} />
           <Route path="/payment" element={<PaymentPage />} />
 
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
+
+          {/* Protect Address so only authed users can open it */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/address" element={<AddressPage />} />
+          </Route>
+          {/* Cart */}
+          <Route
+            path="/cart"
+            element={<CartPage userId={typeof me?.id === "number" ? me.id : null} />}
+          />
 
           {/* Admin (role-restricted) */}
           <Route element={<RequireAdmin />}>
@@ -140,7 +158,6 @@ const App = () => {
               <Route path="users" element={<CustomerPage />} />
               <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
               <Route path="inventory/AddStockPage" element={<AddStockPage />} />
-              {/* more admin pages … */}
             </Route>
           </Route>
 
@@ -160,8 +177,15 @@ const App = () => {
         {/* Global footer on non-home, non-admin pages */}
         {!isAdminRoute && !isHome && <FooterSection />}
       </main>
+    </>
+  );
+}
+
+/* ------------------------------ Root (provider) ------------------------------ */
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
     </AuthProvider>
   );
-};
-
-export default App;
+}

@@ -1,8 +1,9 @@
 // src/components/CartMenu.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { cartApi } from "../../auth/cart/cartApi";
+import { cartApiV2 as cartApi } from "../../auth/cart/cartApiV2";
 import { guestCart } from "../../auth/cart/guestCart";
+import { onCartChanged } from "../../auth/cart/cartBus";
 
 export default function CartMenu({ userId, cartItems = [] }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -34,18 +35,13 @@ export default function CartMenu({ userId, cartItems = [] }) {
 
   // Refresh on cart change
   useEffect(() => {
-    const handler = async () => {
+    const off = onCartChanged(async () => {
       try {
-        if (userId) {
-          const c = await cartApi.getCart(userId);
-          setCart(c);
-        } else {
-          setCart(guestCart.get());
-        }
-      } catch (e) { /* ignore */ }
-    };
-    window.addEventListener("cart:changed", handler);
-    return () => window.removeEventListener("cart:changed", handler);
+        if (userId) setCart(await cartApi.getCart(userId));
+        else setCart(guestCart.get());
+      } catch {}
+    });
+    return () => off();
   }, [userId]);
 
   // Adapt to menu items
@@ -70,6 +66,7 @@ export default function CartMenu({ userId, cartItems = [] }) {
     }));
   }, [cart, cartItems]);
 
+  // Flipkart-like: badge shows total quantity
   const count = useMemo(
     () => (cart?.totalQty ?? menuItems.reduce((n, it) => n + (it.qty || 1), 0)),
     [cart, menuItems]
@@ -149,7 +146,6 @@ export default function CartMenu({ userId, cartItems = [] }) {
                 >
                   View Cart
                 </button>
-               
               </div>
             </>
           ) : (
@@ -176,3 +172,5 @@ export default function CartMenu({ userId, cartItems = [] }) {
     </div>
   );
 }
+
+

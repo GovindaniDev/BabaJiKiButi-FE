@@ -1,6 +1,7 @@
 // src/pages/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useMe } from "../../auth/user/useMe";
 import { getAllProducts } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
@@ -24,10 +25,8 @@ gsap.registerPlugin(ScrollTrigger);
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Button from "../ui/Button";
 import Loader from "../ui/Loader";
+import { addToCartUnified } from "../../utils/addToCartUnified";
 
-// CART
-import { cartApi } from "../../auth/cart/cartApi";
-import { guestCart } from "../../auth/cart/guestCart";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -106,8 +105,9 @@ export default function ShopNow() {
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
 
-  // If you have auth, compute userId; else leave null for guest
-  const userId = null;
+  // Resolve logged-in user id; fall back to guest (null)
+  const { me } = useMe();
+  const userId = typeof me?.id === "number" ? me.id : null;
 
   useEffect(() => {
     let mounted = true;
@@ -553,20 +553,15 @@ function ProductCard({ product: p, userId }) {
   const handleAddToCart = async () => {
     try {
       setAdding(true);
-      if (userId) {
-        await cartApi.addItem(userId, productId, 1);
-      } else {
-        guestCart.addItem(p, 1);
-      }
+      await addToCartUnified({ userId, product: p, productId, qty: 1 });
       setAdded(true);
-      window.dispatchEvent(new CustomEvent("cart:changed"));
       setTimeout(() => setAdded(false), 1500);
     } catch (e) {
-      console.error(e);
+      console.error("AddToCart failed", e);
     } finally {
       setAdding(false);
     }
-  };
+  }
 
   return (
     <motion.article

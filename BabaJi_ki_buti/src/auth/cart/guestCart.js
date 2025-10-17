@@ -1,5 +1,12 @@
 // src/auth/cart/guestCart.js
+import { emitCartChanged } from "./cartBus";
+
 const LS_KEY = "guest_cart_v1";
+
+const n = (x) => {
+  const v = Number(x);
+  return Number.isFinite(v) ? v : 0;
+};
 
 function load() {
   try {
@@ -13,10 +20,67 @@ function save(c) {
   return c;
 }
 
+function migrate(cart) {
+  let changed = false;
+  for (const it of cart.items || []) {
+    // numeric guards
+    const origQty = it.qty;
+    it.qty = Math.max(1, Number.isFinite(+origQty) ? +origQty : 1);
+
+    // backfill mrp/unitPrice from meta/product-ish data if missing
+    const maybeMrp =
+      n(it.mrp) ||
+      n(it.meta?.mrp) ||
+      n(it.listPrice) ||
+      n(it.maxRetailPrice) ||
+      n(it.price) ||
+      n(it.sellingPrice) ||
+      n(it.meta?.sellingPrice) ||
+      n(it.unitPrice); // last resort
+
+    const maybeSell =
+      n(it.unitPrice) ||
+      n(it.sellingPrice) ||
+      n(it.price) ||
+      n(it.meta?.sellingPrice) ||
+      maybeMrp;
+
+    if (!Number.isFinite(it.unitPrice) || it.unitPrice === 0) {
+      it.unitPrice = maybeSell;
+      changed = true;
+    }
+    if (!Number.isFinite(it.mrp) || it.mrp === 0) {
+      it.mrp = maybeMrp;
+      changed = true;
+    }
+
+    // ensure meta exists and mirrors
+    it.meta = {
+      ...(it.meta || {}),
+      title: it.meta?.title ?? it.productName ?? it.name ?? it.title,
+      mrp: n(it.meta?.mrp ?? it.mrp),
+      sellingPrice: n(it.meta?.sellingPrice ?? it.unitPrice),
+      qtySize: it.meta?.qtySize ?? it.qtySize,
+      qtyUnit: it.meta?.qtyUnit ?? it.qtyUnit,
+    };
+
+    // recompute lineTotal
+    const newLineTotal = Number((it.qty * n(it.unitPrice)).toFixed(2));
+    if (newLineTotal !== it.lineTotal) {
+      it.lineTotal = newLineTotal;
+      changed = true;
+    }
+  }
+  return changed ? cart : cart;
+}
+
 function ensureCart() {
   const c = load();
-  if (c) return c;
-  const blank = {
+  if (c) {
+    const migrated = migrate(c);
+    return save(recalc(migrated));
+  }
+  return save({
     cartId: 0,
     userId: null,
     status: "ACTIVE",
@@ -24,60 +88,18 @@ function ensureCart() {
     totalQty: 0,
     distinctItems: 0,
     subtotal: 0,
-  };
-  return save(blank);
+  });
 }
+
 
 function recalc(cart) {
   const totalQty = cart.items.reduce((s, i) => s + (i.qty || 0), 0);
   const distinctItems = cart.items.length;
-  const subtotal = cart.items.reduce(
-    (s, i) => s + Number(i.unitPrice || 0) * (i.qty || 0),
-    0
-  );
+  const subtotal = cart.items.reduce((s, i) => s + n(i.unitPrice) * (i.qty || 0), 0);
   cart.totalQty = totalQty;
   cart.distinctItems = distinctItems;
   cart.subtotal = Number(subtotal.toFixed(2));
   return cart;
-}
-
-/** Build a cart item from a product object (captures extra attributes) */
-function buildItemFromProduct(product, qty) {
-  const pid = product?.productId ?? product?.id;
-  const unitPrice = Number(
-    product?.sellingPrice ?? product?.price ?? product?.mrp ?? 0
-  );
-
-  // Prefer explicit MRP if present; fall back to unitPrice
-  const mrp = Number(
-    // 👇 add parens since we mix ?? and ||
-    ((product?.mrp ?? product?.price ?? product?.sellingPrice) ?? unitPrice) || 0
-  );
-
-  // Extra attributes the UI may read (kept inside a meta bag)
-  const meta = {
-    qtySize: product?.qtySize ?? null,
-    qtyUnit: product?.qtyUnit ?? null,
-    tags: product?.tags ?? product?.tagsEn ?? [],
-    title: product?.title ?? product?.productName ?? product?.name ?? null,
-    subtitle: product?.subtitle ?? null,
-    indication: product?.indication ?? null,
-    // keep mrp in meta too for consistency with UI fallback
-    mrp,
-  };
-
-  return {
-    cartItemId: Date.now() + Math.random(), // temp client id
-    productId: pid,
-    productName:
-      product?.productName || product?.name || product?.title || "Product",
-    productImg: product?.productImg || product?.image || product?.image1 || "",
-    qty: Math.max(1, Number(qty) || 1),
-    unitPrice,
-    mrp,          // <— added explicit mrp for UI
-    meta,         // <— extra fields for the UI
-    lineTotal: Number((unitPrice * (Math.max(1, Number(qty) || 1))).toFixed(2)),
-  };
 }
 
 export const guestCart = {
@@ -87,24 +109,71 @@ export const guestCart = {
 
   addItem(product, qty = 1) {
     const cart = ensureCart();
-    const pid = product?.productId ?? product?.id;
 
-    // price snapshot for this add
-    const unitPrice = Number(
-      product?.sellingPrice ?? product?.price ?? product?.mrp ?? 0
+    const title =
+      product?.productName || product?.name || product?.title || "Product";
+    const image =
+      product?.productImg || product?.image || product?.image1 || "";
+    const key =
+      product?.id ??
+      product?.productId ??
+      `${String(title).toLowerCase()}::${String(image).toLowerCase()}`;
+
+    // canonical prices
+    const mrp = n(
+      product?.mrp ??
+        product?.listPrice ??
+        product?.maxRetailPrice ??
+        product?.meta?.mrp ??
+        product?.price ??
+        product?.sellingPrice // fallback
+    );
+    const unitPrice = n(
+      product?.sellingPrice ?? product?.price ?? product?.unitPrice ?? mrp
     );
 
-    // If already present, just bump qty (and keep stored attributes)
-    const found = cart.items.find((i) => i.productId === pid);
+    let found = cart.items.find((i) => i.key === key);
     if (found) {
-      found.qty += qty;
-      // Optionally refresh unitPrice snapshot if product price changed:
-      found.unitPrice = unitPrice || found.unitPrice;
-      found.lineTotal = Number((found.qty * Number(found.unitPrice)).toFixed(2));
+      found.qty = (found.qty || 1) + qty;
+      // backfill/normalize prices if older item missed them
+      if (found.unitPrice == null) found.unitPrice = unitPrice;
+      if (found.mrp == null) found.mrp = mrp;
+      found.meta = {
+        ...(found.meta || {}),
+        title: product?.title ?? title,
+        titleHi: product?.titleHi,
+        qtySize: product?.qtySize,
+        qtyUnit: product?.qtyUnit,
+        mrp,
+        sellingPrice: unitPrice,
+      };
+      found.lineTotal = Number((found.qty * n(found.unitPrice)).toFixed(2));
     } else {
-      cart.items.push(buildItemFromProduct(product, qty));
+      const safeQty = Math.max(1, Number(qty) || 1);
+      cart.items.push({
+        key,
+        cartItemId: Date.now() + Math.random(),
+        productId: product?.productId ?? product?.id ?? null,
+        productName: title,
+        productImg: image,
+        qty: safeQty,
+        unitPrice, // ✅ selling
+        mrp,       // ✅ mrp (needed for discount/saved)
+        lineTotal: Number((unitPrice * safeQty).toFixed(2)),
+        meta: {
+          title: product?.title ?? title,
+          titleHi: product?.titleHi,
+          qtySize: product?.qtySize,
+          qtyUnit: product?.qtyUnit,
+          mrp,
+          sellingPrice: unitPrice,
+        },
+      });
     }
-    return save(recalc(cart));
+
+    const res = save(recalc(cart));
+    emitCartChanged("guest:addItem");
+    return res;
   },
 
   updateQty(itemId, qty) {
@@ -112,32 +181,25 @@ export const guestCart = {
     const it = cart.items.find((i) => i.cartItemId === itemId);
     if (!it) return cart;
     it.qty = Math.max(1, Number(qty) || 1);
-    it.lineTotal = Number((it.qty * Number(it.unitPrice || 0)).toFixed(2));
-    return save(recalc(cart));
+    it.lineTotal = Number((it.qty * n(it.unitPrice)).toFixed(2));
+    const res = save(recalc(cart));
+    emitCartChanged("guest:updateQty");
+    return res;
   },
 
   removeItem(itemId) {
     const cart = ensureCart();
     cart.items = cart.items.filter((i) => i.cartItemId !== itemId);
-    return save(recalc(cart));
+    const res = save(recalc(cart));
+    emitCartChanged("guest:removeItem");
+    return res;
   },
 
   clear() {
     const cart = ensureCart();
     cart.items = [];
-    return save(recalc(cart));
-  },
-
-  /**
-   * Optional: call this right after login to merge guest -> server.
-   * Keeps server-side source of truth, using only quantities (server will price).
-   */
-  async mergeIntoServer(userId, cartApi) {
-    const cart = load();
-    if (!cart || !cart.items.length) return;
-    for (const it of cart.items) {
-      await cartApi.addItem(userId, it.productId, it.qty);
-    }
-    this.clear();
+    const res = save(recalc(cart));
+    emitCartChanged("guest:clear");
+    return res;
   },
 };
