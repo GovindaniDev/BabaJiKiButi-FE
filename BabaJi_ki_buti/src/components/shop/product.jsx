@@ -106,7 +106,7 @@ export default function ShopNow() {
   const prefersReducedMotion = useReducedMotion();
 
   // Resolve logged-in user id; fall back to guest (null)
-  const { me } = useMe?.() || { me: null };
+  const { me } = useMe();
   const userId = typeof me?.id === "number" ? me.id : null;
 
   useEffect(() => {

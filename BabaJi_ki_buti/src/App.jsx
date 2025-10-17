@@ -69,6 +69,7 @@ function AppInner() {
     return () => clearTimeout(timer);
   }, []);
 
+
   const HomePage = () => {
     useGSAP(() => {
       const smoother = ScrollSmoother.create({
