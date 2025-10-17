@@ -11,8 +11,8 @@ export default function NavBar() {
   const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-const [isTherapyOpen, setIsTherapyOpen] = useState(false);
-const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isTherapyOpen, setIsTherapyOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [searchPos, setSearchPos] = useState({ top: 0, left: 0 });
 
   /* ---------------------------- element refs --------------------------- */
@@ -186,168 +186,168 @@ const [isCategoryOpen, setIsCategoryOpen] = useState(false);
             </Link>
 
             {/* Desktop links */}
-           <ul
-  className={`hidden pl-2 lg:flex col-start-2 min-w-0 items-center gap-6 text-sm font-semibold text-gray-800 whitespace-nowrap flex-nowrap
+            <ul
+              className={`hidden pl-2 lg:flex col-start-2 min-w-0 items-center gap-6 text-sm font-semibold text-gray-800 whitespace-nowrap flex-nowrap
     ${isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-x-auto"}`}
-  style={
-    (isServicesOpen || isCategoryOpen)
-      ? { WebkitMaskImage: "none" } // prevent mask from clipping dropdown
-      : { WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)" }
-  }
->
+              style={
+                (isServicesOpen || isCategoryOpen)
+                  ? { WebkitMaskImage: "none" } // prevent mask from clipping dropdown
+                  : { WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)" }
+              }
+            >
               <li className="shrink-0"><Link to="/" className="hover:text-amber-700 " onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>HOME</Link></li>
               <li className="shrink-0"><Link to="/about" className="hover:text-amber-700 whitespace-nowrap" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>ABOUT US</Link></li>
               <li className="shrink-0"><Link to="/shop" className="hover:text-amber-700 whitespace-nowrap" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>SHOP NOW</Link></li>
 
               {/* ------------------------- SERVICES (dropdown) ------------------------- */}
               <li className="relative shrink-0">
-  <button
-    ref={servicesRef}
-    onClick={() => setIsServicesOpen(v => !v)}
-    onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
-    onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
-    onKeyDown={onServicesKeyDown}
-    aria-haspopup="menu"
-    aria-expanded={isServicesOpen}
-    className="inline-flex items-center gap-1 hover:text-amber-700 whitespace-nowrap"
-  >
-    SERVICES
-    <svg className={`w-4 h-4 transition ${isServicesOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
-      <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
-    </svg>
-  </button>
+                <button
+                  ref={servicesRef}
+                  onClick={() => setIsServicesOpen(v => !v)}
+                  onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
+                  onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
+                  onKeyDown={onServicesKeyDown}
+                  aria-haspopup="menu"
+                  aria-expanded={isServicesOpen}
+                  className="inline-flex items-center gap-1 hover:text-amber-700 whitespace-nowrap"
+                >
+                  SERVICES
+                  <svg className={`w-4 h-4 transition ${isServicesOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" />
+                  </svg>
+                </button>
 
-  {isServicesOpen && (
-    <div
-      ref={servicesMenuRef}
-      onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
-      onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
-      role="menu"
-      className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg py-2 z-50 border border-amber-100"
-    >
-      <Link to="/opd" ref={firstServicesItemRef}
-        onClick={() => { setIsServicesOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-        className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">ओ.पी.डी. सेवाएं</Link>
+                {isServicesOpen && (
+                  <div
+                    ref={servicesMenuRef}
+                    onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
+                    onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
+                    role="menu"
+                    className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg py-2 z-50 border border-amber-100"
+                  >
+                    <Link to="/opd" ref={firstServicesItemRef}
+                      onClick={() => { setIsServicesOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                      className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">ओ.पी.डी. सेवाएं</Link>
 
-      <Link to="/bmi" onClick={() => { setIsServicesOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-        className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">BMI Calculator</Link>
+                    <Link to="/bmi" onClick={() => { setIsServicesOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                      className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">BMI Calculator</Link>
 
-      <Link to="/dosha" onClick={() => { setIsServicesOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-        className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">Dosha Test</Link>
+                    <Link to="/dosha" onClick={() => { setIsServicesOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                      className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">Dosha Test</Link>
 
-      {/* nested submenu */}
-      <div
-        className="relative group"
-        onMouseEnter={() => isPointerFine() && openWithHover("therapy", setIsTherapyOpen)}
-        onMouseLeave={() => isPointerFine() && closeWithHover("therapy", setIsTherapyOpen)}
-      >
-        <button
-          onClick={() => setIsTherapyOpen(v => !v)}
-          aria-haspopup="menu"
-          aria-expanded={isTherapyOpen}
-          className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-[#faeade]"
-        >
-          <span>Therapy Services</span>
-          <svg className={`w-4 h-4 transition ${isTherapyOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
-            <path d="M7.21 14.77a.75.75 0 01.02-1.06L11.17 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"/>
-          </svg>
-        </button>
+                    {/* nested submenu */}
+                    <div
+                      className="relative group"
+                      onMouseEnter={() => isPointerFine() && openWithHover("therapy", setIsTherapyOpen)}
+                      onMouseLeave={() => isPointerFine() && closeWithHover("therapy", setIsTherapyOpen)}
+                    >
+                      <button
+                        onClick={() => setIsTherapyOpen(v => !v)}
+                        aria-haspopup="menu"
+                        aria-expanded={isTherapyOpen}
+                        className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-[#faeade]"
+                      >
+                        <span>Therapy Services</span>
+                        <svg className={`w-4 h-4 transition ${isTherapyOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M7.21 14.77a.75.75 0 01.02-1.06L11.17 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" />
+                        </svg>
+                      </button>
 
-        {isTherapyOpen && (
-          <div
-            ref={therapyMenuRef}
-            role="menu"
-            className="absolute left-full top-0 ml-2 w-56 rounded-xl bg-white shadow-lg py-2 z-[60] border border-amber-100"
-          >
-            <Link to="/service/nutrient" ref={firstTherapyItemRef}
-              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-              className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">न्यूट्रीशंट</Link>
-            <Link to="/service/remedios"
-              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-              className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">प्राकृतिक चिकित्सा</Link>
-            <Link to="/service/therapy"
-              onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-              className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">Tailor-Made Ayurvedic Therapy</Link>
-          </div>
-        )}
-      </div>
+                      {isTherapyOpen && (
+                        <div
+                          ref={therapyMenuRef}
+                          role="menu"
+                          className="absolute left-full top-0 ml-2 w-56 rounded-xl bg-white shadow-lg py-2 z-[60] border border-amber-100"
+                        >
+                          <Link to="/service/nutrient" ref={firstTherapyItemRef}
+                            onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                            className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">न्यूट्रीशंट</Link>
+                          <Link to="/service/remedios"
+                            onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                            className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">प्राकृतिक चिकित्सा</Link>
+                          <Link to="/service/therapy"
+                            onClick={() => { setIsServicesOpen(false); setIsTherapyOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                            className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">Tailor-Made Ayurvedic Therapy</Link>
+                        </div>
+                      )}
+                    </div>
 
-      <Link to="/panchkarma" onClick={() => { setIsServicesOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-        className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">पंचकर्म</Link>
+                    <Link to="/panchkarma" onClick={() => { setIsServicesOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                      className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">पंचकर्म</Link>
 
-      <Link to="/naadi" onClick={() => { setIsServicesOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-        className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">नाड़ी परीक्षण</Link>
-    </div>
-  )}
-</li>
+                    <Link to="/naadi" onClick={() => { setIsServicesOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                      className="block px-4 py-2 text-sm hover:bg-[#faeade]" role="menuitem">नाड़ी परीक्षण</Link>
+                  </div>
+                )}
+              </li>
 
 
               {/* ---------------------- CATEGORY (mega menu) ----------------------- */}
               <li className="relative shrink-0">
-  <button
-    ref={categoryBtnRef}
-    className="inline-flex items-center gap-1 hover:text-amber-700 whitespace-nowrap"
-    onClick={() => setIsCategoryOpen(v => !v)}
-    onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
-    onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
-    onKeyDown={onCategoryKeyDown}
-    aria-haspopup="menu"
-    aria-expanded={isCategoryOpen}
-  >
-    CATEGORY
-    <svg className={`w-4 h-4 transition ${isCategoryOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
+                <button
+                  ref={categoryBtnRef}
+                  className="inline-flex items-center gap-1 hover:text-amber-700 whitespace-nowrap"
+                  onClick={() => setIsCategoryOpen(v => !v)}
+                  onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
+                  onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
+                  onKeyDown={onCategoryKeyDown}
+                  aria-haspopup="menu"
+                  aria-expanded={isCategoryOpen}
+                >
+                  CATEGORY
+                  <svg className={`w-4 h-4 transition ${isCategoryOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
 
-  {isCategoryOpen && (
-    <div
-      ref={categoryMenuRef}
-      onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
-      onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
-      role="menu"
-      className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,900px)] rounded-[32px] shadow-xl bg-white z-50 overflow-hidden border border-amber-100"
-      style={{ backgroundColor: "#fefcf8" }}
-    >
-      <div className="relative px-6 md:px-10 py-10 md:py-12">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 md:gap-8 mb-8">
-          {categories.map((category, i) => (
-            <a
-              key={i}
-              href={category.path}
-              onClick={(e) => { e.preventDefault(); setIsCategoryOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-              className="group flex flex-col items-center text-center"
-              role="menuitem"
-            >
-              <div className="mx-auto h-16 w-16 rounded-full grid place-items-center bg-white border border-amber-100 shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:bg-amber-50">
-                <img src={category.icon} alt={category.name} className="h-16 w-16 object-contain transition-transform duration-200 group-hover:scale-110" />
-              </div>
-              <span className="mt-3 text-xs md:text-sm font-semibold text-[#5a6d52] leading-tight max-w-[120px] group-hover:text-amber-700 transition-colors">
-                {category.name}
-              </span>
-            </a>
-          ))}
-        </div>
-        <div className="flex justify-center">
-          <a
-            href="/all-categories"
-            onClick={(e) => { e.preventDefault(); setIsCategoryOpen(false); window.scrollTo({top:0,behavior:"instant"}); }}
-            className="px-6 md:px-8 py-2.5 md:py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 text-sm font-semibold"
-          >
-            SHOP ALL
-          </a>
-        </div>
-      </div>
-      <div className="relative h-16 md:h-20">
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-          <path d="M0 60 Q150 20 300 60 T600 60 T900 60 T1200 60 V120 H0Z" fill="#f9ebd7" opacity="0.45" />
-          <path d="M0 80 Q150 50 300 80 T600 80 T900 80 T1200 80 V120 H0Z" fill="#f5e1c8" opacity="0.65" />
-          <path d="M0 95 Q150 75 300 95 T600 95 T900 95 T1200 95 V120 H0Z" fill="#f2dcc4" />
-        </svg>
-      </div>
-    </div>
-  )}
-</li>
+                {isCategoryOpen && (
+                  <div
+                    ref={categoryMenuRef}
+                    onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
+                    onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
+                    role="menu"
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,900px)] rounded-[32px] shadow-xl bg-white z-50 overflow-hidden border border-amber-100"
+                    style={{ backgroundColor: "#fefcf8" }}
+                  >
+                    <div className="relative px-6 md:px-10 py-10 md:py-12">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 md:gap-8 mb-8">
+                        {categories.map((category, i) => (
+                          <a
+                            key={i}
+                            href={category.path}
+                            onClick={(e) => { e.preventDefault(); setIsCategoryOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                            className="group flex flex-col items-center text-center"
+                            role="menuitem"
+                          >
+                            <div className="mx-auto h-16 w-16 rounded-full grid place-items-center bg-white border border-amber-100 shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:bg-amber-50">
+                              <img src={category.icon} alt={category.name} className="h-16 w-16 object-contain transition-transform duration-200 group-hover:scale-110" />
+                            </div>
+                            <span className="mt-3 text-xs md:text-sm font-semibold text-[#5a6d52] leading-tight max-w-[120px] group-hover:text-amber-700 transition-colors">
+                              {category.name}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                      <div className="flex justify-center">
+                        <a
+                          href="/all-categories"
+                          onClick={(e) => { e.preventDefault(); setIsCategoryOpen(false); window.scrollTo({ top: 0, behavior: "instant" }); }}
+                          className="px-6 md:px-8 py-2.5 md:py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 text-sm font-semibold"
+                        >
+                          SHOP ALL
+                        </a>
+                      </div>
+                    </div>
+                    <div className="relative h-16 md:h-20">
+                      <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+                        <path d="M0 60 Q150 20 300 60 T600 60 T900 60 T1200 60 V120 H0Z" fill="#f9ebd7" opacity="0.45" />
+                        <path d="M0 80 Q150 50 300 80 T600 80 T900 80 T1200 80 V120 H0Z" fill="#f5e1c8" opacity="0.65" />
+                        <path d="M0 95 Q150 75 300 95 T600 95 T900 95 T1200 95 V120 H0Z" fill="#f2dcc4" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </li>
 
 
               <li className="shrink-0"><Link to="/blog" className="hover:text-amber-700 whitespace-nowrap" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>OUR BLOGS</Link></li>
@@ -397,9 +397,9 @@ const [isCategoryOpen, setIsCategoryOpen] = useState(false);
               <CartMenu cartItems={cartItems} />
               <button onClick={() => setIsMobileMenuOpen((v) => !v)} className="p-2 rounded-full hover:bg-gray-100 min-h-[44px] min-w-[44px]" aria-label="Open menu">
                 {isMobileMenuOpen ? (
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z"/></svg>
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" /></svg>
                 ) : (
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
                 )}
               </button>
             </div>

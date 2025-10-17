@@ -51,6 +51,7 @@ import AddStockPage from "./page/admin/inventory/AddStockPage";
 import CartPage from "./components/cart/CartPage";
 import AccountPage from "./page/profile/AccountPage";
 import RequireAdmin from "./auth/RequireAuth";
+import PaymentPage from "./components/payment/paymentsection";
 
 // ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
@@ -121,6 +122,8 @@ const App = () => {
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
+
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
 
