@@ -54,6 +54,9 @@ import AddressPage from "./page/address/AddressPage";
 import CartPage from "./page/cart/CartPage";
 import { useMe } from "./auth/user/useMe"; 
 // register once
+import PaymentPage from "./components/payment/paymentsection";
+
+// ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
 /* --------------------------- Inner app (under provider) --------------------------- */
@@ -126,6 +129,9 @@ function AppInner() {
           <Route path="/service/therapy" element={<TherapyPage />} />
 
   
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
+
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
 
