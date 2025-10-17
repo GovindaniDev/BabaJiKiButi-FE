@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import CartMenu from "../page/cart/CartMenu";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/user/useMe"; // 👈 NEW
+import CartMenu from "../page/cart/CartMenu";
 
 export default function NavBar() {
   /* ---------------------------- local state ---------------------------- */
@@ -363,7 +363,7 @@ const [isCategoryOpen, setIsCategoryOpen] = useState(false);
                 </div>
               </div>
               <div className="w-px h-8 bg-gray-200" />
-              <CartMenu cartItems={cartItems} />
+              <CartMenu userId={me?.id} cartItems={cartItems} />
               <Link to="/wishlist" className="p-2 rounded-full hover:bg-gray-100" aria-label="Wishlist" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
                 <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.01a15.247 15.247 0 01-.383-.187 25.18 25.18 0 01-4.244-2.832C4.688 15.36 2.25 12.686 2.25 9.5 2.25 7.014 4.285 5 6.75 5c1.494 0 2.904.73 3.75 1.874A4.725 4.725 0 0114.25 5c2.465 0 4.5 2.014 4.5 4.5 0 3.186-2.438 5.86-4.739 8.378a25.175 25.175 0 01-4.244 2.832 15.247 15.247 0 01-.383.187l-.022.01-.007.003-.003.001a.75.75 0 01-.644 0l-.003-.001z" /></svg>
               </Link>
@@ -394,7 +394,7 @@ const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
             {/* Mobile actions */}
             <div className="lg:hidden flex items-center gap-2 col-start-3 justify-self-end">
-              <CartMenu cartItems={cartItems} />
+              <CartMenu userId={me?.id} cartItems={cartItems} />
               <button onClick={() => setIsMobileMenuOpen((v) => !v)} className="p-2 rounded-full hover:bg-gray-100 min-h-[44px] min-w-[44px]" aria-label="Open menu">
                 {isMobileMenuOpen ? (
                   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z"/></svg>

@@ -1,6 +1,7 @@
-import { cartApi } from "@/auth/cart/cartApi";
-import { guestCart } from "@/auth/cart/guestCart";
-import { emitCartChanged } from "@/auth/cart/cartBus";
+
+import { guestCart } from "../auth/cart/guestCart";
+import { emitCartChanged } from "../auth/cart/cartBus";
+import { cartApiV2 } from "../auth/cart/cartApiV2";
 
 /** Call this from buttons on product cards and PDP.
  *  Accepts either `product` (object) or `productId` (number/string).
@@ -19,7 +20,7 @@ export async function addToCartUnified({ userId, product, productId, qty = 1 }) 
       console.error("[addToCartUnified] Missing productId for server add:", { product, productId });
       return;
     }
-    await cartApi.addItem(userId, pid, Number(qty) || 1);
+    await cartApiV2.addItem(userId, pid, Number(qty) || 1);
   } else {
     // for guest we pass the full product so we can snapshot price/title/image
     if (!product && pid != null) product = { id: pid };

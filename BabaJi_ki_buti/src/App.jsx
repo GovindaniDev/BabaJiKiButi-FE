@@ -51,9 +51,8 @@ import AddStockPage from "./page/admin/inventory/AddStockPage";
 import AccountPage from "./page/profile/AccountPage";
 import RequireAdmin from "./auth/RequireAuth";
 import AddressPage from "./page/address/AddressPage";
-import { useMe } from "./auth/user/useMe"; // <- will be used inside AppInner
-import CartSection from "./components/cart/CartSection";
-
+import CartPage from "./page/cart/CartPage";
+import { useMe } from "./auth/user/useMe"; 
 // register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -125,9 +124,7 @@ function AppInner() {
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
 
-          {/* Cart works for guests; pass userId when logged in */}
-          <Route path="/cart" element={<CartSection userId={me?.id} />} />
-
+  
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
 
@@ -135,6 +132,11 @@ function AppInner() {
           <Route element={<ProtectedRoute />}>
             <Route path="/address" element={<AddressPage />} />
           </Route>
+          {/* Cart */}
+          <Route
+            path="/cart"
+            element={<CartPage userId={typeof me?.id === "number" ? me.id : null} />}
+          />
 
           {/* Admin (role-restricted) */}
           <Route element={<RequireAdmin />}>

@@ -3,9 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/AuthContext";
 
-// ✅ NEW: for guest→server cart merge + mini-cart refresh
-import { cartApi } from "../auth/cart/cartApi";
-import { guestCart } from "../auth/cart/guestCart";
 
 const statusToMessage = (status) => {
   switch (status) {
@@ -56,14 +53,14 @@ export default function LoginPage() {
         toast.success(`Welcome, ${name}!`, { duration: 4000 });
 
         // ---- Merge guest cart → server (non-fatal if fails) ----
-        try {
-          if (u.id) {
-            await guestCart.mergeIntoServer(u.id, cartApi);
-            window.dispatchEvent(new CustomEvent("cart:changed"));
-          }
-        } catch (e) {
-          console.warn("Guest cart merge failed (non-fatal)", e);
-        }
+        // try {
+        //   if (u.id) {
+        //     await guestCart.mergeIntoServer(u.id, cartApi);
+        //     window.dispatchEvent(new CustomEvent("cart:changed"));
+        //   }
+        // } catch (e) {
+        //   console.warn("Guest cart merge failed (non-fatal)", e);
+        // }
 
         // ---- Redirect logic ----
         if (isAdmin) {

@@ -1,6 +1,7 @@
 // src/pages/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useMe } from "../../auth/user/useMe";
 import { getAllProducts } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
@@ -24,11 +25,8 @@ gsap.registerPlugin(ScrollTrigger);
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Button from "../ui/Button";
 import Loader from "../ui/Loader";
+import { addToCartUnified } from "../../utils/addToCartUnified";
 
-// CART
-import { cartApi } from "../../auth/cart/cartApi";
-import { guestCart } from "../../auth/cart/guestCart";
-import { emitCartChanged } from "../../auth/cart/cartBus";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -107,8 +105,9 @@ export default function ShopNow() {
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
 
-  // If you have auth, compute userId; else leave null for guest
-  const userId = null;
+  // Resolve logged-in user id; fall back to guest (null)
+  const { me } = useMe?.() || { me: null };
+  const userId = typeof me?.id === "number" ? me.id : null;
 
   useEffect(() => {
     let mounted = true;
@@ -552,37 +551,17 @@ function ProductCard({ product: p, userId }) {
   }, []);
 
   const handleAddToCart = async () => {
-  try {
-    setAdding(true);
-
-    // p = your product object; productId prop is optional
-    const pid =
-      productId ?? p?.productId ?? p?.id ?? p?.sku ?? null;
-
-    if (userId) {
-      if (!pid) {
-        console.warn("AddToCart: missing product id for server add", { p, productId });
-        // Optional: also add to guest so user still sees it if id is missing
-        guestCart.addItem(p, 1);
-      } else {
-        await cartApi.addItem(userId, pid, 1);
-      }
-    } else {
-      // guest path needs the full product so identity key is stable
-      guestCart.addItem(p, 1);
+    try {
+      setAdding(true);
+      await addToCartUnified({ userId, product: p, productId, qty: 1 });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1500);
+    } catch (e) {
+      console.error("AddToCart failed", e);
+    } finally {
+      setAdding(false);
     }
-
-    // tell Navbar & Cart page to refresh (and other tabs too)
-    emitCartChanged("button:add");
-
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  } catch (e) {
-    console.error("AddToCart failed", e);
-  } finally {
-    setAdding(false);
   }
-}
 
   return (
     <motion.article
