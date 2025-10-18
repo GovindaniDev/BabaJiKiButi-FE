@@ -1,11 +1,21 @@
+// src/page/address/AddressPage.jsx
 import React, { useEffect, useState } from "react";
 import { MapPin, Plus, Edit2, Trash2, Home, Briefcase } from "lucide-react";
 import { addressApi } from "../../auth/address/addressApi";
 import { useMe } from "../../auth/user/useMe";
+import { useNavigate } from "react-router-dom";
 
 export default function AddressPage({ userId: userIdProp }) {
-  const { me } = (typeof useMe === "function" ? useMe() : {}) || {};
-  const userId = userIdProp ?? me?.id;
+  const { me, loading: meLoading } = (typeof useMe === "function" ? useMe() : {}) || {};
+  const userId = userIdProp ?? me?.id ?? null;
+  const navigate = useNavigate();
+
+  // ---------------- guard: require auth ----------------
+  useEffect(() => {
+    if (!meLoading && !userId) {
+      navigate("/login?next=/address", { replace: true });
+    }
+  }, [meLoading, userId, navigate]);
 
   // ---------------- cache helpers ----------------
   const cacheKey = userId ? `addr_cache:${userId}` : null;
@@ -16,7 +26,6 @@ export default function AddressPage({ userId: userIdProp }) {
       const raw = localStorage.getItem(cacheKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      // Optional basic shape check
       if (!Array.isArray(parsed?.addresses)) return null;
       return parsed.addresses;
     } catch {
@@ -27,13 +36,7 @@ export default function AddressPage({ userId: userIdProp }) {
   const writeCache = (list) => {
     if (!cacheKey) return;
     try {
-      localStorage.setItem(
-        cacheKey,
-        JSON.stringify({
-          // Keep it simple; you can add updatedAt if you want
-          addresses: list ?? [],
-        })
-      );
+      localStorage.setItem(cacheKey, JSON.stringify({ addresses: list ?? [] }));
     } catch {
       /* ignore quota errors */
     }
@@ -80,7 +83,7 @@ export default function AddressPage({ userId: userIdProp }) {
     for (const a of list || []) {
       const key = a?.id ?? a?.addressId;
       if (!key) continue;
-      byId.set(key, a);
+      byId.set(key, { ...a, id: a?.id ?? a?.addressId }); // ensure id exists
     }
     let seenDefault = false;
     const out = Array.from(byId.values()).map((a) => {
@@ -122,23 +125,15 @@ export default function AddressPage({ userId: userIdProp }) {
 
   // -------- effects ----------
   useEffect(() => {
-    // When userId changes, load from cache immediately (fast paint),
-    // and then fetch from server to sync.
     if (!userId) return;
-
     const cached = readCache();
     if (cached) {
       setAddresses(dedupeAndNormalize(cached));
-      setLoading(false); // show instantly
-      // still sync in background
+      setLoading(false);
       refresh();
     } else {
-      // no cache -> go to network
       refresh();
     }
-
-    // Cleanup if userId changes (optional)
-    return () => {};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -166,18 +161,15 @@ export default function AddressPage({ userId: userIdProp }) {
     setDeletingId(id);
     setError("");
 
-    // Optimistic: remove locally & cache, then call API
     const prev = addresses;
     const optimistic = prev.filter((a) => a.id !== id);
     setAddressesAndCache(optimistic);
 
     try {
       await addressApi.remove(userId, id);
-      // already removed; nothing else to do
     } catch (e) {
       console.error("delete failed", e);
       setError(e?.message || "Failed to delete address");
-      // rollback
       setAddressesAndCache(prev);
     } finally {
       setDeletingId(null);
@@ -205,66 +197,95 @@ export default function AddressPage({ userId: userIdProp }) {
 
     try {
       if (editingId) {
-        // Optimistic update
+        // Update (optimistic)
         const prev = addresses;
         const optimistic = prev.map((a) => (a.id === editingId ? { ...a, ...formData } : a));
         setAddressesAndCache(optimistic);
 
         const updated = await addressApi.update(userId, editingId, formData);
         setAddressesAndCache((list) =>
-          list.map((a) => (a.id === editingId ? { ...a, ...updated } : a))
+          list.map((a) => (a.id === editingId ? { ...a, ...updated, id: updated?.id ?? editingId } : a))
         );
       } else {
-        // Create: optimistic add a temp item so page feels snappy
+        // Create (optimistic)
         const tempId = `tmp-${Date.now()}`;
         const temp = { ...formData, id: tempId, isDefault: false };
-        const prev = addresses;
-        setAddressesAndCache([...prev, temp]);
+        const wasEmpty = addresses.length === 0;
+        const hadDefault = addresses.some((a) => a.isDefault);
+        setAddressesAndCache((list) => [...list, temp]);
 
         const created = await addressApi.create(userId, formData);
+        const createdId = created?.id ?? created?.addressId;
         setAddressesAndCache((list) =>
-          list.map((a) => (a.id === tempId ? { ...created } : a))
+          list.map((a) => (a.id === tempId ? { ...created, id: createdId || a.id } : a))
         );
+
+        // If this is the first address or there was no default, auto-set default
+        if (wasEmpty || !hadDefault) {
+          setAddressesAndCache((list) =>
+            list.map((a) => ({ ...a, isDefault: (a.id ?? a.addressId) === (createdId || a.id) }))
+          );
+          try {
+            const serverDefault = await addressApi.makeDefault(userId, createdId);
+            setAddressesAndCache((list) =>
+              list.map((a) =>
+                (a.id ?? a.addressId) === createdId
+                  ? { ...a, ...serverDefault, isDefault: true }
+                  : { ...a, isDefault: false }
+              )
+            );
+          } catch (e) {
+            console.warn("Auto-set default failed (non-fatal)", e);
+          }
+        }
       }
+
       setShowForm(false);
       setEditingId(null);
       setFormData(emptyForm());
     } catch (e) {
       console.error("save failed", e);
       setError(e?.message || "Failed to save address");
-      // If save failed after optimistic add/update, best effort resync
       refresh();
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSetDefault = async (id) => {
-    if (settingDefaultId) return;
-    setSettingDefaultId(id);
-    setError("");
+ // inside AddressPage.jsx
 
-    // Optimistic: mark only this one as default
-    const prev = addresses;
-    const optimistic = prev.map((a) => ({ ...a, isDefault: a.id === id }));
-    setAddressesAndCache(optimistic);
+const handleSetDefault = async (id) => {
+  if (settingDefaultId) return;
+  setSettingDefaultId(id);
+  setError("");
 
-    try {
-      const updatedAddr = await addressApi.makeDefault(userId, id);
-      setAddressesAndCache((list) =>
-        list.map((a) =>
-          a.id === id ? { ...a, ...updatedAddr, isDefault: true } : { ...a, isDefault: false }
-        )
-      );
-    } catch (e) {
-      console.error("set default failed", e);
-      setError(e?.message || "Failed to set default");
-      // rollback to previous state
-      setAddressesAndCache(prev);
-    } finally {
-      setSettingDefaultId(null);
-    }
-  };
+  const prev = addresses;
+  const optimistic = prev.map((a) => ({ ...a, isDefault: a.id === id }));
+  setAddressesAndCache(optimistic);
+
+  try {
+    const updatedAddr = await addressApi.makeDefault(userId, id); // ✅ use id
+    setAddressesAndCache((list) =>
+      list.map((a) =>
+        a.id === id ? { ...a, ...updatedAddr, isDefault: true } : { ...a, isDefault: false }
+      )
+    );
+    // notify other tabs/pages (PaymentSection listens)
+    window.dispatchEvent(new CustomEvent("address:changed"));
+  } catch (e) {
+    console.error("set default failed", e);
+    setError(e?.message || "Failed to set default");
+    setAddressesAndCache(prev);
+  } finally {
+    setSettingDefaultId(null);
+  }
+};
+
+// After a successful makeDefault or auto-set default:
+
+
+  // Selected/default address (enables checkout)
+  const defaultAddr = addresses.find((a) => a.isDefault);
 
   // ---------------- UI ----------------
   return (
@@ -286,100 +307,136 @@ export default function AddressPage({ userId: userIdProp }) {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-4">
         {loading ? (
           <div className="py-20 text-center text-[#6b4c43]">Loading addresses…</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {/* Add New Address */}
-            <button
-              type="button"
-              onClick={handleAddNew}
-              className="relative rounded-2xl p-8 bg-white/60 backdrop-blur border border-dashed border-[#f1c5b6] ring-1 ring-inset ring-[#f7d8c9] hover:bg-[#fdeee7] hover:translate-y-[-2px] transition-all shadow-sm"
-            >
-              <div className="w-16 h-16 mx-auto bg-[#e6a995] rounded-full flex items-center justify-center mb-4 shadow">
-                <Plus className="w-8 h-8 text-white" />
-              </div>
-              <p className="text-center text-lg font-semibold text-[#c85f46]">
-                Add a New Address
-              </p>
-              <p className="mt-2 text-center text-sm text-[#85655c]">
-                Save multiple locations for faster checkout
-              </p>
-            </button>
-
-            {/* Address Cards */}
-            {addresses.map((addr) => (
-              <div
-                key={addr.id ?? addr.addressId}
-                className="group relative rounded-2xl p-5 bg-white/80 backdrop-blur border border-[#f1c5b6] ring-1 ring-inset ring-[#f7d8c9] shadow-sm hover:shadow-md hover:translate-y-[-2px] transition-all"
+          <>
+            {/* Checkout button (enabled only if a default address exists) */}
+            <div className="mt-2 mb-4 flex justify-end">
+              <button
+                onClick={() => navigate("/payment")}
+                disabled={!defaultAddr}
+                className={`px-5 py-3 rounded-lg font-semibold shadow-sm transition
+                  ${
+                    defaultAddr
+                      ? "bg-[#cc7f66] text-white hover:bg-[#b86f59]"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                aria-disabled={!defaultAddr}
+                title={defaultAddr ? "Proceed to payment" : "Select an address to continue"}
               >
-                {addr.isDefault && (
-                  <div className="absolute -top-2 -right-2">
-                    <span className="inline-block rounded-full bg-[#f7d8c9] text-[#8d5b4f] text-[11px] px-3 py-1 shadow">
-                      Default
+                {defaultAddr ? "Checkout" : "Select an address to continue"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Add New Address */}
+              <button
+                type="button"
+                onClick={handleAddNew}
+                className="relative rounded-2xl p-8 bg-white/60 backdrop-blur border border-dashed border-[#f1c5b6] ring-1 ring-inset ring-[#f7d8c9] hover:bg-[#fdeee7] hover:translate-y-[-2px] transition-all shadow-sm"
+              >
+                <div className="w-16 h-16 mx-auto bg-[#e6a995] rounded-full flex items-center justify-center mb-4 shadow">
+                  <Plus className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-center text-lg font-semibold text-[#c85f46]">
+                  Add a New Address
+                </p>
+                <p className="mt-2 text-center text-sm text-[#85655c]">
+                  Save multiple locations for faster checkout
+                </p>
+              </button>
+
+              {/* Address Cards */}
+              {addresses.map((addr) => (
+                <div
+                  key={addr.id ?? addr.addressId}
+                  onClick={() => {
+                    if (!addr.isDefault && !settingDefaultId) {
+                      handleSetDefault(addr.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="group relative rounded-2xl p-5 bg-white/80 backdrop-blur border border-[#f1c5b6] ring-1 ring-inset ring-[#f7d8c9] shadow-sm hover:shadow-md hover:translate-y-[-2px] transition-all"
+                >
+                  {addr.isDefault && (
+                    <div className="absolute -top-2 -right-2">
+                      <span className="inline-block rounded-full bg-[#f7d8c9] text-[#8d5b4f] text-[11px] px-3 py-1 shadow">
+                        Default
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 bg-[#fdeee7] text-[#6b4c43] px-3 py-1 rounded-full text-xs ring-1 ring-[#f1c5b6]">
+                      {addr.type === "WORK" ? (
+                        <Briefcase className="w-3.5 h-3.5" />
+                      ) : (
+                        <Home className="w-3.5 h-3.5" />
+                      )}
+                      {addr.type || "HOME"}
                     </span>
                   </div>
-                )}
 
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 bg-[#fdeee7] text-[#6b4c43] px-3 py-1 rounded-full text-xs ring-1 ring-[#f1c5b6]">
-                    {addr.type === "WORK" ? (
-                      <Briefcase className="w-3.5 h-3.5" />
-                    ) : (
-                      <Home className="w-3.5 h-3.5" />
-                    )}
-                    {addr.type || "HOME"}
-                  </span>
-                </div>
+                  <div className="mb-2">
+                    <p className="font-semibold text-[#3d2b26] text-base leading-6">
+                      {addr.name}
+                    </p>
+                    <p className="text-[#6b4c43] text-sm">{addr.phone}</p>
+                  </div>
 
-                <div className="mb-2">
-                  <p className="font-semibold text-[#3d2b26] text-base leading-6">
-                    {addr.name}
-                  </p>
-                  <p className="text-[#6b4c43] text-sm">{addr.phone}</p>
-                </div>
+                  <div className="text-[#6b4c43] text-sm leading-relaxed space-y-0.5 mt-3">
+                    <p>{addr.address}</p>
+                    <p>{addr.locality}</p>
+                    <p>
+                      {addr.city}, {addr.state} - {addr.pincode}
+                    </p>
+                    {addr.landmark ? <p>Landmark: {addr.landmark}</p> : null}
+                  </div>
 
-                <div className="text-[#6b4c43] text-sm leading-relaxed space-y-0.5 mt-3">
-                  <p>{addr.address}</p>
-                  <p>{addr.locality}</p>
-                  <p>
-                    {addr.city}, {addr.state} - {addr.pincode}
-                  </p>
-                  {addr.landmark ? <p>Landmark: {addr.landmark}</p> : null}
-                </div>
-
-                <div className="mt-5 pt-4 border-t border-[#f3cbbd] flex items-center gap-3">
-                  <button
-                    onClick={() => handleEdit(addr)}
-                    className="inline-flex items-center gap-1.5 text-[#b1614d] hover:text-[#8f4f3f] text-sm font-medium"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    Edit
-                  </button>
-
-                  <button
-                    disabled={deletingId === addr.id}
-                    onClick={() => handleDelete(addr.id)}
-                    className="inline-flex items-center gap-1.5 text-[#6b4c43] hover:text-[#b94a4a] text-sm font-medium disabled:opacity-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {deletingId === addr.id ? "Deleting..." : "Delete"}
-                  </button>
-
-                  {!addr.isDefault && (
+                  <div className="mt-5 pt-4 border-t border-[#f3cbbd] flex items-center gap-3">
                     <button
-                      disabled={!!settingDefaultId}
-                      onClick={() => handleSetDefault(addr.id)}
-                      className="ml-auto inline-flex items-center justify-center rounded-full text-sm font-semibold px-3 py-1.5 ring-1 ring-inset ring-[#e6a995] text-[#b1614d] hover:bg-[#fdeee7] disabled:opacity-60"
+                      onClick={(e) => {
+                        e.stopPropagation(); // prevent card-select
+                        handleEdit(addr);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-[#b1614d] hover:text-[#8f4f3f] text-sm font-medium"
                     >
-                      {settingDefaultId === addr.id ? "Setting…" : "Set Default"}
+                      <Edit2 className="w-4 h-4" />
+                      Edit
                     </button>
-                  )}
+
+                    <button
+                      disabled={deletingId === addr.id}
+                      onClick={(e) => {
+                        e.stopPropagation(); // prevent card-select
+                        handleDelete(addr.id);
+                      }}
+                      className="inline-flex items-center gap-1.5 text-[#6b4c43] hover:text-[#b94a4a] text-sm font-medium disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {deletingId === addr.id ? "Deleting..." : "Delete"}
+                    </button>
+
+                    {!addr.isDefault && (
+                      <button
+                        disabled={!!settingDefaultId}
+                        onClick={(e) => {
+                          e.stopPropagation(); // prevent card-select
+                          handleSetDefault(addr.id);
+                        }}
+                        className="ml-auto inline-flex items-center justify-center rounded-full text-sm font-semibold px-3 py-1.5 ring-1 ring-inset ring-[#e6a995] text-[#b1614d] hover:bg-[#fdeee7] disabled:opacity-60"
+                      >
+                        {settingDefaultId === addr.id ? "Setting…" : "Set Default"}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Modal */}

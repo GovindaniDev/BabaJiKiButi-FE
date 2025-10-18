@@ -1,4 +1,3 @@
-// App.jsx
 import { Routes, Route, useLocation } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import HeroSection from "./sections/HeroSection";
@@ -23,7 +22,6 @@ import ReturnRefundSection from "./page/returns/ReturnRefundPage";
 import TermSection from "./page/terms/TermPage";
 import ContactPage from "./page/contact/ContactPage";
 import AboutPage from "./page/about/AboutPage";
-import AuthProvider from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
 import SessionsPage from "./page/account/SessionsPage";
@@ -48,30 +46,30 @@ import ReturnPage from "./page/admin/return/ReturnPage";
 import CustomerPage from "./page/admin/users/CustomerPage";
 import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
+import CartPage from "./components/cart/CartPage";
 import AccountPage from "./page/profile/AccountPage";
 import RequireAdmin from "./auth/RequireAuth";
 import AddressPage from "./page/address/AddressPage";
-import CartPage from "./page/cart/CartPage";
-import { useMe } from "./auth/user/useMe"; 
-// register once
-import PaymentPage from "./components/payment/paymentsection";
+import { useMe } from "./auth/user/useMe";
+import CartSection from "./page/cart/CartPage";
+import PaymentPage from "./page/payment/paymentPage";
 
-// ✅ register once
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
-/* --------------------------- Inner app (under provider) --------------------------- */
-function AppInner() {
+const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isHome = location.pathname === "/";
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const { me } = useMe(); // ✅ safe here because we are UNDER <AuthProvider>
+
+  // ✅ now this runs inside AuthProvider (moved to main.jsx)
+  const { me, loading: meLoading } = useMe();
+  const userId = me?.id ?? null;
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1500);
     return () => clearTimeout(timer);
   }, []);
-
 
   const HomePage = () => {
     useGSAP(() => {
@@ -83,7 +81,6 @@ function AppInner() {
       });
       return () => smoother.kill();
     }, []);
-
     return (
       <div id="smooth-wrapper">
         <div id="smooth-content">
@@ -99,19 +96,21 @@ function AppInner() {
     );
   };
 
+  // Optional: block routes until we know auth
+  if (meLoading) return <Loading label="Loading account..." />;
+
   return (
     <>
       <Toaster reverseOrder={false} />
       <main>
         {loading && <Loading label="Please wait..." />}
 
-        {/* Hide global NavBar on admin layout */}
         {!isAdminRoute && <NavBar />}
 
         <Routes>
           {/* Public */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/shop" element={<Product />} />
+          <Route path="/shop" element={<Product userId={userId} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<SignUpPage />} />
           <Route path="/terms" element={<TermSection />} />
@@ -127,23 +126,10 @@ function AppInner() {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
-
-  
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/cart" element={<CartSection userId={userId} />} />
 
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
-
-          {/* Protect Address so only authed users can open it */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/address" element={<AddressPage />} />
-          </Route>
-          {/* Cart */}
-          <Route
-            path="/cart"
-            element={<CartPage userId={typeof me?.id === "number" ? me.id : null} />}
-          />
 
           {/* Admin (role-restricted) */}
           <Route element={<RequireAdmin />}>
@@ -165,6 +151,8 @@ function AppInner() {
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/address" element={<AddressPage/>} />
+            <Route path="/payment" element={<PaymentPage />} />
           </Route>
 
           {/* Product Pages */}
@@ -174,18 +162,10 @@ function AppInner() {
           <Route path="*" element={<NotFound />} />
         </Routes>
 
-        {/* Global footer on non-home, non-admin pages */}
         {!isAdminRoute && !isHome && <FooterSection />}
       </main>
     </>
   );
-}
+};
 
-/* ------------------------------ Root (provider) ------------------------------ */
-export default function App() {
-  return (
-    <AuthProvider>
-      <AppInner />
-    </AuthProvider>
-  );
-}
+export default App;

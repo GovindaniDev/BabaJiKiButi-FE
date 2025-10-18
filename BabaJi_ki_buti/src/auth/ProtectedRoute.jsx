@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+
 import Loading from "@/components/loading";
 import { useAuth } from "./AuthContext";
 
@@ -9,9 +10,7 @@ export default function ProtectedRoute({ roles }) {
   if (loading) return <Loading label="Please wait..." />;
 
   if (!isAuthenticated) {
-    // send users to login with ?next=<original path>
-    const next = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`/login?next=${next}`} replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (roles?.length && !roles.some((r) => user?.roles?.includes(r))) {
