@@ -1,7 +1,6 @@
 // src/pages/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useMe } from "../../auth/user/useMe";
 import { getAllProducts } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
@@ -25,8 +24,9 @@ gsap.registerPlugin(ScrollTrigger);
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Button from "../ui/Button";
 import Loader from "../ui/Loader";
-import { addToCartUnified } from "../../utils/addToCartUnified";
 
+// CART (backend only)
+import { cartApi } from "../../auth/cart/cartApi";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -80,7 +80,7 @@ const tapScale = { scale: 0.98 };
 const hoverScale = { scale: 1.02 };
 
 /* ----------------------------- main page ----------------------------- */
-export default function ShopNow() {
+export default function ShopNow({ userId }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,10 +104,6 @@ export default function ShopNow() {
   const headerRef = useRef(null);
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
-
-  // Resolve logged-in user id; fall back to guest (null)
-  const { me } = useMe();
-  const userId = typeof me?.id === "number" ? me.id : null;
 
   useEffect(() => {
     let mounted = true;
@@ -220,14 +216,12 @@ export default function ShopNow() {
     if (sort === "price_low")
       list.sort(
         (a, b) =>
-          (a?.sellingPrice || a?.price || 0) -
-          (b?.sellingPrice || b?.price || 0)
+          (a?.sellingPrice || a?.price || 0) - (b?.sellingPrice || b?.price || 0)
       );
     else if (sort === "price_high")
       list.sort(
         (a, b) =>
-          (b?.sellingPrice || b?.price || 0) -
-          (a?.sellingPrice || a?.price || 0)
+          (b?.sellingPrice || b?.price || 0) - (a?.sellingPrice || a?.price || 0)
       );
     else if (sort === "reviews")
       list.sort((a, b) => getRating(b) - getRating(a));
@@ -237,15 +231,7 @@ export default function ShopNow() {
       );
 
     return list;
-  }, [
-    products,
-    query,
-    inStockOnly,
-    ratingAtLeast,
-    minPrice,
-    maxPrice,
-    sort,
-  ]);
+  }, [products, query, inStockOnly, ratingAtLeast, minPrice, maxPrice, sort]);
 
   const perPage = 12;
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -450,11 +436,7 @@ export default function ShopNow() {
               className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-10 sm:gap-y-14 pt-8"
             >
               {visible.map((p) => (
-                <ProductCard
-                  key={p.id || p.slug || p.productName}
-                  product={p}
-                  userId={userId}
-                />
+                <ProductCard key={p.id || p.slug || p.productName} product={p} userId={userId} />
               ))}
             </div>
 
@@ -551,17 +533,23 @@ function ProductCard({ product: p, userId }) {
   }, []);
 
   const handleAddToCart = async () => {
+    if (!userId) {
+      alert("Please log in to add items to your cart.");
+      return;
+    }
     try {
       setAdding(true);
-      await addToCartUnified({ userId, product: p, productId, qty: 1 });
+      await cartApi.addItem(userId, productId, 1);
       setAdded(true);
+      // notify mini cart / others
+      window.dispatchEvent(new CustomEvent("cart:changed"));
       setTimeout(() => setAdded(false), 1500);
     } catch (e) {
-      console.error("AddToCart failed", e);
+      console.error(e);
     } finally {
       setAdding(false);
     }
-  }
+  };
 
   return (
     <motion.article
@@ -872,9 +860,13 @@ function FiltersPanel(props) {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setSelectedTags(
-                        active ? selectedTags.filter((x) => x !== t) : [...selectedTags, t]
-                      )}
+                      onClick={() =>
+                        setSelectedTags(
+                          active
+                            ? selectedTags.filter((x) => x !== t)
+                            : [...selectedTags, t]
+                        )
+                      }
                       className={`px-3 py-1.5 rounded-full text-xs border ${
                         active
                           ? "bg-neutral-900 text-white border-neutral-900"

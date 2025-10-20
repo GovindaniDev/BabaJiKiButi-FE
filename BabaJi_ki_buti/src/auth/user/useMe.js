@@ -4,10 +4,12 @@ import { userApi } from "./userApi";
 import { useAuth } from "../AuthContext";
 
 export function useMe({ skip = false } = {}) {
-  const { isAuthenticated } = useAuth();
-  const [data, setData]     = useState(null);
-  const [error, setError]   = useState(null);
-  const [loading, setLoading] = useState(!skip);
+  const auth = typeof useAuth === "function" ? useAuth() : null;
+  const isAuthenticated = !!auth?.isAuthenticated;
+
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(!skip && isAuthenticated);
 
   useEffect(() => {
     let alive = true;
@@ -25,10 +27,20 @@ export function useMe({ skip = false } = {}) {
     return () => { alive = false; };
   }, [skip, isAuthenticated]);
 
-  return { me: data, loading, error, refetch: async () => {
+  const refetch = async () => {
+    if (!isAuthenticated) return null;
     setLoading(true);
-    try { const me = await userApi.getMe(); setData(me); setError(null); }
-    catch(e){ setError(e); }
-    finally{ setLoading(false); }
-  }};
+    try {
+      const me = await userApi.getMe();
+      setData(me);
+      return me;
+    } catch (e) {
+      setError(e);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { me: data, loading, error, refetch, isAuthenticated };
 }

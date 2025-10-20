@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../auth/AuthContext";
 
-
 const statusToMessage = (status) => {
   switch (status) {
     case 401: return "Invalid email or password.";
@@ -27,11 +26,7 @@ export default function LoginPage() {
   const { isAuthenticated, loading, login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // keep your existing "from" but also support ?next=
   const from = location.state?.from?.pathname || "/";
-  const params = new URLSearchParams(location.search);
-  const next = params.get("next"); // e.g. "/address"
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,44 +41,28 @@ export default function LoginPage() {
         const u = res.user || {};
         const name = u.name || u.email || "User";
 
-        // backend sends a single enum field: role = "ADMIN" | "USER"
+        // ✅ backend sends a single enum field: role = "ADMIN" | "USER"
         const role = (u.role || "").toString().toUpperCase();
         const isAdmin = role === "ADMIN";
 
         toast.success(`Welcome, ${name}!`, { duration: 4000 });
 
-        // ---- Merge guest cart → server (non-fatal if fails) ----
-        // try {
-        //   if (u.id) {
-        //     await guestCart.mergeIntoServer(u.id, cartApi);
-        //     window.dispatchEvent(new CustomEvent("cart:changed"));
-        //   }
-        // } catch (e) {
-        //   console.warn("Guest cart merge failed (non-fatal)", e);
-        // }
-
-        // ---- Redirect logic ----
-        if (isAdmin) {
-          navigate("/admin", { replace: true });
-        } else if (next) {
-          navigate(next, { replace: true });       // e.g., "/address"
-        } else {
-          navigate(from || "/", { replace: true }); // fallback
-        }
-        return;
+        // ✅ Redirect: Admin → /admin, Normal → from
+        navigate(isAdmin ? "/admin" : from, { replace: true });
+      } else {
+        if (res?.fieldErrors) setFieldErrors(res.fieldErrors);
+        const friendly =
+          (typeof res?.message === "string" && res.message.trim()) ||
+          statusToMessage(res?.status);
+        setError(friendly);
+        toast.error(friendly, { duration: 3500 });
       }
-
-      if (res?.fieldErrors) setFieldErrors(res.fieldErrors);
-      const friendly =
-        (typeof res?.message === "string" && res.message.trim()) ||
-        statusToMessage(res?.status);
-      setError(friendly);
-      toast.error(friendly, { duration: 3500 });
     } catch (err) {
       const apiStatus = err?.status || err?.response?.status;
       const apiMsg =
         (typeof err?.message === "string" && err.message) ||
-        (typeof err?.response?.data?.message === "string" && err.response.data.message) ||
+        (typeof err?.response?.data?.message === "string" &&
+          err.response.data.message) ||
         statusToMessage(apiStatus);
 
       const friendly = apiMsg || "Network error. Please check your connection.";
@@ -105,15 +84,7 @@ export default function LoginPage() {
           <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8">
             <h2 className="text-2xl font-bold mb-2">You’re already signed in</h2>
             <p className="text-gray-600 mb-6">Hi {name}! You don’t need to log in again.</p>
-            <div className="flex gap-3 flex-wrap">
-              {next && (
-                <Link
-                  to={next}
-                  className="px-4 py-2 rounded-xl bg-[#faeade] hover:bg-[#f5dcd0] font-semibold transition"
-                >
-                  Continue
-                </Link>
-              )}
+            <div className="flex gap-3">
               <Link to="/" className="px-4 py-2 rounded-xl bg-[#faeade] hover:bg-[#f5dcd0] font-semibold transition">
                 Go home
               </Link>
