@@ -138,57 +138,64 @@ const PlanCard = ({
   cta = "Subscribe",
   onClick,
   billing = "monthly",
+  wrapperClassName = "",
 }) => {
-  const price = billing === "yearly" ? priceYearly : priceMonthly;
-  const unit = billing === "yearly" ? "/year" : "/month";
+  const price = priceMonthly;
+  const unit = "/month";
   return (
-    <motion.div
-      variants={fadeUp}
-      whileHover={{ y: -6 }}
-      transition={{ type: "spring", stiffness: 240, damping: 18 }}
-      className={[
-        "relative h-full rounded-2xl border p-8 backdrop-blur-md",
-        highlight
-          ? "border-yellow-300/40 bg-yellow-300/10 shadow-lg shadow-yellow-300/10"
-          : "border-white/10 bg-black/30",
-      ].join(" ")}
-    >
-      {badge && (
-        <div className="absolute -top-3 left-8 inline-flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-black">
-          {badge === "Best Value" && <Crown className="h-4 w-4" />}
-          {badge}
-        </div>
-      )}
-
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold">{title}</h3>
-        <p className="text-sm text-white/70">{subtitle}</p>
-      </div>
-
-      <div className="mb-6">
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-extrabold text-yellow-300">{price}</span>
-          <span className="text-white/60">{unit}</span>
-        </div>
-      </div>
-
-      <ul className="mb-8 space-y-3 text-sm">{perks.map((p, i) => <React.Fragment key={i}>{included(p)}</React.Fragment>)}</ul>
-
-      <Button
-        onClick={onClick}
+    <div className={wrapperClassName}>
+      <motion.div
+        variants={fadeUp}
+        whileHover={{ y: -6 }}
+        transition={{ type: "spring", stiffness: 240, damping: 18 }}
         className={[
-          "w-full justify-center",
-          highlight ? "bg-yellow-300 text-black hover:bg-yellow-200" : "bg-transparent border-white/20 hover:bg-white/5",
+          "relative h-full rounded-2xl border p-8 backdrop-blur-md",
+          highlight
+            ? "border-yellow-300/40 bg-yellow-300/10 shadow-lg shadow-yellow-300/10"
+            : "border-white/10 bg-black/30",
         ].join(" ")}
-        variant={highlight ? undefined : "outline"}
-        size="lg"
       >
-        {cta}
-      </Button>
+        {badge && (
+          <div className="absolute -top-3 left-8 inline-flex items-center gap-1 rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-black">
+            {badge === "Best Value" && <Crown className="h-4 w-4" />}
+            {badge}
+          </div>
+        )}
 
-      {/* Small trust footer */}
-      <div className="mt-4 text-[11px] text-white/60">Secure payment • Cancel anytime</div>
-    </motion.div>
+        <div className="mb-6">
+          <h3 className="text-xl font-semibold">{title}</h3>
+          <p className="text-sm text-white/70">{subtitle}</p>
+        </div>
+
+        <div className="mb-6">
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-extrabold text-yellow-300">{price}</span>
+            <span className="text-white/60">{unit}</span>
+          </div>
+        </div>
+
+        <ul className="mb-8 space-y-3 text-sm">
+          {perks.map((p, i) => (
+            <React.Fragment key={i}>{included(p)}</React.Fragment>
+          ))}
+        </ul>
+
+        <Button
+          onClick={onClick}
+          className={[
+            "w-full justify-center",
+            highlight ? "bg-yellow-300 text-black hover:bg-yellow-200" : "bg-transparent border-white/20 hover:bg-white/5",
+          ].join(" ")}
+          variant={highlight ? undefined : "outline"}
+          size="lg"
+        >
+          {cta}
+        </Button>
+
+        {/* Small trust footer */}
+        <div className="mt-4 text-[11px] text-white/60">Secure payment • Cancel anytime</div>
+      </motion.div>
+    </div>
   );
 };
 
@@ -197,46 +204,54 @@ const SubscriptionPlans = () => {
 
   const plans = [
     {
-      title: "Starter",
-      subtitle: "For casual shoppers",
-      priceMonthly: "₹199",
+      title: "Basic",
+      subtitle: "standard plan - 99 monthly",
+      priceMonthly: "₹99",
       priceYearly: "₹1,999",
       perks: [
-        "5% member-only discount",
-        "Early access to sales",
-        "₹50 delivery fee credit / order",
-        "Earn 1.5× loyalty points",
+        "subscription plan",
+        "discount upto 50%",
+        "updates notification",
+        "upcoming event notification and sales early acceses",
       ],
     },
-    {
-      title: "Plus",
-      subtitle: "For repeat buyers",
-      priceMonthly: "₹499",
-      priceYearly: "₹4,999",
-      highlight: true,
-      badge: "Best Value",
-      perks: [
-        "10% member-only discount",
-        "Free shipping on orders ₹499+",
-        "Priority support & returns",
-        "Earn 2× loyalty points",
-        "Early access to limited drops",
-      ],
-    },
-    {
-      title: "Elite",
-      subtitle: "For power users & families",
-      priceMonthly: "₹999",
-      priceYearly: "₹9,999",
-      perks: [
-        "15% member-only discount",
-        "Free shipping on all orders",
-        "VIP concierge support",
-        "Earn 3× loyalty points",
-        "Monthly surprise samples",
-      ],
-    },
+    // {
+    //   title: "Plus",
+    //   subtitle: "For repeat buyers",
+    //   priceMonthly: "₹499",
+    //   priceYearly: "₹4,999",
+    //   highlight: true,
+    //   badge: "Best Value",
+    //   perks: [
+    //     "10% member-only discount",
+    //     "Free shipping on orders ₹499+",
+    //     "Priority support & returns",
+    //     "Earn 2× loyalty points",
+    //     "Early access to limited drops",
+    //   ],
+    // },
+    // {
+    //   title: "Elite",
+    //   subtitle: "For power users & families",
+    //   priceMonthly: "₹999",
+    //   priceYearly: "₹9,999",
+    //   perks: [
+    //     "15% member-only discount",
+    //     "Free shipping on all orders",
+    //     "VIP concierge support",
+    //     "Earn 3× loyalty points",
+    //     "Monthly surprise samples",
+    //   ],
+    // },
   ];
+
+  // ✅ Center the cards smartly based on how many plans there are
+  const gridClass =
+    plans.length === 1
+      ? "grid-cols-1 place-items-center"
+      : plans.length === 2
+      ? "grid-cols-1 sm:grid-cols-2 place-items-center"
+      : "grid-cols-1 md:grid-cols-3";
 
   return (
     <section id="plans" className="py-20 bg-black/40">
@@ -248,7 +263,9 @@ const SubscriptionPlans = () => {
         viewport={{ once: true, amount: 0.25 }}
       >
         <motion.div className="text-center mb-10" variants={fadeUp}>
-          <span className="text-yellow-300 text-sm font-medium tracking-wide uppercase">Membership</span>
+          <span className="text-yellow-300 text-sm font-medium tracking-wide uppercase">
+            Membership
+          </span>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold">Choose Your Plan</h2>
           <p className="mt-3 text-white/70">
             Save more on every order and unlock fast delivery, exclusive discounts, and priority support.
@@ -264,17 +281,20 @@ const SubscriptionPlans = () => {
           >
             Monthly
           </Button>
-          <Button
+          {/* <Button
             variant={billing === "yearly" ? undefined : "outline"}
             className={billing === "yearly" ? "" : "text-white/80"}
             onClick={() => setBilling("yearly")}
           >
             Yearly <span className="ml-2 rounded-full bg-yellow-300/20 px-2 py-0.5 text-[10px] text-yellow-30">Save 20%</span>
-          </Button>
+          </Button> */}
         </motion.div>
 
         {/* Plans Grid */}
-        <motion.div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto" variants={container}>
+        <motion.div
+          className={`grid gap-6 ${gridClass} max-w-6xl mx-auto`}
+          variants={container}
+        >
           {plans.map((p, idx) => (
             <PlanCard
               key={idx}
@@ -286,12 +306,17 @@ const SubscriptionPlans = () => {
                 console.log("Subscribe:", p.title, billing);
               }}
               cta={p.highlight ? "Start Plus" : `Choose ${p.title}`}
+              // When there's only one card, keep it nicely sized and centered
+              wrapperClassName={plans.length === 1 ? "max-w-md w-full" : "w-full"}
             />
           ))}
         </motion.div>
 
         {/* Benefits strip */}
-        <motion.div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4" variants={container}>
+        <motion.div
+          className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4"
+          variants={container}
+        >
           {[
             { icon: Leaf, label: "Ayurvedic Goodness", desc: "Member-only wellness tips & samples" },
             { icon: Shield, label: "Hassle-free Returns", desc: "Extended return window for members" },
@@ -310,7 +335,7 @@ const SubscriptionPlans = () => {
                   </span>
                   <div>
                     <div className="font-semibold">{b.label}</div>
-                    <div className="text-sm text-white/70">{b.desc}</div>0
+                    <div className="text-sm text-white/70">{b.desc}</div>
                   </div>
                 </div>
               </motion.div>

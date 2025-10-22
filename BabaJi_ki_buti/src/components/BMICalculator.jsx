@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Stethoscope, 
-  Star, 
-  Heart, 
-  Shield, 
-  Award, 
-  Leaf 
+import {
+  Stethoscope,
+  Star,
+  Heart,
+  Shield,
+  Award,
+  Leaf,
+  Crown,
+  Check
 } from 'lucide-react';
 
 // Product configuration - easy to edit
@@ -49,6 +51,71 @@ function getBMICategory(bmi) {
     return { category: 'Obese', color: 'text-white', bgColor: 'bg-black/75 border-black/75' };
   }
 }
+
+/* -------------------------------- Subscription Band (from Dosha test) -------------------------------- */
+const SubscriptionBand = () => {
+  const accent = '#C9A87A';
+  const Included = ({ text }) => (
+    <li className="flex items-start gap-3">
+      <span className="mt-0.5 rounded-md bg-black/10 p-1">
+        <Check className="h-4 w-4 text-black/70" />
+      </span>
+      <span className="text-gray-800">{text}</span>
+    </li>
+  );
+
+  return (
+    <section className="mt-12">
+      <div
+        className="relative overflow-hidden rounded-3xl border-2"
+        style={{ borderColor: accent, background: 'linear-gradient(135deg,#f3e2cd,#f8efe3)' }}
+      >
+        <div className="pointer-events-none absolute inset-0 [background:radial-gradient(circle_at_20%_10%,rgba(255,255,255,.6),transparent_40%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,.4),transparent_45%)]" />
+        <div className="relative p-6 md:p-10">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#7b5e57] border border-[#e7d5c5]">
+                <Crown className="h-4 w-4" /> Membership
+              </div>
+              <h3 className="mt-3 text-3xl md:text-4xl font-extrabold text-[#2c2c2c] leading-tight">
+                Save more with <span className="text-[#7b5e57] underline decoration-[#e8d8c3]">BJK Buti Plus</span>
+              </h3>
+              <p className="mt-2 text-[#4b3b37]">
+                Fast delivery, member-only discounts, early access & priority support—cancel anytime.
+              </p>
+              <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+                <Included text="Up to 50% discount" />
+                <Included text="Fast delivery benefits" />
+                <Included text="Sale & drops early access" />
+                <Included text="Update notifications" />
+              </ul>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.35 }}
+              className="shrink-0 w-full max-w-sm bg-white rounded-2xl border border-[#e7d5c5] p-6 shadow-sm"
+            >
+              <div className="flex items-end gap-2">
+                <div className="text-5xl font-extrabold text-[#7b5e57]">₹99</div>
+                <div className="pb-2 text-sm text-gray-600">/month</div>
+              </div>
+              <button
+                onClick={() => console.log('Subscribe: Basic monthly')}
+                className="mt-6 w-full rounded-xl bg-[#7b5e57] px-5 py-3 font-semibold text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#7b5e57]/50 transition"
+              >
+                Start Plus @ ₹99
+              </button>
+              <div className="mt-2 text-[11px] text-gray-500 text-center">Secure payment • Cancel anytime</div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+/* ----------------------------------------------------------------------------------------------------- */
 
 function BMICalculator() {
   const [formData, setFormData] = useState({
@@ -195,7 +262,7 @@ function BMICalculator() {
                   {/* Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      आपका नाम 
+                      आपका नाम
                     </label>
                     <input
                       type="text"
@@ -209,7 +276,7 @@ function BMICalculator() {
                   {/* Age */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      आपकी उम्र 
+                      आपकी उम्र
                     </label>
                     <input
                       type="number"
@@ -358,67 +425,71 @@ function BMICalculator() {
 
           {/* Product Recommendations Section */}
           {result && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="bg-white/90 backdrop-blur-lg rounded-2xl p-8 border border-gray-200 shadow-2xl"
-            >
-              <div className="text-center mb-8">
-                <h3 className="text-3xl font-bold text-[#aa7a4f] flex items-center justify-center gap-3 mb-4">
-                  <Award className="w-8 h-8 text-[#a26833]" />
-                  आपके लिए खास सुझाव
-                  <Leaf className="w-8 h-8 text-[#a26833]" />
-                </h3>
-                <p className="text-gray-700 max-w-2xl mx-auto">
-                  आपके BMI category के हिसाब से ये products specially curated हैं।
-                  Baba Ji की expertise से चुने गए natural और effective solutions।
-                </p>
-              </div>
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="bg-white/90 backdrop-blur-lg rounded-2xl p-8 border border-gray-200 shadow-2xl"
+              >
+                <div className="text-center mb-8">
+                  <h3 className="text-3xl font-bold text-[#aa7a4f] flex items-center justify-center gap-3 mb-4">
+                    <Award className="w-8 h-8 text-[#a26833]" />
+                    आपके लिए खास सुझाव
+                    <Leaf className="w-8 h-8 text-[#a26833]" />
+                  </h3>
+                  <p className="text-gray-700 max-w-2xl mx-auto">
+                    आपके BMI category के हिसाब से ये products specially curated हैं।
+                    Baba Ji की expertise से चुने गए natural और effective solutions।
+                  </p>
+                </div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {getProductsForCategory(result.category).map((product, index) => (
-                  <motion.div
-                    key={product.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
-                    className="bg-white/80 rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:shadow-[#ba9f7d]/30 transition-all transform hover:scale-[1.02]"
-                  >
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <img
-                          src={product.img}
-                          alt={product.name}
-                          className="w-full h-32 rounded-lg object-cover"
-                        />
-                        <div className="absolute top-2 right-2 bg-black/75 rounded-full p-1">
-                          <Heart className="w-4 h-4 text-white" fill="currentColor" />
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getProductsForCategory(result.category).map((product, index) => (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.1 }}
+                      className="bg-white/80 rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:shadow-[#ba9f7d]/30 transition-all transform hover:scale-[1.02]"
+                    >
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <img
+                            src={product.img}
+                            alt={product.name}
+                            className="w-full h-32 rounded-lg object-cover"
+                          />
+                          <div className="absolute top-2 right-2 bg-black/75 rounded-full p-1">
+                            <Heart className="w-4 h-4 text-white" fill="currentColor" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-gray-900 text-lg">{product.name}</h4>
+                          </div>
+                          <p className="text-gray-600 text-sm leading-relaxed">{product.tagline}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-[#aa7a4f] font-semibold text-sm">Baba's Pick ⭐</span>
+                          <a
+                            href={product.href}
+                            className="bg-[#a26833] text-white px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          >
+                            View Product
+                          </a>
                         </div>
                       </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-gray-900 text-lg">{product.name}</h4>
-                        </div>
-                        <p className="text-gray-600 text-sm leading-relaxed">{product.tagline}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2">
-                        <span className="text-[#aa7a4f] font-semibold text-sm">Baba's Pick ⭐</span>
-                        <a
-                          href={product.href}
-                          className="bg-[#a26833] text-white px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        >
-                          View Product
-                        </a>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-
-            </motion.div>
+              {/* ---- Subscription band appended after products ---- */}
+              <SubscriptionBand />
+            </>
           )}
         </div>
       </div>
