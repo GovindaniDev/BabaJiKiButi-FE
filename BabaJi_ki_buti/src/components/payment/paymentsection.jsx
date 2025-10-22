@@ -189,7 +189,7 @@ export default function PaymentSection({ userId: userIdProp }) {
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-bold text-orange-700">
             Payment
           </motion.h1>
-          <p className="mt-2 text-sm text-gray-600">• No hidden charges</p>
+        
         </div>
       </header>
 
