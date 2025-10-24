@@ -1,15 +1,34 @@
 // src/auth/address/addressApi.js
-// Matches backend:
-//   Base: /api/users/{userId}/addresses
-//   Wrapper: ApiResponse<T>  -> { data, message?, status? }
-// Uses cookie session: credentials: 'include'
+// Base shape (matches backend):
+//   /api/users/{userId}/addresses
+// Backend wraps in ApiResponse<T> -> { data, message?, status? }
+
+// ---- configurable API host (optional) ----
+// Works same-origin (empty) OR with a full host like "https://api.example.com"
+const API_BASE =
+  (typeof window !== "undefined" && window.API_BASE_URL) ||
+  import.meta?.env?.VITE_API_BASE ||
+  ""; // "" -> same origin
 
 const BASE = (userId) => `/api/users/${encodeURIComponent(userId)}/addresses`;
 
+// join helper that respects absolute URLs
+const toUrl = (path) =>
+  API_BASE
+    ? API_BASE.replace(/\/+$/, "") + (path.startsWith("/") ? path : `/${path}`)
+    : path;
+
 async function http(url, { method = "GET", body, headers } = {}) {
-  const res = await fetch(url, {
+  // prevent stale GETs
+  const finalUrl =
+    method === "GET"
+      ? url + (url.includes("?") ? "&" : "?") + "__ts=" + Date.now()
+      : url;
+
+  const res = await fetch(toUrl(finalUrl), {
     method,
     credentials: "include",
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(headers || {}),
@@ -18,12 +37,10 @@ async function http(url, { method = "GET", body, headers } = {}) {
   });
 
   const text = await res.text();
-  let json;
+  let json = null;
   try {
     json = text ? JSON.parse(text) : null;
-  } catch {
-    json = null;
-  }
+  } catch {}
 
   if (!res.ok) {
     const msg =
@@ -35,27 +52,27 @@ async function http(url, { method = "GET", body, headers } = {}) {
     throw err;
   }
 
-  // Unwrap ApiResponse<T> -> return .data if present, otherwise json
+  // Unwrap ApiResponse<T>
   return json && Object.prototype.hasOwnProperty.call(json, "data")
     ? json.data
     : json;
 }
 
 /* ------------------------- mappers (DTO <-> UI) ------------------------- */
-/** Backend -> UI: normalize keys your components prefer */
 function fromDto(dto) {
   if (!dto) return null;
+  const rawType = dto.addressType || "Home";
   return {
-    id: dto.addressId,             // keep both if you like
-    addressId: dto.addressId,      // explicit
+    id: dto.addressId,
+    addressId: dto.addressId,
     userId: dto.userId,
 
     name: dto.name,
-    phone: dto.mobile,             // UI uses 'phone'
+    phone: dto.mobile,
     altPhone: dto.alternativePhone,
 
-    pincode: dto.pinCode,          // UI uses 'pincode'
-    pinCode: dto.pinCode,          // if you need raw
+    pincode: dto.pinCode,
+    pinCode: dto.pinCode,
 
     locality: dto.locality,
     address: dto.address,
@@ -63,8 +80,9 @@ function fromDto(dto) {
     state: dto.state,
     landmark: dto.landmark,
 
-    type: dto.addressType,         // UI uses 'type'
-    addressType: dto.addressType,  // raw
+    // UI wants uppercase tokens, backend keeps TitleCase
+    type: String(rawType).toUpperCase(),     // "HOME" | "WORK"  <-- for UI
+    addressType: rawType,                    // "Home" | "Work"  <-- raw from backend
 
     isDefault: !!dto.isDefault,
 
@@ -73,31 +91,39 @@ function fromDto(dto) {
   };
 }
 
-/** UI -> Backend: convert UI form shape to Create/Update request */
+function normalizeType(t) {
+  // Map UI values ("HOME"/"WORK", or anything) -> backend TitleCase ("Home"/"Work")
+  const up = String(t || "").trim().toUpperCase();
+  if (up === "WORK") return "Work";
+  return "Home";
+}
+
+/** UI -> Backend */
 function toCreateReq(ui) {
   return {
     name: ui.name?.trim() || "",
-    mobile: ui.phone?.trim() || "",
-    alternativePhone: ui.altPhone?.trim() || "",
+    mobile: (ui.phone ?? ui.mobile ?? "").toString().trim(),
+    alternativePhone:
+      (ui.altPhone ?? ui.alternatePhone ?? ui.alternativePhone ?? "").toString().trim(),
     pinCode: ui.pincode?.trim() || ui.pinCode?.trim() || "",
     locality: ui.locality?.trim() || "",
     address: ui.address?.trim() || "",
     city: ui.city?.trim() || "",
     state: ui.state?.trim() || "",
     landmark: ui.landmark?.trim() || "",
-    addressType: ui.type || ui.addressType || "Home",
+    addressType: normalizeType(ui.type || ui.addressType), // -> Home|Work
     makeDefault: !!ui.makeDefault,
   };
 }
 
 function toUpdateReq(ui) {
-  // Same fields as create, backend requires all (NotBlank annotations)
+  // Backend requires all fields (NotBlank), reuse create mapping
   return toCreateReq(ui);
 }
 
 /* ------------------------------ API surface ----------------------------- */
 export const addressApi = {
-  /** List addresses for a user (sorted default first by backend) */
+  /** List addresses for a user (sorted default-first by backend) */
   async list(userId) {
     const data = await http(BASE(userId));
     return Array.isArray(data) ? data.map(fromDto) : [];
@@ -109,7 +135,7 @@ export const addressApi = {
     return fromDto(data);
   },
 
-  /** Create new address (UI shape in; DTO back) */
+  /** Create new address (UI -> DTO -> UI) */
   async create(userId, uiPayload) {
     const req = toCreateReq(uiPayload);
     const data = await http(BASE(userId), { method: "POST", body: req });

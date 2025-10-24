@@ -1,5 +1,4 @@
-// Demo-first API: returns defaults when backend is absent (404/CORS/etc)
-// Persists to localStorage so actions (redeem, topup) feel real in dev.
+
 
 import { app } from "../auth/http"; // keep if you’ll switch to real backend later
 
