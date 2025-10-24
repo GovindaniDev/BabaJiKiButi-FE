@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { userApi } from "../../../../../auth/user/userApi";
+import { createPortal } from "react-dom";
+
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -77,7 +79,7 @@ const Avatar = ({ name }) => {
     .join("")
     .toUpperCase();
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-100 text-slate-700 text-sm font-bold ring-1 ring-slate-200">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-100 text-slate-700 text-sm font-bold ring-1 ring-slate-200">
       {initials}
     </div>
   );
@@ -205,7 +207,7 @@ export default function Users() {
         role: payload.role,
         status: payload.status,
       };
-      const updated = id ? await userApi.updateById(id, toSend) : await userApi.create?.(toSend); // if you add a create API
+      const updated = id ? await userApi.updateById(id, toSend) : await userApi.create?.(toSend);
       const norm = normalizeUser(updated ?? toSend);
       if (id) {
         setRows((prev) => prev.map((u) => (u.id === id ? { ...u, ...norm } : u)));
@@ -270,46 +272,46 @@ export default function Users() {
   const actionsFor = (u) => {
     const isBusy = savingId === u.id || deletingId === u.id;
     return (
-    <ActionMenu
-      user={u}
-      busy={isBusy}
-      onEdit={() => openEditor(u)}
-      onToggleBlock={() => updateStatus(u, u.status === "blocked" ? "active" : "blocked")}
-      onToggleActive={() => updateStatus(u, u.status === "inactive" ? "active" : "inactive")}
-      onSoftDelete={() => deleteUser(u, false)}
-    />
+      <ActionMenu
+        user={u}
+        busy={isBusy}
+        onEdit={() => openEditor(u)}
+        onToggleBlock={() => updateStatus(u, u.status === "blocked" ? "active" : "blocked")}
+        onToggleActive={() => updateStatus(u, u.status === "inactive" ? "active" : "inactive")}
+        onSoftDelete={() => deleteUser(u, false)}
+      />
     );
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className=" flex max-w-7xl items-center justify-between px-4 py-4">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Users</h1>
-          <div className="flex items-center gap-2">
-            <div className="relative hidden md:block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-72 rounded-xl border border-slate-200 bg-white px-9 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-
-            <ToolbarButton icon={RefreshCw} onClick={load} disabled={loading}>
-              Refresh
-            </ToolbarButton>
-            <ToolbarButton icon={Filter} onClick={() => {}}>Filter</ToolbarButton>
-            <ToolbarButton icon={Download} onClick={exportCSV}>Export CSV</ToolbarButton>
-            <ToolbarButton icon={Plus} variant="primary" onClick={() => openEditor({ id: null, name: "", email: "", phone: "", role: "user", status: "active" })}>
-              Add User
-            </ToolbarButton>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Users</h1>
+        <div className="flex items-center gap-2">
+          <div className="relative hidden md:block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search..."
+              className="w-72 rounded-xl border border-slate-200 bg-white px-9 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
           </div>
+
+          <ToolbarButton icon={RefreshCw} onClick={load} disabled={loading}>
+            Refresh
+          </ToolbarButton>
+          <ToolbarButton icon={Filter} onClick={() => {}}>Filter</ToolbarButton>
+          <ToolbarButton icon={Download} onClick={exportCSV}>Export CSV</ToolbarButton>
+          <ToolbarButton icon={Plus} variant="primary" onClick={() => openEditor({ id: null, name: "", email: "", phone: "", role: "user", status: "active" })}>
+            Add User
+          </ToolbarButton>
         </div>
+      </div>
 
       {/* Analytics (click to filter) */}
-      <section className=" max-w-7xl px-4 py-6">
+      <section className="mx-auto max-w-7xl px-4 py-6">
         {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">{error}</div>}
 
         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -348,11 +350,10 @@ export default function Users() {
             active={status === "blocked"}
           />
         </div>
-
       </section>
 
       {/* Filters */}
-      <div className="max-w-7xl px-4 pb-4">
+      <div className="mx-auto max-w-7xl px-4 pb-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-full md:hidden">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -399,22 +400,24 @@ export default function Users() {
       </div>
 
       {/* Table */}
-      <main className=" max-w-7xl px-4 pb-16">
+      <main className="mx-auto max-w-7xl px-4 pb-16">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {/* follow ProductCatalog: wrapper handles horizontal scroll */}
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
-                <tr>
+                <tr className="whitespace-nowrap">
                   <Th>User</Th>
                   <Th onClick={() => onSort("role")} sortable sort={sort} id="role">Role</Th>
                   <Th onClick={() => onSort("status")} sortable sort={sort} id="status">Status</Th>
-                  <Th onClick={() => onSort("joinDate")} sortable sort={sort} id="joinDate">Join Date</Th>
-                  <Th onClick={() => onSort("lastLogin")} sortable sort={sort} id="lastLogin">Last Login</Th>
-                  <Th onClick={() => onSort("orders")} sortable sort={sort} id="orders">Orders</Th>
-                  <Th onClick={() => onSort("totalSpent")} sortable sort={sort} id="totalSpent">Total Spent</Th>
+                  <Th onClick={() => onSort("joinDate")} sortable sort={sort} id="joinDate" className="hidden lg:table-cell">Join Date</Th>
+                  <Th onClick={() => onSort("lastLogin")} sortable sort={sort} id="lastLogin" className="hidden lg:table-cell">Last Login</Th>
+                  <Th onClick={() => onSort("orders")} sortable sort={sort} id="orders" className="hidden lg:table-cell">Orders</Th>
+                  <Th onClick={() => onSort("totalSpent")} sortable sort={sort} id="totalSpent" className="hidden lg:table-cell">Total Spent</Th>
                   <Th className="text-center">Actions</Th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-slate-100">
                 {loading && (
                   <tr>
@@ -424,35 +427,47 @@ export default function Users() {
 
                 {!loading && filtered.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50/60">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
+                    {/* User (truncate long name/email to avoid overflow) */}
+                    <td className="px-4 md:px-6 py-4">
+                      <div className="flex items-center gap-3 min-w-0">
                         <Avatar name={u.name} />
-                        <div>
-                          <div className="font-semibold text-slate-900">{u.name}</div>
-                          <div className="text-xs text-slate-500">{u.email}</div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 truncate max-w-[220px] md:max-w-[280px]">{u.name}</div>
+                          <div className="text-xs text-slate-500 truncate max-w-[220px] md:max-w-[280px]">{u.email || "—"}</div>
                           {u.phone && <div className="text-xs text-slate-500">{u.phone}</div>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+
+                    {/* Role */}
+                    <td className="px-4 md:px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Pill type="role" value={u.role} />
-                       
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+
+                    {/* Status */}
+                    <td className="px-4 md:px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Pill type="status" value={u.status} />
-                     
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">{u.joinDate ? new Date(u.joinDate).toLocaleDateString() : "-"}</td>
-                    <td className="px-6 py-4 text-slate-700">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "-"}</td>
-                    <td className="px-6 py-4 text-slate-700">{u.orders}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{formatINR(u.totalSpent)}</td>
-                    <td className="px-2 py-2">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* Action buttons */}
+
+                    {/* Dates / numbers (hidden on small screens) */}
+                    <td className="px-4 md:px-6 py-4 text-slate-700 hidden lg:table-cell">
+                      {u.joinDate ? new Date(u.joinDate).toLocaleDateString() : "-"}
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-slate-700 hidden lg:table-cell">
+                      {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "-"}
+                    </td>
+                    <td className="px-4 md:px-6 py-4 text-slate-700 hidden lg:table-cell">{u.orders}</td>
+                    <td className="px-4 md:px-6 py-4 font-semibold text-slate-900 hidden lg:table-cell">
+                      {formatINR(u.totalSpent)}
+                    </td>
+
+                    {/* Actions (keep narrow) */}
+                    <td className="px-2 py-2 w-0">
+                      <div className="flex items-center justify-center">
                         {actionsFor(u)}
                       </div>
                     </td>
@@ -488,10 +503,10 @@ export default function Users() {
 function Th({ children, className, sortable, onClick, sort, id }) {
   const isActive = sortable && sort?.key === id;
   return (
-    <th className={cn("px-6 py-3 text-xs font-semibold uppercase tracking-wide", className)}>
+    <th className={cn("px-4 md:px-6 py-3 text-xs font-semibold uppercase tracking-wide", className)}>
       <button
         type="button"
-        className={cn("group inline-flex items-center gap-1 text-slate-600", sortable && "hover:text-slate-900")}
+        className={cn("group inline-flex items-center gap-1 text-slate-600 whitespace-nowrap", sortable && "hover:text-slate-900")}
         onClick={onClick}
       >
         {children}
@@ -521,11 +536,11 @@ function CardStat({ title, value, icon: Icon, sub, tone, onClick, active }) {
         active && "ring-2 ring-violet-500"
       )}
     >
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-gray-600">{title}</span>
-        <Icon className="w-5 h-5 text-gray-400" />
+        <Icon className="h-5 w-5 text-gray-400" />
       </div>
-      <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+      <div className="mb-1 text-2xl font-bold text-gray-900">{value}</div>
       {sub && <div className="text-sm text-gray-600">{sub}</div>}
     </button>
   );
@@ -584,10 +599,7 @@ function EditDrawer({ user, onClose, onSave, saving }) {
 
       {/* Drawer panel (right) */}
       <div
-        className="relative z-50 h-full w-full max-w-md bg-white shadow-2xl ring-1 ring-black/5
-                   transform transition-transform duration-200"
-        // If you want a slide-in effect, keep the next line.
-        // When mounted, it's already at translate-x-0
+        className="relative z-50 h-full w-full max-w-md transform bg-white shadow-2xl ring-1 ring-black/5 transition-transform duration-200"
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h3 className="text-lg font-semibold">{isNew ? "Add User" : "Edit User"}</h3>
@@ -676,7 +688,6 @@ function EditDrawer({ user, onClose, onSave, saving }) {
   );
 }
 
-
 function Field({ label, children }) {
   return (
     <label className="block">
@@ -685,20 +696,62 @@ function Field({ label, children }) {
     </label>
   );
 }
+
 function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftDelete }) {
   const [open, setOpen] = useState(false);
-  const toggle = () => setOpen((o) => !o);
-  const close = () => setOpen(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, placement: "bottom" });
+  const btnRef = React.useRef(null);
 
   const blockLabel = user.status === "blocked" ? "Unblock" : "Block";
   const activeLabel = user.status === "inactive" ? "Activate" : "Set Inactive";
+
+  const close = () => setOpen(false);
+  const toggle = () => setOpen((o) => !o);
+
+  // compute viewport position for the popover (fixed, not clipped by table/scroll)
+  const computePosition = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const menuWidth = 176; // ~w-44 px
+    const menuHeightGuess = 200; // rough; we also clamp with max-h
+
+    let left = Math.min(
+      Math.max(8, r.right - menuWidth),                // prefer align-right
+      window.innerWidth - menuWidth - 8                // keep within viewport
+    );
+
+    // decide top/bottom placement
+    const spaceBelow = window.innerHeight - r.bottom;
+    const placeBottom = spaceBelow > menuHeightGuess + 16;
+    let top = placeBottom ? r.bottom + 8 : r.top - menuHeightGuess - 8;
+
+    // clamp to viewport
+    top = Math.min(Math.max(8, top), window.innerHeight - 8 - menuHeightGuess);
+
+    setPos({ top, left, placement: placeBottom ? "bottom" : "top" });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    computePosition();
+    const onScroll = () => computePosition();
+    const onResize = () => computePosition();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open, computePosition]);
 
   return (
     <div className="relative inline-block text-left">
       <button
         type="button"
+        ref={btnRef}
         disabled={busy}
-        onClick={toggle}
+        onClick={() => { if (!open) computePosition(); toggle(); }}
         className={cn(
           "inline-flex items-center rounded-xl p-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-slate-600",
           busy && "opacity-60 cursor-not-allowed"
@@ -709,17 +762,22 @@ function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftD
         <MoreVertical className="h-5 w-5" />
       </button>
 
-      {open && (
+      {/* PORTAL menu to avoid being clipped by overflow containers */}
+      {open && createPortal(
         <>
-          {/* backdrop to close on outside click */}
+          {/* backdrop */}
           <button
-            className="fixed inset-0 z-40 cursor-default"
+            className="fixed inset-0 z-[90] cursor-default"
             onClick={close}
             aria-hidden="true"
             tabIndex={-1}
           />
           <div
-            className="absolute right-0 z-50 mt-2 w-44 origin-top-right rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5"
+            className={cn(
+              "fixed z-[100] w-44 rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5",
+              "max-h-[280px] overflow-auto"
+            )}
+            style={{ top: pos.top, left: pos.left }}
             role="menu"
           >
             <MenuBtn onClick={() => { close(); onEdit?.(); }}>
@@ -738,16 +796,17 @@ function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftD
               <Trash2 className="h-4 w-4" /> Soft delete
             </MenuBtn>
 
-            {/* View details */}
             <MenuLink to={`/admin/users/${user.id}`} onClick={close}>
               <Eye className="h-4 w-4" /> View
             </MenuLink>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
 }
+
 
 function MenuBtn({ children, onClick, danger }) {
   return (

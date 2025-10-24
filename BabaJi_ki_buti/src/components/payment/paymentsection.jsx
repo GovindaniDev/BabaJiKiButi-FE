@@ -24,7 +24,8 @@ export default function PaymentSection({ userId: userIdProp }) {
   const navigate = useNavigate();
 
   // allow either prop or hook; keeps component reusable
-  const { me, loading: meLoading } = typeof useMe === "function" ? useMe() : { me: null, loading: false };
+  const { me, loading: meLoading } =
+    typeof useMe === "function" ? useMe() : { me: null, loading: false };
   const userId = userIdProp ?? me?.id ?? null;
 
   const [addr, setAddr] = useState(null);
@@ -40,6 +41,7 @@ export default function PaymentSection({ userId: userIdProp }) {
 
   /* ---------- local cache helpers (same key as AddressPage) ---------- */
   const cacheKey = userId ? `addr_cache:${userId}` : null;
+  const bumpKey = userId ? `addr_bump:${userId}` : null; // 👈 unified
 
   const readDefaultFromCache = () => {
     if (!cacheKey) return null;
@@ -54,6 +56,20 @@ export default function PaymentSection({ userId: userIdProp }) {
     }
   };
 
+  const fetchDefault = async ({ silent = false } = {}) => {
+    if (!userId) return;
+    if (!silent) setAddrLoading(true);
+    setAddrError("");
+    try {
+      const server = await addressApi.getDefault(userId); // server truth
+      setAddr(server || null);
+    } catch (e) {
+      setAddrError(e?.message || "Failed to load default address");
+    } finally {
+      if (!silent) setAddrLoading(false);
+    }
+  };
+
   /* -------- guard: require auth -------- */
   useEffect(() => {
     if (!meLoading && !userId) {
@@ -61,48 +77,93 @@ export default function PaymentSection({ userId: userIdProp }) {
     }
   }, [meLoading, userId, navigate]);
 
-  /* -------- address: prime from cache, then fetch from server -------- */
+  /* ✅ MAIN one-time fetch (sets addrLoading=false when done) */
   useEffect(() => {
     if (!userId) return;
     let ignore = false;
 
-    const cachedDefault = readDefaultFromCache();
-    if (cachedDefault) {
-      setAddr(cachedDefault);
-      setAddrLoading(false);
-    }
+    // prime from cache for instant UI
+    const cached = readDefaultFromCache();
+    if (cached) setAddr(cached);
 
-    (async () => {
+    const load = async () => {
       try {
         setAddrLoading(true);
         setAddrError("");
-        const a = await addressApi.getDefault(userId); // null if none
+        const a = await addressApi.getDefault(userId);
         if (!ignore) setAddr(a || null);
       } catch (e) {
         if (!ignore) setAddrError(e?.message || "Failed to load default address");
       } finally {
-        if (!ignore) setAddrLoading(false);
+        if (!ignore) setAddrLoading(false); // ← makes the spinner stop
       }
-    })();
-
-    // live updates from AddressPage
-    const onAddressChanged = () => {
-      const latest = readDefaultFromCache();
-      if (latest) setAddr(latest);
     };
-    const onStorage = (e) => {
-      if (e.key === cacheKey) onAddressChanged();
-    };
-    window.addEventListener("address:changed", onAddressChanged);
-    window.addEventListener("storage", onStorage);
 
+    load();
     return () => {
       ignore = true;
-      window.removeEventListener("address:changed", onAddressChanged);
-      window.removeEventListener("storage", onStorage);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, cacheKey]);
+  }, [userId]);
+
+  /* Refresh on bfcache restore / tab visibility */
+  useEffect(() => {
+    if (!userId) return;
+
+    const hardRefresh = () => {
+      const cached = readDefaultFromCache();
+      if (cached) setAddr(cached);
+      fetchDefault({ silent: true }); // confirm with server
+    };
+
+    const onPageShow = () => hardRefresh(); // bfcache restore
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") hardRefresh();
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, cacheKey, bumpKey]);
+
+  /* Live updates via storage/focus/custom event from Address page */
+  useEffect(() => {
+    if (!bumpKey) return;
+    const bump = localStorage.getItem(bumpKey);
+    if (bump) fetchDefault({ silent: true });
+
+    const onStorage = (e) => {
+      if (e.key === cacheKey || e.key === bumpKey) {
+        const cached = readDefaultFromCache();
+        if (cached) setAddr(cached);
+        fetchDefault({ silent: true });
+      }
+    };
+
+    const onFocus = () => fetchDefault({ silent: true });
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+
+    const onCustom = () => {
+      const cached = readDefaultFromCache();
+      if (cached) setAddr(cached);
+      fetchDefault({ silent: true });
+    };
+    window.addEventListener("address:changed", onCustom); // 👈 unified event
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("address:changed", onCustom);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey, bumpKey, userId]);
 
   /* -------- cart: fetch live from server -------- */
   useEffect(() => {
@@ -180,16 +241,19 @@ export default function PaymentSection({ userId: userIdProp }) {
   const onRemoveCoupon = () => setCouponApplied(null);
   const onPayNow = () => alert("Hook your payment SDK here");
 
-  /* ------------------------------- UI (unchanged design) -------------------------------- */
+  /* ------------------------------- UI -------------------------------- */
   return (
     <div className="min-h-screen bg-[#faeade] ">
       {/* Header */}
       <header className="bg-gradient-to-b from-[#faeade] via-white to-[#faeade] sticky top-22 z-10">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl md:text-4xl font-bold text-orange-700">
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl md:text-4xl font-bold text-orange-700"
+          >
             Payment
           </motion.h1>
-        
         </div>
       </header>
 
@@ -197,13 +261,24 @@ export default function PaymentSection({ userId: userIdProp }) {
         {/* LEFT: Delivery + Items + Coupon */}
         <section className="lg:col-span-2 space-y-6">
           {/* Delivery address */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-br from-white to-[#fff5eb] rounded-xl border border-orange-100 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-white to-[#fff5eb] rounded-xl border border-orange-100 shadow-sm"
+          >
             <div className="p-5 flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-orange-50 text-orange-700"><MapPin size={20} /></div>
+              <div className="p-2 rounded-lg bg-orange-50 text-orange-700">
+                <MapPin size={20} />
+              </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold text-gray-900">Delivery Address</h2>
-                  <Link to="/address?next=/payment" className="text-sm text-orange-700 hover:text-orange-800 font-medium">Change</Link>
+                  <Link
+                    to="/address"
+                    className="text-sm text-orange-700 hover:text-orange-800 font-medium"
+                  >
+                    Change
+                  </Link>
                 </div>
 
                 {addrLoading ? (
@@ -212,18 +287,27 @@ export default function PaymentSection({ userId: userIdProp }) {
                   <p className="mt-2 text-red-600">{addrError}</p>
                 ) : addr ? (
                   <p className="mt-1 text-gray-700">
-                    <span className="font-medium">{addr.name}</span> {addr.isDefault ? "(Default)" : ""} — {addr.pincode}
+                    <span className="font-medium">{addr.name}</span>{" "}
+                    {addr.isDefault ? "(Default)" : ""} — {addr.pincode}
                     <br />
-                    {addr.address}{addr.locality ? `, ${addr.locality}` : ""}
+                    {addr.address}
+                    {addr.locality ? `, ${addr.locality}` : ""}
                     <br />
-                    {addr.city}, {addr.state}{addr.landmark ? ` — Landmark: ${addr.landmark}` : ""}
+                    {addr.city}, {addr.state}
+                    {addr.landmark ? ` — Landmark: ${addr.landmark}` : ""}
                     <br />
                     {addr.phone}
                   </p>
                 ) : (
                   <p className="mt-2 text-gray-700">
                     No default address.{" "}
-                    <Link to="/address?next=/payment" className="text-orange-700 font-medium hover:underline">Set one now</Link>.
+                    <Link
+                      to="/address?next=/payment"
+                      className="text-orange-700 font-medium hover:underline"
+                    >
+                      Set one now
+                    </Link>
+                    .
                   </p>
                 )}
               </div>
@@ -231,9 +315,15 @@ export default function PaymentSection({ userId: userIdProp }) {
           </motion.div>
 
           {/* Cart items */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-orange-100 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl border border-orange-100 shadow-sm"
+          >
             <div className="p-5 border-b border-orange-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Cart ({totals.totalQty} {totals.totalQty === 1 ? "item" : "items"})</h2>
+              <h2 className="font-semibold text-gray-900">
+                Cart ({totals.totalQty} {totals.totalQty === 1 ? "item" : "items"})
+              </h2>
               {!cartLoading && !isEmpty && (
                 <span className="text-sm text-gray-600">
                   {INR(totals.subTotal)} <span className="text-gray-400">subtotal</span>
@@ -249,27 +339,39 @@ export default function PaymentSection({ userId: userIdProp }) {
               <div className="p-7 text-gray-600">Your cart is empty.</div>
             ) : (
               <ul className="divide-y divide-orange-100">
-                {items.map((it, idx) => {
+                {(cart?.items ?? []).map((it, idx) => {
                   const qty = Number(it.qty || 0);
                   const mrp = Number(it.mrp ?? 0);
                   const sell = Number(it.sellingPrice ?? it.unitPrice ?? 0);
                   const showMrp = mrp > 0 && mrp > sell;
                   const lineTotal = sell * qty;
-                  const key = it.cartItemId ?? it.id ?? it.itemId ?? it.productId ?? `row-${idx}`;
+                  const key =
+                    it.cartItemId ?? it.id ?? it.itemId ?? it.productId ?? `row-${idx}`;
                   return (
                     <li key={key} className="p-5 flex gap-4">
                       <div className="w-20 h-20 border rounded-lg bg-white overflow-hidden grid place-items-center">
-                        <img alt={it.productName} src={it.productImg || "https://via.placeholder.com/72"} loading="lazy" className="max-w-[90%] max-h-[90%] object-contain" />
+                        <img
+                          alt={it.productName}
+                          src={it.productImg || "https://via.placeholder.com/72 "}
+                          loading="lazy"
+                          className="max-w-[90%] max-h-[90%] object-contain"
+                        />
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{it.productName}</div>
                         <div className="text-sm text-gray-600 mt-0.5">Qty: {qty}</div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">{INR(sell)}</span>
+                          <span className="font-semibold text-gray-900">
+                            {INR(sell)}
+                          </span>
                           {showMrp && (
                             <>
-                              <span className="line-through text-xs text-gray-500">{INR(mrp)}</span>
-                              <span className="text-xs text-green-700 font-semibold">{Math.round(((mrp - sell) / mrp) * 100)}% off</span>
+                              <span className="line-through text-xs text-gray-500">
+                                {INR(mrp)}
+                              </span>
+                              <span className="text-xs text-green-700 font-semibold">
+                                {Math.round(((mrp - sell) / mrp) * 100)}% off
+                              </span>
                             </>
                           )}
                         </div>
@@ -286,7 +388,11 @@ export default function PaymentSection({ userId: userIdProp }) {
           </motion.div>
 
           {/* Coupon */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-xl border border-orange-100 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-xl border border-orange-100 shadow-sm"
+          >
             <div className="p-5 border-b border-orange-100 flex items-center gap-2">
               <Tag size={18} className="text-orange-700" />
               <h3 className="font-semibold text-gray-900">Apply Coupon</h3>
@@ -299,12 +405,19 @@ export default function PaymentSection({ userId: userIdProp }) {
                 placeholder="Enter coupon code"
                 className="flex-1 min-w-[220px] bg-white border border-orange-200 rounded-lg px-3 py-2 outline-none"
               />
-              <button type="submit" className="px-4 py-2 rounded-lg font-semibold bg-orange-700 text-white hover:bg-orange-800">
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-lg font-semibold bg-orange-700 text-white hover:bg-orange-800"
+              >
                 Apply
               </button>
 
               {couponApplied && (
-                <button type="button" onClick={onRemoveCoupon} className="px-3 py-2 rounded-lg font-semibold bg-gray-100 text-gray-700">
+                <button
+                  type="button"
+                  onClick={onRemoveCoupon}
+                  className="px-3 py-2 rounded-lg font-semibold bg-gray-100 text-gray-700"
+                >
                   Remove {couponApplied.code}
                 </button>
               )}
@@ -314,7 +427,11 @@ export default function PaymentSection({ userId: userIdProp }) {
 
         {/* RIGHT: Order Summary + Pay Now */}
         <aside className="space-y-4">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-gradient-to-br from-white to-[#fff5eb] rounded-xl border border-orange-100 shadow-sm">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-white to-[#fff5eb] rounded-xl border border-orange-100 shadow-sm"
+          >
             <div className="p-5 border-b border-orange-100">
               <h2 className="font-semibold text-gray-900">Order Summary</h2>
             </div>
@@ -327,7 +444,9 @@ export default function PaymentSection({ userId: userIdProp }) {
 
               <div className="flex justify-between">
                 <span className="text-gray-600">Discount</span>
-                <span className="font-medium text-green-700">– {INR(Math.max(0, totals.savings))}</span>
+                <span className="font-medium text-green-700">
+                  – {INR(Math.max(0, totals.savings))}
+                </span>
               </div>
 
               <div className="flex justify-between">
@@ -337,14 +456,22 @@ export default function PaymentSection({ userId: userIdProp }) {
 
               {totals.couponDiscount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Coupon {couponApplied?.code ? `(${couponApplied.code})` : ""}</span>
-                  <span className="font-medium text-green-700">– {INR(totals.couponDiscount)}</span>
+                  <span className="text-gray-600">
+                    Coupon {couponApplied?.code ? `(${couponApplied.code})` : ""}
+                  </span>
+                  <span className="font-medium text-green-700">
+                    – {INR(totals.couponDiscount)}
+                  </span>
                 </div>
               )}
 
               <div className="flex justify-between">
-                <span className="text-gray-600">Shipping {totals.shipping === 0 ? "(Free above ₹500)" : ""}</span>
-                <span className="font-medium text-gray-900">{totals.shipping === 0 ? "Free" : INR(totals.shipping)}</span>
+                <span className="text-gray-600">
+                  Shipping {totals.shipping === 0 ? "(Free above ₹500)" : ""}
+                </span>
+                <span className="font-medium text-gray-900">
+                  {totals.shipping === 0 ? "Free" : INR(totals.shipping)}
+                </span>
               </div>
 
               <div className="flex justify-between">
@@ -369,7 +496,11 @@ export default function PaymentSection({ userId: userIdProp }) {
                 onClick={onPayNow}
                 disabled={!addr || isEmpty}
                 className={`w-full inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold shadow-lg transition
-                  ${addr && !isEmpty ? "text-white bg-orange-700 hover:bg-orange-800" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
+                  ${
+                    addr && !isEmpty
+                      ? "text-white bg-orange-700 hover:bg-orange-800"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
               >
                 Pay Now
               </motion.button>

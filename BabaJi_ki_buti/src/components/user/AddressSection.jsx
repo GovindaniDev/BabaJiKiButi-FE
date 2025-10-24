@@ -3,12 +3,16 @@ import React, { useEffect, useState } from "react";
 import { MapPin, Plus, Edit2, Trash2, Home, Briefcase } from "lucide-react";
 import { addressApi } from "../../auth/address/addressApi";
 import { useMe } from "../../auth/user/useMe";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
-export default function AddressPage({ userId: userIdProp }) {
+export default function AddressSection({ userId: userIdProp }) {
   const { me, loading: meLoading } = (typeof useMe === "function" ? useMe() : {}) || {};
   const userId = userIdProp ?? me?.id ?? null;
   const navigate = useNavigate();
+
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const nextPath = params.get("next");
 
   // ---------------- guard: require auth ----------------
   useEffect(() => {
@@ -19,6 +23,7 @@ export default function AddressPage({ userId: userIdProp }) {
 
   // ---------------- cache helpers ----------------
   const cacheKey = userId ? `addr_cache:${userId}` : null;
+  const bumpKey  = userId ? `addr_bump:${userId}` : null; // 👈 unified bump key
 
   const readCache = () => {
     if (!cacheKey) return null;
@@ -40,6 +45,14 @@ export default function AddressPage({ userId: userIdProp }) {
     } catch {
       /* ignore quota errors */
     }
+  };
+
+  const bump = () => {
+    if (!bumpKey) return;
+    try {
+      localStorage.setItem(bumpKey, String(Date.now()));
+      window.dispatchEvent(new CustomEvent("address:changed")); // 👈 unified event name
+    } catch {}
   };
 
   const clearCache = () => {
@@ -83,7 +96,9 @@ export default function AddressPage({ userId: userIdProp }) {
     for (const a of list || []) {
       const key = a?.id ?? a?.addressId;
       if (!key) continue;
-      byId.set(key, { ...a, id: a?.id ?? a?.addressId }); // ensure id exists
+      // ensure id exists and make sure type is uppercase for UI
+      const typeUp = String(a?.type || a?.addressType || "Home").toUpperCase();
+      byId.set(key, { ...a, id: key, type: typeUp });
     }
     let seenDefault = false;
     const out = Array.from(byId.values()).map((a) => {
@@ -111,8 +126,24 @@ export default function AddressPage({ userId: userIdProp }) {
     setLoading(true);
     setError("");
     try {
+      // 1) Load list
       const raw = await addressApi.list(userId);
-      const normalized = dedupeAndNormalize(raw);
+      let normalized = dedupeAndNormalize(raw);
+
+      // 2) Ask backend who is default (authoritative)
+      try {
+        const def = await addressApi.getDefault(userId);
+        const defId = def?.id ?? def?.addressId;
+        if (defId != null) {
+          normalized = normalized.map((a) => ({
+            ...a,
+            isDefault: (a.id ?? a.addressId) === defId,
+          }));
+        }
+      } catch {
+        // If /default not implemented, rely on list shape
+      }
+
       setAddresses(normalized);
       writeCache(normalized);
     } catch (e) {
@@ -137,6 +168,21 @@ export default function AddressPage({ userId: userIdProp }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  // Listen for cross-tab/page changes & custom events
+  useEffect(() => {
+    if (!userId) return;
+    const onChange = () => refresh();
+    const onStorage = (e) => {
+      if (e.key === bumpKey) refresh();
+    };
+    window.addEventListener("address:changed", onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("address:changed", onChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [userId, bumpKey]);
+
   // -------- UI handlers ----------
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -151,8 +197,20 @@ export default function AddressPage({ userId: userIdProp }) {
 
   const handleEdit = (addr) => {
     setEditingId(addr.id);
-    const { isDefault, id, addressId, ...rest } = addr;
-    setFormData({ ...rest, type: rest.type || "HOME" });
+    const {
+      isDefault,
+      id,
+      addressId,
+      altPhone,
+      alternatePhone,
+      addressType,
+      type,
+      ...rest
+    } = addr;
+    const alt = altPhone ?? alternatePhone ?? "";
+    // Ensure form type is uppercase for the radios
+    const formType = String(type || addressType || "HOME").toUpperCase();
+    setFormData({ ...rest, alternatePhone: alt, type: formType });
     setShowForm(true);
   };
 
@@ -167,6 +225,7 @@ export default function AddressPage({ userId: userIdProp }) {
 
     try {
       await addressApi.remove(userId, id);
+      bump(); // notify others just in case default changed
     } catch (e) {
       console.error("delete failed", e);
       setError(e?.message || "Failed to delete address");
@@ -199,13 +258,18 @@ export default function AddressPage({ userId: userIdProp }) {
       if (editingId) {
         // Update (optimistic)
         const prev = addresses;
-        const optimistic = prev.map((a) => (a.id === editingId ? { ...a, ...formData } : a));
+        const optimistic = prev.map((a) =>
+          a.id === editingId ? { ...a, ...formData } : a
+        );
         setAddressesAndCache(optimistic);
 
         const updated = await addressApi.update(userId, editingId, formData);
         setAddressesAndCache((list) =>
-          list.map((a) => (a.id === editingId ? { ...a, ...updated, id: updated?.id ?? editingId } : a))
+          list.map((a) =>
+            a.id === editingId ? { ...a, ...updated, id: updated?.id ?? editingId } : a
+          )
         );
+        bump();
       } else {
         // Create (optimistic)
         const tempId = `tmp-${Date.now()}`;
@@ -234,9 +298,12 @@ export default function AddressPage({ userId: userIdProp }) {
                   : { ...a, isDefault: false }
               )
             );
+            bump(); // notify PaymentSection
           } catch (e) {
             console.warn("Auto-set default failed (non-fatal)", e);
           }
+        } else {
+          bump();
         }
       }
 
@@ -252,37 +319,41 @@ export default function AddressPage({ userId: userIdProp }) {
     }
   };
 
- // inside AddressPage.jsx
+  // AddressPage.jsx
+  const handleSetDefault = async (id) => {
+    if (settingDefaultId) return; // Prevent double requests
+    setSettingDefaultId(id);
+    setError(null);
 
-const handleSetDefault = async (id) => {
-  if (settingDefaultId) return;
-  setSettingDefaultId(id);
-  setError("");
+    // Optimistically update local state so UI reflects change immediately
+    const prev = addresses;
+    const optimistic = prev.map((a) => ({ ...a, isDefault: a.id === id }));
+    setAddressesAndCache(optimistic);
 
-  const prev = addresses;
-  const optimistic = prev.map((a) => ({ ...a, isDefault: a.id === id }));
-  setAddressesAndCache(optimistic);
+    try {
+      // Make API call to backend to persist change
+      const updatedAddr = await addressApi.makeDefault(userId, id);
 
-  try {
-    const updatedAddr = await addressApi.makeDefault(userId, id); // ✅ use id
-    setAddressesAndCache((list) =>
-      list.map((a) =>
-        a.id === id ? { ...a, ...updatedAddr, isDefault: true } : { ...a, isDefault: false }
-      )
-    );
-    // notify other tabs/pages (PaymentSection listens)
-    window.dispatchEvent(new CustomEvent("address:changed"));
-  } catch (e) {
-    console.error("set default failed", e);
-    setError(e?.message || "Failed to set default");
-    setAddressesAndCache(prev);
-  } finally {
-    setSettingDefaultId(null);
-  }
-};
+      // Update state again with the server response, in case other details changed
+      setAddressesAndCache((list) =>
+        list.map((a) =>
+          a.id === id ? { ...a, ...updatedAddr, isDefault: true } : { ...a, isDefault: false }
+        )
+      );
 
-// After a successful makeDefault or auto-set default:
+      // Notify other tabs/pages (PaymentSection and others)
+      bump();
 
+      // If user came from payment, optionally redirect them there
+      if (nextPath) setTimeout(() => navigate(nextPath, { replace: true }), 10);
+    } catch (e) {
+      // On failure, revert optimistic change and notify error
+      setError(e?.message || "Failed to set default");
+      setAddressesAndCache(prev);
+    } finally {
+      setSettingDefaultId(null);
+    }
+  };
 
   // Selected/default address (enables checkout)
   const defaultAddr = addresses.find((a) => a.isDefault);
