@@ -1026,7 +1026,7 @@ export default function ProductPageAlt() {
               disabled={Number(effectiveStock) <= 0}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-3 rounded inline-flex items-center gap-2 disabled:opacity-50"
             >
-              BUY NOW — ONE CLICK
+              BUY NOW 
             </motion.button>
           </div>
         </section>

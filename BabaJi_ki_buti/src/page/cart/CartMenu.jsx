@@ -150,7 +150,7 @@ export default function CartMenu({ userId }) {
                 </button>
                 <button className="inline-flex items-center justify-center rounded-md px-3 py-2 text-sm text-white hover:opacity-95"
                         style={{ backgroundColor: "#faeade", color: "#3a2a28", border: "1px solid #f0cabf" }}
-                        onClick={() => navigate("/checkout")}>
+                        onClick={() => navigate("/address")}>
                   Checkout
                 </button>
               </div>

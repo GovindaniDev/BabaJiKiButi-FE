@@ -6,6 +6,7 @@ import { addressApi } from "../../auth/address/addressApi";
 import { cartApi } from "../../auth/cart/cartApi";
 import { useMe } from "../../auth/user/useMe";
 import { useNavigate, Link } from "react-router-dom";
+import CheckoutButton from "../../components/payment/CheckoutButton";
 
 /* ----------------------------- helpers ----------------------------- */
 const INR = (n) =>
@@ -239,7 +240,19 @@ export default function PaymentSection({ userId: userIdProp }) {
   };
 
   const onRemoveCoupon = () => setCouponApplied(null);
-  const onPayNow = () => alert("Hook your payment SDK here");
+
+  /* -------- payment items for gateway (no value changes) -------- */
+  const paymentItems = useMemo(
+    () =>
+      (cart?.items ?? []).map((it, idx) => ({
+        id: it.cartItemId ?? it.id ?? it.itemId ?? it.productId ?? `row-${idx}`,
+        name: it.productName ?? it.name ?? `Item ${idx + 1}`,
+        qty: Number(it?.qty || 0),
+        price: Number(it?.sellingPrice ?? it?.unitPrice ?? 0),
+        img: it.productImg || null,
+      })),
+    [cart]
+  );
 
   /* ------------------------------- UI -------------------------------- */
   return (
@@ -361,9 +374,7 @@ export default function PaymentSection({ userId: userIdProp }) {
                         <div className="font-medium text-gray-900">{it.productName}</div>
                         <div className="text-sm text-gray-600 mt-0.5">Qty: {qty}</div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">
-                            {INR(sell)}
-                          </span>
+                          <span className="font-semibold text-gray-900">{INR(sell)}</span>
                           {showMrp && (
                             <>
                               <span className="line-through text-xs text-gray-500">
@@ -484,16 +495,18 @@ export default function PaymentSection({ userId: userIdProp }) {
               <div className="flex items-center justify-between text-base">
                 <span className="font-semibold text-gray-900">Total Amount</span>
                 <span className="font-extrabold text-orange-800 flex items-center gap-1">
-                  <IndianRupee size={18} /> {INR(totals.totalPayable)}
+                  {INR(totals.totalPayable)}
                 </span>
               </div>
             </div>
 
             <div className="p-5 pt-0">
-              <motion.button
-                whileHover={{ scale: addr && !isEmpty ? 1.02 : 1 }}
-                whileTap={{ scale: addr && !isEmpty ? 0.98 : 1 }}
-                onClick={onPayNow}
+              <CheckoutButton
+                userId={userId}
+                addressId={addr?.id ?? null}
+                amount={Math.round(totals.totalPayable)}
+                currency="INR"
+                items={paymentItems}
                 disabled={!addr || isEmpty}
                 className={`w-full inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold shadow-lg transition
                   ${
@@ -503,7 +516,7 @@ export default function PaymentSection({ userId: userIdProp }) {
                   }`}
               >
                 Pay Now
-              </motion.button>
+              </CheckoutButton>
 
               <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-600">
                 <Shield size={14} className="text-orange-700" />
