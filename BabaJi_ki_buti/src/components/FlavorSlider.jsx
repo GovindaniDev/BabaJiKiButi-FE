@@ -102,7 +102,7 @@ const FlavorSlider = () => {
            <div className="absolute bottom-10 right-10 z-40">
   <Link
     to={to}
-    className="btn-golden-glow inline-flex items-center justify-center px-6 py-3 rounded-full font-bold text-lg tracking-wider
+    className="btn-golden-glow inline-flex items-center justify-center px-4 py-3 rounded-full font-bold text-lg tracking-wider
                bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500
                text-black shadow-[0_0_20px_rgba(255,215,0,0.5)]
                hover:shadow-[0_0_35px_rgba(255,215,0,0.8)]
