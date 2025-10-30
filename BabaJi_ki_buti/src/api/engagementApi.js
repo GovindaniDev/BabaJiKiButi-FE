@@ -1,10 +1,9 @@
-
-
 import { app } from "../auth/http"; // keep if you’ll switch to real backend later
 
 const DEMO_ON =
   (import.meta?.env?.VITE_USE_DEMO ?? "true").toString().toLowerCase() !== "false";
 
+const PAGE_SIZE = 20;
 const LS_KEY = "demo-engagement-state:v1";
 
 const n = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
@@ -58,7 +57,7 @@ function loadState() {
       ],
     },
 
-    // 🔹 demo orders seed
+    // demo orders seed
     orders: [
       {
         id: "O-50150",
@@ -75,7 +74,7 @@ function loadState() {
         id: "O-50123",
         placedAt: "2025-10-12T10:20:00+05:30",
         amount: 799,
-        status: "Out for delivery", // "Processing" | "Shipped" | "Out for delivery" | "Delivered" | "Cancelled"
+        status: "Out for delivery",
         items: [
           { id: 1, name: "Herbal Mix – Digest Boost", qty: 1, price: 799, img: "/images/nu1.png" },
         ],
@@ -116,68 +115,42 @@ function saveState(s) {
 }
 const state = loadState();
 
-/* ------------------------------ migration guards ------------------------------ */
-function migrateState() {
-  let changed = false;
+/* ----------------------------- helpers ----------------------------- */
 
-  if (!state || typeof state !== "object") return;
-
-  if (!state.wallet || typeof state.wallet !== "object") {
-    state.wallet = { balance: 0, lastUpdated: null, tiers: [], txns: [] };
-    changed = true;
-  } else {
-    if (!Array.isArray(state.wallet.tiers)) { state.wallet.tiers = []; changed = true; }
-    if (!Array.isArray(state.wallet.txns))  { state.wallet.txns  = []; changed = true; }
+function mapOrderStatusToUi(s) {
+  switch (String(s || "").toUpperCase()) {
+    case "DELIVERED": return "Delivered";
+    case "CANCELLED": return "Cancelled";
+    case "SHIPPING":  return "Shipped";
+    case "PROCESSING":
+    case "PLACED":
+    default:          return "Processing";
   }
-
-  if (!Array.isArray(state.orders)) {
-    state.orders = [];
-    changed = true;
-  }
-
-  if (!state.loyalty || typeof state.loyalty !== "object") {
-    state.loyalty = { balance: 0, lifetimeEarned: 0, lifetimeRedeemed: 0, expiringSoon: [] };
-    changed = true;
-  } else if (!Array.isArray(state.loyalty.expiringSoon)) {
-    state.loyalty.expiringSoon = [];
-    changed = true;
-  }
-
-  if (!state.referral || typeof state.referral !== "object") {
-    state.referral = { code: "DEMO", url: "", referredCount: 0, earnedCredits: 0 };
-    changed = true;
-  }
-
-  if (!state.milestones || typeof state.milestones !== "object") {
-    state.milestones = { currentSpend: 0, nextMilestone: 0, tiers: [] };
-    changed = true;
-  } else if (!Array.isArray(state.milestones.tiers)) {
-    state.milestones.tiers = [];
-    changed = true;
-  }
-
-  const hasDemo = Array.isArray(state.orders) && state.orders.some(o => String(o.id) === "O-50150");
-  if (!hasDemo) {
-    state.orders = [
-      {
-        id: "O-50150",
-        placedAt: new Date().toISOString(),
-        amount: 999,
-        status: "Processing",
-        items: [{ id: 4, name: "Test Blend – Demo Pack", qty: 1, price: 999, img: "/images/nu4.png" }],
-        eta: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10),
-        trackingId: "TRK999999",
-      },
-      ...(Array.isArray(state.orders) ? state.orders : []),
-    ];
-    changed = true;
-  }
-
-  if (changed) saveState(state);
 }
-migrateState();
 
-/* ----------------------------- Helpers ----------------------------- */
+function normalizeOrdersFromBackend(list = []) {
+  return list.map((o) => ({
+    id: String(o?.id ?? o?.orderNumber ?? Math.random()),
+    orderNumber: o?.orderNumber || null,
+    placedAt: o?.createdAt || null,
+    amount: Number(o?.netAmount ?? 0),
+    status: mapOrderStatusToUi(o?.status),
+    items: (o?.items || []).map((it) => ({
+      id: String(it?.id ?? Math.random()),
+      name: it?.productName || "Item",
+      qty: Number(it?.quantity ?? 1),
+      price: Number(it?.price ?? 0),
+      productId: it?.productId ?? null,
+      productVariantId: it?.productVariantId ?? null,
+      img: "/images/placeholder.png",
+    })),
+    eta: null,
+    deliveredOn: null,
+    cancelledOn: null,
+    trackingId: null,
+  }));
+}
+
 function normalizeLoyalty(s) {
   return {
     balance: n(s?.balance),
@@ -255,8 +228,7 @@ export async function getLoyaltySummary(userId) {
   try {
     const { data } = await app.get(`/loyalty/summary`, { params: { userId } });
     return normalizeLoyalty(data?.data || data);
-  } catch (e) {
-    // fall back silently in dev
+  } catch {
     return normalizeLoyalty(state.loyalty);
   }
 }
@@ -272,69 +244,114 @@ export async function redeemPoints({ userId, points }) {
   return data?.data || data;
 }
 
-/* ------------------------------ WALLET ------------------------------ */
-// export async function getWallet(userId) {
-//   if (DEMO_ON) return normalizeWallet(state.wallet);
-//   try {
-//     const { data } = await app.get(`/wallet`, { params: { userId } });
-//     return normalizeWallet(data?.data || data);
-//   } catch (e) {
-//     return normalizeWallet(state.wallet);
-//   }
-// }
-// export async function topupWallet({ userId, amount }) {
-//   if (DEMO_ON) {
-//     const a = n(amount);
-//     state.wallet.balance = n(state.wallet.balance) + a;
-//     state.wallet.lastUpdated = new Date().toISOString();
-//     state.wallet.txns = [
-//       {
-//         id: `t${Date.now()}`,
-//         type: "Top-up",
-//         amount: a,
-//         at: new Date().toISOString().slice(0, 10),
-//       },
-//       ...(state.wallet.txns || []),
-//     ];
-//     saveState(state);
-//     return { ok: true, demo: true };
-//   }
-//   const { data } = await app.post(`/wallet/topup`, { userId, amount });
-//   return data?.data || data;
-// }
-
-/* ------------------------------ ORDERS ------------------------------ */
-export async function getOrders(userId) {
-  if (DEMO_ON) {
-    const list = Array.isArray(state.orders) ? state.orders : [];
-    return { total: list.length, list: normalizeOrders(list) };
-  }
+/* ------------------------------ ORDERS (session-based) ------------------------------ */
+/**
+ * Live: GET /api/orders/my (page,size,sort)
+ * Backend derives user from session → no userId param needed.
+ */
+export async function getOrders({ page = 0, size = PAGE_SIZE, useDemo = false } = {}) {
   try {
-    const { data } = await app.get(`/orders`, { params: { userId } });
-    const rows = data?.data || data;
-    const list = Array.isArray(rows?.list) ? rows.list : (Array.isArray(rows) ? rows : []);
-    return {
-      total: Array.isArray(rows) ? rows.length : Number(rows?.total ?? list.length),
-      list: normalizeOrders(list),
-    };
+    const res = await app.get(`/api/orders/my`, {
+      params: { page, size, sort: "createdAt,desc" },
+      withCredentials: true,
+    });
+
+    const data = res?.data?.data ?? res?.data; // ApiResponse<Page<T>> or Page<T>
+    const content = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+    const total = Number.isFinite(data?.totalElements)
+      ? data.totalElements
+      : Array.isArray(content)
+      ? content.length
+      : 0;
+
+    return { total, list: normalizeOrdersFromBackend(content) };
   } catch (e) {
+    console.error("getOrders failed:", e);
+    if (!useDemo) return { total: 0, list: [] };
     const list = Array.isArray(state.orders) ? state.orders : [];
     return { total: list.length, list: normalizeOrders(list) };
   }
 }
 
-export async function trackOrder(orderId) {
-  if (DEMO_ON) {
+/* ------------------------------ ORDERS (BY USER) ------------------------------ */
+/**
+ * Fetch orders for a specific userId.
+ * Tries:
+ *   A) GET /api/users/{userId}/orders?page=&size=&sort=
+ *   B) GET /api/orders?userId={userId}&page=&size=&sort=
+ * Returns: { total: number, list: NormalizedOrder[] }
+ */
+export async function getOrdersByUserId(
+  userId,
+  { page = 0, size = PAGE_SIZE, sort = "createdAt,desc", useDemo = false } = {}
+) {
+  if (!userId) {
+    console.warn("getOrdersByUserId: userId missing");
+    return { total: 0, list: [] };
+  }
+
+  const unwrapOrdersPayload = (payload) => {
+    const data = payload?.data ?? payload;
+    const content = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+    const total = Number.isFinite(data?.totalElements)
+      ? data.totalElements
+      : Array.isArray(content)
+      ? content.length
+      : 0;
+    return { total, content };
+  };
+
+  // Try A) /api/users/{userId}/orders
+  try {
+    const resA = await app.get(`/api/users/${encodeURIComponent(userId)}/orders`, {
+      params: { page, size, sort },
+      withCredentials: true,
+    });
+    const { total, content } = unwrapOrdersPayload(resA?.data);
+    return { total, list: normalizeOrdersFromBackend(content) };
+  } catch (eA) {
+    // fallback to B
+  }
+
+  // Try B) /api/orders?userId=...
+  try {
+    const resB = await app.get(`/api/orders`, {
+      params: { userId, page, size, sort },
+      withCredentials: true,
+    });
+    const { total, content } = unwrapOrdersPayload(resB?.data);
+    return { total, list: normalizeOrdersFromBackend(content) };
+  } catch (eB) {
+    console.error("getOrdersByUserId failed:", eB);
+  }
+
+  // DEMO fallback
+  if (DEMO_ON || useDemo) {
+    const list = Array.isArray(state.orders) ? state.orders : [];
+    return { total: list.length, list: normalizeOrders(list) };
+  }
+
+  return { total: 0, list: [] };
+}
+
+export async function trackOrder(orderId, { useDemo = false } = {}) {
+  try {
+    const { data } = await app.get(`/orders/${orderId}/track`);
+    return data?.data || data;
+  } catch (e) {
+    if (!useDemo) return null;
     const list = Array.isArray(state.orders) ? state.orders : [];
     const o = list.find((x) => String(x.id) === String(orderId));
     return o ? { trackingId: o.trackingId, status: o.status, eta: o.eta, demo: true } : null;
   }
-  const { data } = await app.get(`/orders/${orderId}/track`);
-  return data?.data || data;
 }
 
-export async function cancelOrder(orderId) {
-  if (DEMO_ON) {
+export async function cancelOrder(orderId, { useDemo = false } = {}) {
+  try {
+    const { data } = await app.post(`/orders/${orderId}/cancel`);
+    return data?.data || data;
+  } catch (e) {
+    if (!useDemo) throw e;
     const list = Array.isArray(state.orders) ? state.orders : [];
     state.orders = list.map((o) =>
       String(o.id) === String(orderId)
@@ -344,8 +361,6 @@ export async function cancelOrder(orderId) {
     saveState(state);
     return { ok: true, demo: true };
   }
-  const { data } = await app.post(`/orders/${orderId}/cancel`);
-  return data?.data || data;
 }
 
 /* ------------------------------ REFERRAL ----------------------------- */
@@ -354,7 +369,7 @@ export async function getReferralStats(userId) {
   try {
     const { data } = await app.get(`/referrals`, { params: { userId } });
     return normalizeReferral(data?.data || data);
-  } catch (e) {
+  } catch {
     return normalizeReferral(state.referral);
   }
 }
@@ -365,7 +380,7 @@ export async function getMilestones(userId) {
   try {
     const { data } = await app.get(`/rewards/milestones`, { params: { userId } });
     return normalizeMilestones(data?.data || data);
-  } catch (e) {
+  } catch {
     return normalizeMilestones(state.milestones);
   }
 }

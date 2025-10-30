@@ -1,4 +1,3 @@
-// src/page/account/AccountPage.jsx
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
@@ -35,7 +34,7 @@ import {
   redeemPoints,
   getReferralStats,
   getMilestones,
-  getOrders,
+  getOrdersByUserId, // ⬅️ use userId-specific fetch
   trackOrder,
   cancelOrder,
 } from "../../api/engagementApi";
@@ -44,6 +43,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useMe } from "../../auth/user/useMe";
 import { userApi } from "../../auth/user/userApi";
 import { app } from "../../auth/http";
+import { cartApi } from "../../auth/cart/cartApi"; // <-- used for Order Again
 
 const INR = (n) =>
   new Intl.NumberFormat("en-IN", {
@@ -82,7 +82,7 @@ const Badge = ({ children, tone = "slate" }) => (
 );
 
 /* ------------------------- Orders panel (inline) ------------------------- */
-function OrdersPanel({ orders = [], onTrack, onCancel, total }) {
+function OrdersPanel({ orders = [], onTrack, onCancel, onReorder, total }) {
   if (!orders.length)
     return (
       <div className="rounded-2xl border bg-white p-5">
@@ -112,9 +112,9 @@ function OrdersPanel({ orders = [], onTrack, onCancel, total }) {
           >
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium">#{o.id}</span>
+                <span className="font-medium">#{o.orderNumber || o.id}</span>
                 <span className="text-xs text-gray-500">
-                  Placed {new Date(o.placedAt).toLocaleDateString()}
+                  Placed {o.placedAt ? new Date(o.placedAt).toLocaleDateString() : "-"}
                 </span>
                 {o.status === "Delivered" ? (
                   <Badge tone="green">Delivered {o.deliveredOn || ""}</Badge>
@@ -130,6 +130,18 @@ function OrdersPanel({ orders = [], onTrack, onCancel, total }) {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {/* Order Again */}
+              {o.status !== "Cancelled" && (
+                <button
+                  type="button"
+                  onClick={() => onReorder(o)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm"
+                  title="Order again"
+                >
+                  <Sparkles className="h-4 w-4" /> Order Again
+                </button>
+              )}
+
               {!!o.trackingId && o.status !== "Cancelled" && (
                 <button
                   type="button"
@@ -219,7 +231,7 @@ export default function AccountPage() {
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // sync tab to URL (always runs; no early returns before hooks)
+  // sync tab to URL
   useEffect(() => {
     setSearchParams(
       (prev) => {
@@ -240,7 +252,7 @@ export default function AccountPage() {
       });
   }, [me]);
 
-  // fetch bundles (Wallet removed)
+  // fetch bundles
   useEffect(() => {
     if (!me?.id) return;
     let alive = true;
@@ -251,7 +263,7 @@ export default function AccountPage() {
           getLoyaltySummary(me.id),
           getReferralStats(me.id),
           getMilestones(me.id),
-          getOrders(me.id),
+          getOrdersByUserId(me.id), // ⬅️ fetch by specific userId
         ]);
         if (!alive) return;
         setLoyalty(L);
@@ -261,9 +273,7 @@ export default function AccountPage() {
         setOrdersTotal(O?.total || (O?.list?.length ?? 0));
         setRedeemPts(Math.min(200, L?.balance || 0));
       } catch (e) {
-        toast.error(
-          e?.response?.data?.message || e?.message || "Failed to load"
-        );
+        toast.error(e?.response?.data?.message || e?.message || "Failed to load");
       } finally {
         if (alive) setPending(false);
       }
@@ -273,7 +283,7 @@ export default function AccountPage() {
     };
   }, [me?.id]);
 
-  // guards (note: all hooks above — we never return before declaring hooks)
+  // guards
   if (!isAuthenticated)
     return (
       <div className="max-w-6xl mx-auto p-6 pt-32 text-center">
@@ -281,23 +291,17 @@ export default function AccountPage() {
       </div>
     );
   if (loading)
-    return (
-      <div className="max-w-6xl mx-auto p-6 pt-24">Loading your profile…</div>
-    );
+    return <div className="max-w-6xl mx-auto p-6 pt-24">Loading your profile…</div>;
   if (error)
     return (
       <div className="max-w-6xl mx-auto p-6 pt-24 text-red-600">
         Failed to load: {String(error?.message || "Error")}
       </div>
     );
-  if (!me)
-    return (
-      <div className="max-w-6xl mx-auto p-6 pt-24">No profile found.</div>
-    );
+  if (!me) return <div className="max-w-6xl mx-auto p-6 pt-24">No profile found.</div>;
 
   // handlers
-  const onChange = (e) =>
-    setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
+  const onChange = (e) => setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
   const onSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -347,10 +351,7 @@ export default function AccountPage() {
   };
 
   const redeem = async () => {
-    const pts = Math.min(
-      Math.max(Number(redeemPts || 0), 0),
-      loyalty?.balance || 0
-    );
+    const pts = Math.min(Math.max(Number(redeemPts || 0), 0), loyalty?.balance || 0);
     if (!pts) return toast("Enter points to redeem");
     try {
       await redeemPoints({ userId: me.id, points: pts });
@@ -371,7 +372,7 @@ export default function AccountPage() {
       const res = await trackOrder(order.id);
       if (!res) return toast.error("Tracking unavailable");
       const msg = [
-        `Order #${order.id}`,
+        `Order #${order.orderNumber || order.id}`,
         res.trackingId ? `Tracking: ${res.trackingId}` : "",
         res.status ? `Status: ${res.status}` : "",
         res.eta ? `ETA: ${res.eta}` : "",
@@ -385,10 +386,10 @@ export default function AccountPage() {
   };
 
   const handleCancel = async (order) => {
-    if (!confirm(`Cancel order #${order.id}?`)) return;
+    if (!confirm(`Cancel order #${order.orderNumber || order.id}?`)) return;
     try {
       await cancelOrder(order.id);
-      toast.success(`Order #${order.id} cancelled`);
+      toast.success(`Order #${order.orderNumber || order.id} cancelled`);
       setOrders((list) =>
         list.map((o) =>
           o.id === order.id
@@ -405,14 +406,40 @@ export default function AccountPage() {
     }
   };
 
+  // 🆕 Order Again (reorder)
+  const handleReorder = async (order) => {
+    try {
+      if (!Array.isArray(order?.items) || !order.items.length) {
+        return toast.error("No items found in this order");
+      }
+
+      for (const it of order.items) {
+        const productId = it.productId ?? it.id;
+        const quantity = Number(it.qty ?? it.quantity ?? 1);
+        const productVariantId = it.productVariantId ?? it.variantId ?? undefined;
+
+        if (typeof cartApi?.add === "function") {
+          await cartApi.add({ productId, quantity, productVariantId });
+        } else if (typeof cartApi?.addItem === "function") {
+          await cartApi.addItem({ productId, quantity, productVariantId });
+        } else {
+          throw new Error("cartApi.add(...) is not available");
+        }
+      }
+
+      toast.success("Items added to your cart");
+      navigate("/cart");
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.message || "Failed to reorder";
+      toast.error(msg);
+    }
+  };
+
   const subscribed =
-    Boolean(me?.subscription?.active) ||
-    Boolean(me?.isSubscribed) ||
-    Boolean(me?.plan);
+    Boolean(me?.subscription?.active) || Boolean(me?.isSubscribed) || Boolean(me?.plan);
 
   const handleDeleteAccount = async () => {
-    if (!confirm("Are you sure you want to permanently delete your account?"))
-      return;
+    if (!confirm("Are you sure you want to permanently delete your account?")) return;
     try {
       if (typeof userApi?.deleteMe === "function") await userApi.deleteMe();
       else await app.delete("/users/me");
@@ -424,7 +451,7 @@ export default function AccountPage() {
     }
   };
 
-  // compute-only (no hooks): progress and delivered count
+  // compute-only
   const deliveredCount = Array.isArray(orders)
     ? orders.filter((o) => o.status === "Delivered").length
     : 0;
@@ -432,13 +459,9 @@ export default function AccountPage() {
   let progressPct = 1;
   if (milestones?.nextMilestone) {
     const from =
-      (milestones.tiers?.filter((t) => t.reached).slice(-1)[0]?.threshold ??
-        0) || 0;
+      (milestones.tiers?.filter((t) => t.reached).slice(-1)[0]?.threshold ?? 0) || 0;
     const to = milestones.nextMilestone || 1;
-    const cur = Math.min(
-      Math.max((milestones.currentSpend || 0) - from, 0),
-      to - from
-    );
+    const cur = Math.min(Math.max((milestones.currentSpend || 0) - from, 0), to - from);
     progressPct = cur / (to - from || 1);
   }
 
@@ -447,12 +470,8 @@ export default function AccountPage() {
       {/* Header */}
       <div className="mb-4 md:mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            My Account
-          </h1>
-          <p className="text-sm text-gray-600">
-            Welcome back, {me?.name || me?.email}
-          </p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Account</h1>
+          <p className="text-sm text-gray-600">Welcome back, {me?.name || me?.email}</p>
         </div>
         <div className="hidden md:flex items-center gap-3">
           <span className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -490,7 +509,7 @@ export default function AccountPage() {
               }`}
             />
 
-            {/* Orders tile (replaces Wallet) */}
+            {/* Orders tile */}
             <StatTile
               icon={Truck}
               label="Orders"
@@ -522,9 +541,7 @@ export default function AccountPage() {
               <div className="rounded-2xl border bg-gradient-to-r from-amber-50 to-amber-100 p-5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
-                    <h3 className="font-semibold text-lg">
-                      Unlock more with Subscription
-                    </h3>
+                    <h3 className="font-semibold text-lg">Unlock more with Subscription</h3>
                     <p className="text-sm text-amber-800/90">
                       Get free delivery, exclusive discounts & faster support.
                     </p>
@@ -539,15 +556,9 @@ export default function AccountPage() {
               </div>
             )}
 
-            <ProfileForm
-              form={form}
-              saving={saving}
-              onChange={onChange}
-              onSave={onSave}
-            />
+            <ProfileForm form={form} saving={saving} onChange={onChange} onSave={onSave} />
             <DangerZone onDelete={handleDeleteAccount} isDeleting={deleting} />
           </div>
-         
         </div>
       )}
 
@@ -566,25 +577,19 @@ export default function AccountPage() {
           orders={orders}
           onTrack={handleTrack}
           onCancel={handleCancel}
+          onReorder={handleReorder} // <-- wired
         />
       )}
 
       {activeTab === "referrals" && (
-        <Referral
-          refStats={refStats}
-          onCopy={(text) => copy(text)}
-          onShare={shareLink}
-        />
+        <Referral refStats={refStats} onCopy={(text) => copy(text)} onShare={shareLink} />
       )}
 
       {activeTab === "milestones" && (
         <Milestones milestones={milestones} progressPct={progressPct} />
       )}
 
-      {/* Insights no longer receives wallet */}
-      {activeTab === "insights" && (
-        <Insights loyalty={loyalty} refStats={refStats} />
-      )}
+      {activeTab === "insights" && <Insights loyalty={loyalty} refStats={refStats} />}
     </div>
   );
 }

@@ -199,153 +199,153 @@ const PlanCard = ({
   );
 };
 
-const SubscriptionPlans = () => {
-  const [billing, setBilling] = useState("monthly"); // 'monthly' | 'yearly'
+  const SubscriptionPlans = () => {
+    const [billing, setBilling] = useState("monthly"); // 'monthly' | 'yearly'
 
-  const plans = [
-    {
-      title: "Basic",
-      subtitle: "standard plan - 99 monthly",
-      priceMonthly: "₹99",
-      priceYearly: "₹1,999",
-      perks: [
-        "subscription plan",
-        "discount upto 50%",
-        "updates notification",
-        "upcoming event notification and sales early acceses",
-      ],
-    },
-    // {
-    //   title: "Plus",
-    //   subtitle: "For repeat buyers",
-    //   priceMonthly: "₹499",
-    //   priceYearly: "₹4,999",
-    //   highlight: true,
-    //   badge: "Best Value",
-    //   perks: [
-    //     "10% member-only discount",
-    //     "Free shipping on orders ₹499+",
-    //     "Priority support & returns",
-    //     "Earn 2× loyalty points",
-    //     "Early access to limited drops",
-    //   ],
-    // },
-    // {
-    //   title: "Elite",
-    //   subtitle: "For power users & families",
-    //   priceMonthly: "₹999",
-    //   priceYearly: "₹9,999",
-    //   perks: [
-    //     "15% member-only discount",
-    //     "Free shipping on all orders",
-    //     "VIP concierge support",
-    //     "Earn 3× loyalty points",
-    //     "Monthly surprise samples",
-    //   ],
-    // },
-  ];
+    const plans = [
+      {
+        title: "Basic",
+        subtitle: "standard plan - 99 monthly",
+        priceMonthly: "₹99",
+        priceYearly: "₹1,999",
+        perks: [
+          "subscription plan",
+          "discount upto 50%",
+          "updates notification",
+          "upcoming event notification and sales early acceses",
+        ],
+      },
+      // {
+      //   title: "Plus",
+      //   subtitle: "For repeat buyers",
+      //   priceMonthly: "₹499",
+      //   priceYearly: "₹4,999",
+      //   highlight: true,
+      //   badge: "Best Value",
+      //   perks: [
+      //     "10% member-only discount",
+      //     "Free shipping on orders ₹499+",
+      //     "Priority support & returns",
+      //     "Earn 2× loyalty points",
+      //     "Early access to limited drops",
+      //   ],
+      // },
+      // {
+      //   title: "Elite",
+      //   subtitle: "For power users & families",
+      //   priceMonthly: "₹999",
+      //   priceYearly: "₹9,999",
+      //   perks: [
+      //     "15% member-only discount",
+      //     "Free shipping on all orders",
+      //     "VIP concierge support",
+      //     "Earn 3× loyalty points",
+      //     "Monthly surprise samples",
+      //   ],
+      // },
+    ];
 
-  // ✅ Center the cards smartly based on how many plans there are
-  const gridClass =
-    plans.length === 1
-      ? "grid-cols-1 place-items-center"
-      : plans.length === 2
-      ? "grid-cols-1 sm:grid-cols-2 place-items-center"
-      : "grid-cols-1 md:grid-cols-3";
+    // ✅ Center the cards smartly based on how many plans there are
+    const gridClass =
+      plans.length === 1
+        ? "grid-cols-1 place-items-center"
+        : plans.length === 2
+        ? "grid-cols-1 sm:grid-cols-2 place-items-center"
+        : "grid-cols-1 md:grid-cols-3";
 
-  return (
-    <section id="plans" className="py-20 bg-black/40">
-      <motion.div
-        className="container mx-auto px-4"
-        variants={container}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.25 }}
-      >
-        <motion.div className="text-center mb-10" variants={fadeUp}>
-          <span className="text-yellow-300 text-sm font-medium tracking-wide uppercase">
-            Membership
-          </span>
-          <h2 className="mt-3 text-3xl md:text-4xl font-bold">Choose Your Plan</h2>
-          <p className="mt-3 text-white/70">
-            Save more on every order and unlock fast delivery, exclusive discounts, and priority support.
-          </p>
-        </motion.div>
-
-        {/* Billing Toggle */}
-        <motion.div className="mb-10 flex items-center justify-center gap-3" variants={fadeUp}>
-          <Button
-            variant={billing === "monthly" ? undefined : "outline"}
-            className={billing === "monthly" ? "" : "text-white/80"}
-            onClick={() => setBilling("monthly")}
-          >
-            Monthly
-          </Button>
-          {/* <Button
-            variant={billing === "yearly" ? undefined : "outline"}
-            className={billing === "yearly" ? "" : "text-white/80"}
-            onClick={() => setBilling("yearly")}
-          >
-            Yearly <span className="ml-2 rounded-full bg-yellow-300/20 px-2 py-0.5 text-[10px] text-yellow-30">Save 20%</span>
-          </Button> */}
-        </motion.div>
-
-        {/* Plans Grid */}
+    return (
+      <section id="plans" className="py-20 bg-black/40">
         <motion.div
-          className={`grid gap-6 ${gridClass} max-w-6xl mx-auto`}
+          className="container mx-auto px-4"
           variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.25 }}
         >
-          {plans.map((p, idx) => (
-            <PlanCard
-              key={idx}
-              {...p}
-              billing={billing}
-              onClick={() => {
-                // hook up to your checkout / cart flow
-                // e.g., navigate(`/checkout?plan=${p.title.toLowerCase()}&billing=${billing}`)
-                console.log("Subscribe:", p.title, billing);
-              }}
-              cta={p.highlight ? "Start Plus" : `Choose ${p.title}`}
-              // When there's only one card, keep it nicely sized and centered
-              wrapperClassName={plans.length === 1 ? "max-w-md w-full" : "w-full"}
-            />
-          ))}
-        </motion.div>
+          <motion.div className="text-center mb-10" variants={fadeUp}>
+            <span className="text-yellow-300 text-sm font-medium tracking-wide uppercase">
+              Membership
+            </span>
+            <h2 className="mt-3 text-3xl md:text-4xl font-bold">Choose Your Plan</h2>
+            <p className="mt-3 text-white/70">
+              Save more on every order and unlock fast delivery, exclusive discounts, and priority support.
+            </p>
+          </motion.div>
 
-        {/* Benefits strip */}
-        <motion.div
-          className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4"
-          variants={container}
-        >
-          {[
-            { icon: Leaf, label: "Ayurvedic Goodness", desc: "Member-only wellness tips & samples" },
-            { icon: Shield, label: "Hassle-free Returns", desc: "Extended return window for members" },
-            { icon: Star, label: "Priority Support", desc: "Skip the queue for faster help" },
-          ].map((b, i) => {
-            const Icon = b.icon;
-            return (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="rounded-xl bg-yellow-300/15 p-2">
-                    <Icon className="h-5 w-5 text-yellow-300" />
-                  </span>
-                  <div>
-                    <div className="font-semibold">{b.label}</div>
-                    <div className="text-sm text-white/70">{b.desc}</div>
+          {/* Billing Toggle */}
+          <motion.div className="mb-10 flex items-center justify-center gap-3" variants={fadeUp}>
+            <Button
+              variant={billing === "monthly" ? undefined : "outline"}
+              className={billing === "monthly" ? "" : "text-white/80"}
+              onClick={() => setBilling("monthly")}
+            >
+              Monthly
+            </Button>
+            {/* <Button
+              variant={billing === "yearly" ? undefined : "outline"}
+              className={billing === "yearly" ? "" : "text-white/80"}
+              onClick={() => setBilling("yearly")}
+            >
+              Yearly <span className="ml-2 rounded-full bg-yellow-300/20 px-2 py-0.5 text-[10px] text-yellow-30">Save 20%</span>
+            </Button> */}
+          </motion.div>
+
+          {/* Plans Grid */}
+          <motion.div
+            className={`grid gap-6 ${gridClass} max-w-6xl mx-auto`}
+            variants={container}
+          >
+            {plans.map((p, idx) => (
+              <PlanCard
+                key={idx}
+                {...p}
+                billing={billing}
+                onClick={() => {
+                  // hook up to your checkout / cart flow
+                  // e.g., navigate(`/checkout?plan=${p.title.toLowerCase()}&billing=${billing}`)
+                  console.log("Subscribe:", p.title, billing);
+                }}
+                cta={p.highlight ? "Start Plus" : `Choose ${p.title}`}
+                // When there's only one card, keep it nicely sized and centered
+                wrapperClassName={plans.length === 1 ? "max-w-md w-full" : "w-full"}
+              />
+            ))}
+          </motion.div>
+
+          {/* Benefits strip */}
+          <motion.div
+            className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4"
+            variants={container}
+          >
+            {[
+              { icon: Leaf, label: "Ayurvedic Goodness", desc: "Member-only wellness tips & samples" },
+              { icon: Shield, label: "Hassle-free Returns", desc: "Extended return window for members" },
+              { icon: Star, label: "Priority Support", desc: "Skip the queue for faster help" },
+            ].map((b, i) => {
+              const Icon = b.icon;
+              return (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  className="rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-xl bg-yellow-300/15 p-2">
+                      <Icon className="h-5 w-5 text-yellow-300" />
+                    </span>
+                    <div>
+                      <div className="font-semibold">{b.label}</div>
+                      <div className="text-sm text-white/70">{b.desc}</div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </motion.div>
-      </motion.div>
-    </section>
-  );
-};
+      </section>
+    );
+  };
 /* ----------------------- /Subscription Plans ----------------------- */
 
 const AboutUsSection = () => {

@@ -54,6 +54,20 @@ const Button = ({
   );
 };
 
+/* ----------  PRESET CATEGORIES (can be replaced with API data later) ---------- */
+const CATEGORY_OPTIONS = [
+  { name: "Energy & Stamina" },
+  { name: "Pain Relief" },
+  { name: "Hair & Skin Care" },
+  { name: "Digestive Health" },
+  { name: "Men's Health" },
+  { name: "Women's Health" },
+  { name: "Weight Management" },
+  { name: "Specialized Health" },
+  { name: "Nutritional Supplements" },
+  { name: "Immunity & General Wellness" },
+];
+
 /* ----------  INPUT  ---------- */
 const Input = React.forwardRef(({ className, type = 'text', ...props }, ref) => (
   <input
@@ -470,10 +484,23 @@ const trimVal = (v) => (typeof v === 'string' ? v.trim() : v);
 
 /** Matches ProductDto/Product exactly for new backend (no legacy keyherbs fields). */
 function buildProductPayload(formData) {
+  // ---- Relations (make it robust for different server DTOs) ----
+  const categoriesArr = (formData.categories || [])
+    .map(c => ({
+      categoryId: c.categoryId ?? null,
+      categoryName: trimVal(c?.categoryName || ''),
+    }))
+    .filter(c => !!c.categoryName || Number.isFinite(c.categoryId));
+
+  const variantsArr = (formData.variants || [])
+    .map(v => ({ variantId: v.variantId || null, form: trimVal(v?.form || '') }))
+    .filter(v => !!v.form);
+
   const base = {
     slug: trimVal(formData.slug),
     status: formData.status,
     productImg: trimVal(formData.productImg || ''),
+    bannerImg: trimVal(formData.bannerImg || ''), // <-- added
     indication: trimVal(formData.indication || ''),
     indicationHi: trimVal(formData.indicationHi || ''),
 
@@ -525,7 +552,6 @@ function buildProductPayload(formData) {
     trustBadgestagHi: (formData.trustBadgestagHi || []).map(trimVal).filter(Boolean),
 
     // ---------- Herbs/rationale ----------
-    // Structured list: matches ProductDto.keyHerbsDetails
     keyHerbDetails: (formData.keyherbs || [])
       .map(h => ({
         herbTitleEn: trimVal(h?.herbTitleEn || ''),
@@ -535,20 +561,24 @@ function buildProductPayload(formData) {
       }))
       .filter(h => Object.values(h).some(v => !!(v && String(v).trim()))),
 
-    // Rationale lists
     whyherbs: (formData.whyherbs || []).map(trimVal).filter(Boolean),
     whyherbsHi: (formData.whyherbsHi || []).map(trimVal).filter(Boolean),
 
-    // Relations
-    categories: (formData.categories || [])
-      .map(c => ({ categoryId: c.categoryId || null, categoryName: trimVal(c?.categoryName || '') }))
-      .filter(c => !!c.categoryName),
+    // ---- Relations (keep nested objects) ----
+    categories: categoriesArr,
 
-    variants: (formData.variants || [])
-      .map(v => ({ variantId: v.variantId || null, form: trimVal(v?.form || '') }))
-      .filter(v => !!v.form),
+    // Also provide simple lists for servers that bind by names/ids
+    categoryIds: categoriesArr
+      .map(c => c.categoryId)
+      .filter(id => Number.isFinite(id)),
 
-    // Reviews (send only valid ones)
+    categoryNames: categoriesArr
+      .map(c => c.categoryName)
+      .filter(Boolean),
+
+    variants: variantsArr,
+
+    // Reviews
     reviews: (formData.reviews || [])
       .map(r => ({
         rating: r?.rating != null ? Number(r.rating) : null,
@@ -595,6 +625,7 @@ export default function AddProduct() {
     slug: 'amrit-ayu-chyawanprash',
     status: 'ACTIVE',
     productImg: '',
+    bannerImg: '', // <-- added
     indication: 'Ayurvedic Immunity Booster',
     qtySize: 750,
     qtyUnit: 'GM',
@@ -652,10 +683,14 @@ export default function AddProduct() {
     precautionsWarningsHi: [],
     trustBadgestagHi: [],
     whyherbsHi: [],
+
+    // helper for UI picker
+    __selectedCategory: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
+  const [bannerimagePreview, setBannerImagePreview] = useState('');
   const [toast, setToast] = useState(null);
   const [errors, setErrors] = useState({});
 
@@ -690,6 +725,10 @@ export default function AddProduct() {
     if (url && url.startsWith('http')) setImagePreview(url.trim());
   };
 
+  const handleBannerImageBlur = (url) => {
+    if (url && url.startsWith('http')) setBannerImagePreview(url.trim());
+  };
+
   const hasAtLeastOneValidReview = () => {
     const list = formData.reviews || [];
     return list.some((r) => {
@@ -714,12 +753,12 @@ export default function AddProduct() {
     }
 
     const kbCount = (formData.keyBenefits || []).filter(
-    (b) => (b || '').trim().length > 0
-  ).length;
-  if (kbCount < 4) {
-    next.keyBenefits = 'Please add at least 4 key benefits.';
-    showToast('Please add at least 4 key benefits before submitting.', 'error');
-  }
+      (b) => (b || '').trim().length > 0
+    ).length;
+    if (kbCount < 4) {
+      next.keyBenefits = 'Please add at least 4 key benefits.';
+      showToast('Please add at least 4 key benefits before submitting.', 'error');
+    }
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -756,6 +795,7 @@ export default function AddProduct() {
       slug: 'amrit-ayu-chyawanprash',
       status: 'ACTIVE',
       productImg: '',
+      bannerImg: '', // <-- reset too
       indication: 'Ayurvedic Immunity Booster',
       qtySize: 750,
       qtyUnit: 'GM',
@@ -810,8 +850,11 @@ export default function AddProduct() {
       precautionsWarningsHi: [],
       trustBadgestagHi: [],
       whyherbsHi: [],
+
+      __selectedCategory: '',
     }));
     setImagePreview('');
+    setBannerImagePreview('');
     setErrors({});
     showToast('Form reset to defaults', 'info');
   };
@@ -972,6 +1015,21 @@ export default function AddProduct() {
                       )}
                     </div>
 
+                    {/* Banner Image */}
+                    <div>
+                      <Label htmlFor="bannerImg">Banner Image URL</Label>
+                      <Input
+                        id="bannerImg"
+                        value={formData.bannerImg}
+                        onChange={(e) => updateField('bannerImg', e.target.value)}
+                        placeholder="https://..."
+                        onBlur={(e) => handleBannerImageBlur(e.target.value)}
+                      />
+                      {formData.bannerImg && (
+                        <img src={formData.bannerImg} className="mt-2 h-20 w-20 object-cover rounded border" />
+                      )}
+                    </div>
+
                     <div>
                       <Label htmlFor="labReport">Lab Report URL</Label>
                       <div className="flex gap-2">
@@ -1103,7 +1161,7 @@ export default function AddProduct() {
               <Card>
                 <CardHeader>
                   <CardTitle>Tags</CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <Label>Product Tags</Label>
@@ -1185,18 +1243,17 @@ export default function AddProduct() {
                     placeholderHi="कारण (HI)"
                   />
 
-                 <RepeatableBiField
-  label="Key Benefits"
-  items={(formData.keyBenefits || []).map((en, i) => ({ en, hi: formData.keyBenefitsHi?.[i] || '' }))}
-  onChange={(rows) => {
-    updateField('keyBenefits', rows.map((r) => r.en));
-    updateField('keyBenefitsHi', rows.map((r) => r.hi));
-  }}
-  placeholderEn="Benefit (EN) "
-  placeholderHi="लाभ (HI)"
-/>
-{errors.keyBenefits && <p className="text-sm text-rose-600 mt-1">{errors.keyBenefits}</p>}
-
+                  <RepeatableBiField
+                    label="Key Benefits"
+                    items={(formData.keyBenefits || []).map((en, i) => ({ en, hi: formData.keyBenefitsHi?.[i] || '' }))}
+                    onChange={(rows) => {
+                      updateField('keyBenefits', rows.map((r) => r.en));
+                      updateField('keyBenefitsHi', rows.map((r) => r.hi));
+                    }}
+                    placeholderEn="Benefit (EN) "
+                    placeholderHi="लाभ (HI)"
+                  />
+                  {errors.keyBenefits && <p className="text-sm text-rose-600 mt-1">{errors.keyBenefits}</p>}
 
                   <RepeatableBiField
                     label="How It Works"
@@ -1275,6 +1332,14 @@ export default function AddProduct() {
                     </div>
                   </div>
 
+                  {/* Optional custom badges to allow free-form entries */}
+                  <ChipInput
+                    label="Custom / Extra Trust Badges"
+                    chips={formData.trustBadges || []}
+                    onChange={(chips) => updateField('trustBadges', chips)}
+                    placeholder="Add custom badge…"
+                  />
+
                   <RepeatableBiField
                     label="Trust Badge Tagline"
                     items={(formData.trustBadgestag || []).map((en, i) => ({ en, hi: formData.trustBadgestagHi?.[i] || '' }))}
@@ -1306,6 +1371,130 @@ export default function AddProduct() {
                     placeholderEn="Rationale (EN)"
                     placeholderHi="तर्क (HI)"
                   />
+                </CardContent>
+              </Card>
+
+              {/* Categories */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Categories</CardTitle>
+                  <CardDescription>Select from the preset list (you can add multiple)</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Picker row */}
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                    <Select
+                      value={formData.__selectedCategory || ""}
+                      onValueChange={(val) => updateField("__selectedCategory", val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((c) => (
+                          <SelectItem key={c.name} value={c.name}>
+                            <div className="flex items-center gap-2">
+                              <span>{c.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const selected = CATEGORY_OPTIONS.find(c => c.name === formData.__selectedCategory);
+                        if (!selected) return;
+                        const name = selected.name;
+                        const exists = (formData.categories || []).some(
+                          (c) => (c?.categoryName || "").toLowerCase() === name.toLowerCase()
+                        );
+                        if (exists) return;
+                        updateField("categories", [
+                          ...(formData.categories || []),
+                          // If later you add IDs in CATEGORY_OPTIONS, keep them here:
+                          { categoryId: selected.id ?? null, categoryName: name }
+                        ]);
+                        updateField("__selectedCategory", "");
+                      }}
+                      disabled={
+                        !formData.__selectedCategory ||
+                        (formData.categories || []).some(
+                          (c) => (c?.categoryName || "").toLowerCase() === (formData.__selectedCategory || "").toLowerCase()
+                        )
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {/* Selected list */}
+                  {(formData.categories || []).length === 0 ? (
+                    <p className="text-xs text-gray-500">No categories selected yet.</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {(formData.categories || []).map((c, i) => (
+                        <Badge key={`${c.categoryName}-${i}`} variant="default" className="gap-2">
+                          {c.categoryName}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={() =>
+                              updateField(
+                                "categories",
+                                (formData.categories || []).filter((_, idx) => idx !== i)
+                              )
+                            }
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Variants */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Variants</CardTitle>
+                  <CardDescription>Add available dosage forms</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(formData.variants || []).map((v, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                      <Input
+                        value={v.form || ''}
+                        onChange={(e) => {
+                          const next = [...(formData.variants || [])];
+                          next[i] = { ...next[i], form: e.target.value };
+                          updateField('variants', next);
+                        }}
+                        placeholder="e.g., AVALEH"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() =>
+                          updateField('variants', (formData.variants || []).filter((_, idx) => idx !== i))
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => updateField('variants', [...(formData.variants || []), { form: '' }])}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Variant
+                  </Button>
                 </CardContent>
               </Card>
 

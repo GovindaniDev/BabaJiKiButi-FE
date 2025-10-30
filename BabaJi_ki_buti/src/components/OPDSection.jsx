@@ -11,6 +11,7 @@ import {
   Clock,
 
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 // ⬇️ Make sure these paths point to your real local image files
 // (leave names as-is so the rest of your code stays unchanged)
@@ -68,9 +69,9 @@ function OPDSection() {
           />
         </div>
 
-        <div className="container mx-auto px-6 lg:px-8 text-center relative z-10">
+        <div className="container mx-auto px-6 lg:px-8 text-center relative z-10 py-8">
           <motion.h1
-            className="text-5xl md:text-7xl font-bold py-10 text-babi-dark mb-6 tracking-tight"
+            className="text-5xl md:text-7xl font-bold text-babi-dark mb-6 tracking-tight"
             {...fadeInUp}
           >
             ओ.पी.डी. सेवाएं
@@ -299,12 +300,12 @@ function OPDSection() {
         </div>
 
         <div className="container mx-auto text-center relative z-10">
-          <motion.p className="text-babi-dark text-xl mb-6" {...fadeInUp}>
+          <motion.p className="text-[#523122] text-xl font-semibold mb-6" {...fadeInUp}>
             हर दर्द का समाधान
           </motion.p>
 
           <motion.h2
-            className="text-5xl md:text-6xl font-bold text-babi-dark mb-10 leading-tight"
+            className="text-5xl md:text-6xl font-bold text-[#523122] mb-10 leading-tight"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
@@ -314,7 +315,7 @@ function OPDSection() {
           </motion.h2>
 
           <motion.p
-            className="text-babi-dark max-w-4xl mx-auto mb-10 leading-relaxed text-lg"
+            className="text-[#523122] max-w-4xl mx-auto mb-10 leading-relaxed text-lg font-semibold"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.8 }}
@@ -330,14 +331,16 @@ function OPDSection() {
             transition={{ delay: 0.6, duration: 0.6 }}
             viewport={{ once: true }}
           >
-            
+             <Link to="https://www.google.com/maps/place/BABA+JI+KI+BUTI/@28.9802655,76.9905489,762m/data=!3m2!1e3!4b1!4m6!3m5!1s0x390dbb183d826345:0x79f9532049e22b8!8m2!3d28.9802655!4d76.9931238!16s%2Fg%2F11h6nw68st?entry=tts&g_ep=EgoyMDI1MDUyNy4wIPu8ASoASAFQAw%3D%3D&skid=7187cf64-d716-414e-ba5f-d5524082a607">
             <Button
               variant="outline"
               size="lg"
-              className="px-12 py-4 text-xl border-babi-dark/30 text-babi-dark hover:bg-babi-dark/10 hover:scale-105 transition-all duration-300"
+              className="px-12 py-4 text-xl border-babi-dark/30 text-[#523122] hover:bg-babi-dark/10 hover:scale-105 transition-all duration-300"
             >
               VISIT US
+              
             </Button>
+            </Link>
           </motion.div>
         </div>
       </motion.section>

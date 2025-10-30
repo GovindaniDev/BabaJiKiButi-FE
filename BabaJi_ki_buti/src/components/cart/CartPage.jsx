@@ -193,7 +193,6 @@ if (!userId) {
 }
 
 const isEmpty = !loading && items.length === 0;
-
   
 
 
@@ -254,6 +253,7 @@ return (
           ) : items.length === 0 ? (
             <div className="p-7 text-center text-[#5c4b47]">
               <p>Your cart is empty.</p>
+             
             </div>
           ) : (
             items.map((it) => {

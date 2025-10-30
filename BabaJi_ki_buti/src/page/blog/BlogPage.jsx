@@ -1,9 +1,11 @@
-import BlogSection from "../../components/BlogSection";
-
+import { useAuth } from "../../auth/AuthContext";
+import SubscriptionPage from "../../components/Subscribe";
 const BlogPage = () => {
+   const { user } = useAuth();
+    const userId = user?.id ?? null;
     return(
         <div>
-            <BlogSection/>
+            <SubscriptionPage userId={userId}/>
         </div>
     )
 }

@@ -1,6 +1,5 @@
-// src/pages/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { getAllProducts } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
@@ -13,8 +12,11 @@ import {
   RefreshCcw,
   BadgePercent,
   Search,
+  Heart,
 } from "lucide-react";
 
+import { useAuth } from "../../auth/AuthContext";
+import { useMe } from "../../auth/user/useMe";
 // ⚡ GSAP
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -27,6 +29,7 @@ import Loader from "../ui/Loader";
 
 // CART (backend only)
 import { cartApi } from "../../auth/cart/cartApi";
+import { wishlistApi } from "../../auth/wishlist/wishlistApi";
 
 /* ------------------------------ helpers ------------------------------ */
 const formatINR = (num) =>
@@ -80,7 +83,11 @@ const tapScale = { scale: 0.98 };
 const hoverScale = { scale: 1.02 };
 
 /* ----------------------------- main page ----------------------------- */
-export default function ShopNow({ userId }) {
+export default function ShopNow() {
+  const { isAuthenticated } = useAuth();
+  const { me } = useMe({ skip: !isAuthenticated });
+  const userId = me?.id;
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,7 +111,6 @@ export default function ShopNow({ userId }) {
   const headerRef = useRef(null);
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
-
   useEffect(() => {
     let mounted = true;
     const MIN_LOADER_MS = 1000;
@@ -130,6 +136,12 @@ export default function ShopNow({ userId }) {
       mounted = false;
     };
   }, []);
+
+  // ✅ Warm wishlist cache for instant heart state
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    wishlistApi.get(userId).catch(() => {});
+  }, [isAuthenticated, userId]);
 
   // header animation
   useEffect(() => {
@@ -206,6 +218,22 @@ export default function ShopNow({ userId }) {
         (p.productName || p.name || "").toLowerCase().includes(q)
       );
 
+    // categories
+    if (selectedCategories.length > 0) {
+      list = list.filter((p) => {
+        const cat = (p?.category || p?.categoryName || p?.categoryEn || p?.type || "").toString();
+        return selectedCategories.includes(cat);
+      });
+    }
+
+    // tags
+    if (selectedTags.length > 0) {
+      list = list.filter((p) => {
+        const tags = new Set([...(p?.tags || []), ...(p?.tagsEn || []), ...(p?.tagsHi || [])]);
+        return selectedTags.some((t) => tags.has(t));
+      });
+    }
+
     if (inStockOnly) list = list.filter((p) => Number(p?.stock ?? 0) > 0);
     if (ratingAtLeast > 0) list = list.filter((p) => getRating(p) >= ratingAtLeast);
     list = list.filter((p) => {
@@ -231,7 +259,17 @@ export default function ShopNow({ userId }) {
       );
 
     return list;
-  }, [products, query, inStockOnly, ratingAtLeast, minPrice, maxPrice, sort]);
+  }, [
+    products,
+    query,
+    inStockOnly,
+    ratingAtLeast,
+    minPrice,
+    maxPrice,
+    sort,
+    selectedCategories,
+    selectedTags,
+  ]);
 
   const perPage = 12;
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
@@ -436,7 +474,11 @@ export default function ShopNow({ userId }) {
               className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-10 sm:gap-y-14 pt-8"
             >
               {visible.map((p) => (
-                <ProductCard key={p.id || p.slug || p.productName} product={p} userId={userId} />
+                <ProductCard
+                  key={p.id || p.slug || p.productName}
+                  product={p}
+                  userId={userId}
+                />
               ))}
             </div>
 
@@ -502,8 +544,10 @@ function Stars({ value = 0, size = 16 }) {
 }
 
 function ProductCard({ product: p, userId }) {
+  const navigate = useNavigate();
   const imgSrc = p?.productImg || p?.image || p?.image1 || PLACEHOLDER;
-  const title = p?.productName || p?.name || p?.title || p?.product_title || "Untitled Product";
+  const title =
+    p?.productName || p?.name || p?.title || p?.product_title || "Untitled Product";
   const mrp = Number(p?.mrp || p?.price || 0);
   const selling = Number(p?.sellingPrice || p?.price || 0);
   const hasDiscount = mrp > selling && mrp > 0;
@@ -516,7 +560,28 @@ function ProductCard({ product: p, userId }) {
 
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
-  const productId = p?.productId || p?.id;
+  const [wish, setWish] = useState(false);
+  const productId = p?.id ?? p?.productId;
+
+  // Initialize wishlist state from backend (async-safe)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!userId || !productId || typeof wishlistApi.has !== "function") {
+        if (mounted) setWish(false);
+        return;
+      }
+      try {
+        const present = await wishlistApi.has(userId, productId);
+        if (mounted) setWish(present);
+      } catch {
+        if (mounted) setWish(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [userId, productId]);
 
   useEffect(() => {
     if (!imgWrapRef.current || !cartPillRef.current) return;
@@ -541,13 +606,34 @@ function ProductCard({ product: p, userId }) {
       setAdding(true);
       await cartApi.addItem(userId, productId, 1);
       setAdded(true);
-      // notify mini cart / others
       window.dispatchEvent(new CustomEvent("cart:changed"));
       setTimeout(() => setAdded(false), 1500);
     } catch (e) {
       console.error(e);
     } finally {
       setAdding(false);
+    }
+  };
+
+  // Heart click – only toggle wishlist, don't navigate / click image
+  const handleWishlistClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!productId) return;
+    if (!userId) {
+      navigate("/login", { state: { from: `/shop` } });
+      return;
+    }
+    try {
+      // optimistic
+      setWish((v) => !v);
+      const res = await wishlistApi.toggle(userId, productId);
+      setWish(!!res.added); // finalize
+    } catch (err) {
+      console.error(err);
+      // revert on error
+      setWish((v) => !v);
+      alert(err?.message || "Couldn't update wishlist.");
     }
   };
 
@@ -559,12 +645,23 @@ function ProductCard({ product: p, userId }) {
       transition={{ type: "tween", duration: 0.15 }}
     >
       <div ref={imgWrapRef} className="relative rounded-xl overflow-hidden p-2">
+        {/* Wishlist button (top-right over the image) */}
+        <button
+          type="button"
+          onClick={handleWishlistClick}
+          aria-pressed={wish}
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 border border-neutral-200 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+          title={wish ? "In your wishlist" : "Add to wishlist"}
+        >
+          <Heart className={`w-5 h-5 ${wish ? "text-red-500 fill-red-500" : "text-neutral-700"}`} />
+        </button>
+
         <Link to={`/products/${p?.slug || p?.id}`} className="block">
           <motion.img
             src={imgSrc}
             alt={title}
             onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
-            className="w-full h-48 sm:h-56 md:h-64 object-contain"
+            className="w-full h-48 sm:h-56 md:h-64 object-contain pointer-events-auto"
             whileHover={{ scale: 1.02 }}
             transition={{ type: "tween", duration: 0.2 }}
           />
@@ -572,6 +669,7 @@ function ProductCard({ product: p, userId }) {
 
         <div ref={cartPillRef} className="absolute bottom-3 right-3 opacity-0">
           <button
+            type="button"
             onClick={handleAddToCart}
             disabled={adding}
             className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-sm font-semibold hover:bg-amber-300 disabled:opacity-60"
@@ -720,7 +818,7 @@ function FiltersPanel(props) {
           )}
 
           {Array.isArray(categoryOptions) && categoryOptions.length > 0 && (
-            <details className="bg白 rounded-xl border border-neutral-200 p-4 sm:p-5" open>
+            <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
               <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
                 <Filter className="w-4 h-4" /> Category
               </summary>
