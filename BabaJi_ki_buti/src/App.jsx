@@ -46,7 +46,6 @@ import ReturnPage from "./page/admin/return/ReturnPage";
 import CustomerPage from "./page/admin/users/CustomerPage";
 import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
-import CartPage from "./components/cart/CartPage";
 import AccountPage from "./page/profile/AccountPage";
 import RequireAdmin from "./auth/RequireAuth";
 import AddressPage from "./page/address/AddressPage";
@@ -54,6 +53,7 @@ import { useMe } from "./auth/user/useMe";
 import CartSection from "./page/cart/CartPage";
 import PaymentPage from "./page/payment/paymentPage";
 import ThankYou from "./page/order/ThankYou";
+import BlogPage from "./page/blog/BlogPage";
 
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -127,6 +127,7 @@ const App = () => {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
+          <Route path="/blog" element={<BlogPage userId={userId}/>} />
           <Route path="/cart" element={<CartSection userId={userId} />} />
           <Route path="/order/thank-you" element={<ThankYou />} />
           {/* User Account */}

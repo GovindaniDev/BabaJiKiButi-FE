@@ -17,8 +17,8 @@ const INR = (n) =>
   }).format(Number(n || 0));
 
 const DELIVERY_THRESHOLD = 500;
-const DELIVERY_FEE = 49;
-const TAX_RATE = 0.05;
+const DELIVERY_FEE = 0;
+const TAX_RATE = 0.0;
 
 /* ----------------------------- component --------------------------- */
 export default function PaymentSection({ userId: userIdProp }) {

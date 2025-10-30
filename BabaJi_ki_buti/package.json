@@ -31,7 +31,8 @@
     "react-toastify": "^11.0.5",
     "styled-components": "^6.1.19",
     "tailwindcss": "^4.1.13",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "typed.js": "^2.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
