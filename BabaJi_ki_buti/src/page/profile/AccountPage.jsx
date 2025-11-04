@@ -1,3 +1,4 @@
+// src/pages/account/AccountPage.jsx
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
@@ -15,6 +16,7 @@ import {
   Eye,
   XCircle,
   Trash2,
+  Crown,               // ⬅️ used in the active card
 } from "lucide-react";
 
 // UI
@@ -34,16 +36,19 @@ import {
   redeemPoints,
   getReferralStats,
   getMilestones,
-  getOrdersByUserId, // ⬅️ use userId-specific fetch
   trackOrder,
   cancelOrder,
+  getMyOrders,
 } from "../../api/engagementApi";
 
 import { useAuth } from "../../auth/AuthContext";
 import { useMe } from "../../auth/user/useMe";
 import { userApi } from "../../auth/user/userApi";
 import { app } from "../../auth/http";
-import { cartApi } from "../../auth/cart/cartApi"; // <-- used for Order Again
+import { cartApi } from "../../auth/cart/cartApi";
+
+// ⬇️ NEW: bring in your subscription API
+import { subscriptionApi } from "../../auth/subscription/subscriptionApi";
 
 const INR = (n) =>
   new Intl.NumberFormat("en-IN", {
@@ -110,65 +115,52 @@ function OrdersPanel({ orders = [], onTrack, onCancel, onReorder, total }) {
             key={o.id}
             className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
           >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium">#{o.orderNumber || o.id}</span>
-                <span className="text-xs text-gray-500">
-                  Placed {o.placedAt ? new Date(o.placedAt).toLocaleDateString() : "-"}
-                </span>
-                {o.status === "Delivered" ? (
-                  <Badge tone="green">Delivered {o.deliveredOn || ""}</Badge>
-                ) : o.status === "Cancelled" ? (
-                  <Badge tone="red">Cancelled</Badge>
-                ) : (
-                  <Badge tone="amber">{o.status}</Badge>
-                )}
-              </div>
-              <div className="text-sm text-gray-700 line-clamp-1">
-                {o.items?.map((it) => `${it.name} ×${it.qty}`).join(", ")}
+            <div className="min-w-0 flex items-start gap-3">
+              {/* Thumbnail of first item */}
+              {o.items?.[0]?.img && (
+                <img
+                  src={o.items[0].img}
+                  alt={o.items?.[0]?.name || "Product"}
+                  onError={(e) => (e.currentTarget.src = "/images/placeholder.png")}
+                  className="h-12 w-12 rounded-lg object-contain bg-gray-50 border"
+                />
+              )}
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium">
+                    {o.items?.map((it) => `${it.name}`).join(", ")}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    Placed {o.placedAt ? new Date(o.placedAt).toLocaleDateString() : "-"}
+                  </span>
+                  {o.status === "Delivered" ? (
+                    <Badge tone="green">Delivered {o.deliveredOn || ""}</Badge>
+                  ) : o.status === "Cancelled" ? (
+                    <Badge tone="red">Cancelled</Badge>
+                  ) : (
+                    <Badge tone="amber">{o.status}</Badge>
+                  )}
+                </div>
+
+                {/* Items summary with price */}
+                <div className="mt-1 text-sm text-gray-700 line-clamp-2">
+                  {o.items
+                    ?.map((it) => `${it.name} ×${it.qty} — ₹${Number(it.price || 0).toFixed(0)}`)
+                    .join(", ")}
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Order Again */}
-              {o.status !== "Cancelled" && (
-                <button
-                  type="button"
-                  onClick={() => onReorder(o)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm"
-                  title="Order again"
-                >
-                  <Sparkles className="h-4 w-4" /> Order Again
-                </button>
-              )}
-
-              {!!o.trackingId && o.status !== "Cancelled" && (
-                <button
-                  type="button"
-                  onClick={() => onTrack(o)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm"
-                  title="Track order"
-                >
-                  <Truck className="h-4 w-4" /> Track
-                </button>
-              )}
               <Link
                 to={`/orders/${o.id}`}
+                state={{ order: o }}   // ⬅️ this preloads items into OrderDetails, used as a fallback
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm"
                 title="View details"
               >
                 <Eye className="h-4 w-4" /> View
               </Link>
-              {o.status !== "Delivered" && o.status !== "Cancelled" && (
-                <button
-                  type="button"
-                  onClick={() => onCancel(o)}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border hover:bg-gray-50 text-sm text-rose-700 border-rose-200"
-                  title="Cancel order"
-                >
-                  <XCircle className="h-4 w-4" /> Cancel
-                </button>
-              )}
               <div className="ml-2 font-semibold">{INR(o.amount)}</div>
             </div>
           </li>
@@ -231,6 +223,11 @@ export default function AccountPage() {
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // NEW: subscription state
+  const [subActive, setSubActive] = useState(false);
+  const [subCurrent, setSubCurrent] = useState(null);
+  const [subLoading, setSubLoading] = useState(false);
+
   // sync tab to URL
   useEffect(() => {
     setSearchParams(
@@ -252,32 +249,57 @@ export default function AccountPage() {
       });
   }, [me]);
 
-  // fetch bundles
+  // fetch bundles (session-based orders + hydrator) + subscription status
   useEffect(() => {
     if (!me?.id) return;
     let alive = true;
+
     (async () => {
       setPending(true);
+      setSubLoading(true);
       try {
-        const [L, R, M, O] = await Promise.all([
+        const [L, R, M, myOrders] = await Promise.all([
           getLoyaltySummary(me.id),
           getReferralStats(me.id),
           getMilestones(me.id),
-          getOrdersByUserId(me.id), // ⬅️ fetch by specific userId
+          getMyOrders({ page: 0, size: 10 }),
         ]);
+
+        // Fetch subscription in parallel (separate await to keep types clearer)
+        const [isAct, current] = await Promise.all([
+          subscriptionApi.isActive(me.id),
+          subscriptionApi.myCurrent(me.id),
+        ]);
+
         if (!alive) return;
+
         setLoyalty(L);
         setRefStats(R);
         setMilestonesState(M);
-        setOrders(O?.list || []);
-        setOrdersTotal(O?.total || (O?.list?.length ?? 0));
+
+        setOrders(myOrders?.list || []);
+        setOrdersTotal(myOrders?.total ?? (myOrders?.list?.length ?? 0));
+
+        // Normalize 'isActive' shape safely
+        const activeFlag =
+          !!(isAct?.ok && (isAct.data === true || isAct.data?.active === true));
+        setSubActive(activeFlag);
+        setSubCurrent(current?.ok ? current.data : null);
+
         setRedeemPts(Math.min(200, L?.balance || 0));
       } catch (e) {
-        toast.error(e?.response?.data?.message || e?.message || "Failed to load");
+        console.error(e);
+        toast.error(
+          e?.response?.data?.message || e?.message || "Failed to load data"
+        );
       } finally {
-        if (alive) setPending(false);
+        if (alive) {
+          setPending(false);
+          setSubLoading(false);
+        }
       }
     })();
+
     return () => {
       alive = false;
     };
@@ -291,14 +313,13 @@ export default function AccountPage() {
       </div>
     );
   if (loading)
-    return <div className="max-w-6xl mx-auto p-6 pt-24">Loading your profile…</div>;
+    return <div className="max-w-6xl mx-auto p-6 pt-32 text-center">Loading your profile…</div>;
   if (error)
     return (
       <div className="max-w-6xl mx-auto p-6 pt-24 text-red-600">
         Failed to load: {String(error?.message || "Error")}
       </div>
     );
-  if (!me) return <div className="max-w-6xl mx-auto p-6 pt-24">No profile found.</div>;
 
   // handlers
   const onChange = (e) => setForm((s) => ({ ...s, [e.target.name]: e.target.value }));
@@ -406,7 +427,6 @@ export default function AccountPage() {
     }
   };
 
-  // 🆕 Order Again (reorder)
   const handleReorder = async (order) => {
     try {
       if (!Array.isArray(order?.items) || !order.items.length) {
@@ -435,23 +455,13 @@ export default function AccountPage() {
     }
   };
 
+  // ⬇️ Use the definitive subscription flag from API (fallback to legacy hints if needed)
   const subscribed =
-    Boolean(me?.subscription?.active) || Boolean(me?.isSubscribed) || Boolean(me?.plan);
+    subActive ||
+    Boolean(me?.subscription?.active) ||
+    Boolean(me?.isSubscribed) ||
+    Boolean(me?.plan);
 
-  const handleDeleteAccount = async () => {
-    if (!confirm("Are you sure you want to permanently delete your account?")) return;
-    try {
-      if (typeof userApi?.deleteMe === "function") await userApi.deleteMe();
-      else await app.delete("/users/me");
-      toast.success("Your account has been deleted");
-      if (typeof logout === "function") logout();
-      navigate("/", { replace: true });
-    } catch (e) {
-      toast.error(e?.response?.data?.message || e?.message || "Delete failed");
-    }
-  };
-
-  // compute-only
   const deliveredCount = Array.isArray(orders)
     ? orders.filter((o) => o.status === "Delivered").length
     : 0;
@@ -474,10 +484,19 @@ export default function AccountPage() {
           <p className="text-sm text-gray-600">Welcome back, {me?.name || me?.email}</p>
         </div>
         <div className="hidden md:flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <ShieldCheck className="h-4 w-4" /> Member since{" "}
-            {new Date(me?.createdAt || Date.now()).getFullYear()}
+          {/* ⬇️ Membership status badge */}
+          <span
+            className={`inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border ${
+              subscribed
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-slate-50 text-slate-700 border-slate-200"
+            }`}
+            title={subLoading ? "Checking…" : subscribed ? "Membership active" : "Not subscribed"}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            {subLoading ? "Checking…" : subscribed ? "Member Active" : "Free user"}
           </span>
+
           <span className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
             <Sparkles className="h-4 w-4" /> {loyalty?.balance ?? 0} pts
           </span>
@@ -499,6 +518,33 @@ export default function AccountPage() {
       {/* Content per-tab */}
       {activeTab === "overview" && (
         <div className="space-y-6">
+          {/* ⬇️ Show a compact membership strip in overview */}
+          <div className="rounded-2xl border bg-white p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                <Crown className={`h-5 w-5 ${subscribed ? "text-emerald-600" : "text-slate-500"}`} />
+              </div>
+              <div>
+                <div className="font-semibold">
+                  {subscribed ? "Membership Active" : "No active membership"}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {subscribed && subCurrent?.endAt
+                    ? `Valid till ${new Date(subCurrent.endAt).toLocaleString()}`
+                    : "Unlock extra savings & perks by subscribing."}
+                </div>
+              </div>
+            </div>
+            {!subscribed && (
+              <Link
+                to="/subscribe"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white hover:bg-amber-700 text-sm"
+              >
+                Get membership <ExternalLink className="h-4 w-4" />
+              </Link>
+            )}
+          </div>
+
           <div className="grid md:grid-cols-4 gap-4">
             <StatTile
               icon={Gift}
@@ -537,7 +583,33 @@ export default function AccountPage() {
       {activeTab === "profile" && (
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            {!subscribed && (
+            {/* ⬇️ If not subscribed, show upsell. If subscribed, show validity. */}
+            {subscribed ? (
+              <div className="rounded-2xl border bg-white p-5">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 border border-emerald-200">
+                      <Crown className="h-5 w-5 text-emerald-600" />
+                    </span>
+                    <div>
+                      <h3 className="font-semibold text-lg">Membership Active</h3>
+                      <p className="text-sm text-gray-600">
+                        {subCurrent?.endAt
+                          ? `Valid till ${new Date(subCurrent.endAt).toLocaleString()}`
+                          : "Enjoy member perks and extra savings."}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    to="/subscribe"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border hover:bg-gray-50"
+                    title="Manage membership"
+                  >
+                    Manage <ExternalLink className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
               <div className="rounded-2xl border bg-gradient-to-r from-amber-50 to-amber-100 p-5">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
@@ -557,7 +629,7 @@ export default function AccountPage() {
             )}
 
             <ProfileForm form={form} saving={saving} onChange={onChange} onSave={onSave} />
-            <DangerZone onDelete={handleDeleteAccount} isDeleting={deleting} />
+            {/* <DangerZone onDelete={handleDeleteAccount} isDeleting={deleting} /> */}
           </div>
         </div>
       )}
@@ -577,7 +649,7 @@ export default function AccountPage() {
           orders={orders}
           onTrack={handleTrack}
           onCancel={handleCancel}
-          onReorder={handleReorder} // <-- wired
+          onReorder={handleReorder}
         />
       )}
 

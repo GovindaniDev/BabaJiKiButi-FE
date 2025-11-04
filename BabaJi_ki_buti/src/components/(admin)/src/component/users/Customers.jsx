@@ -42,20 +42,24 @@ const roleColor = {
 
 const statusColor = {
   active: "bg-emerald-100 text-emerald-700",
-  inactive: "bg-rose-100 text-rose-700",
+  suspended: "bg-amber-100 text-amber-700",
   blocked: "bg-orange-100 text-orange-700",
   deleted: "bg-slate-200 text-slate-700",
 };
 
+const prettyStatus=(s)=>(s==="inactive"?"suspended":s);
+
 // Tolerant normalizer for backend variations
 function normalizeUser(u = {}) {
+  const rawStatus = String(u.status ?? "active").toLowerCase();
+  const status=rawStatus==="inactive"||rawStatus==="suspended"?"suspended":rawStatus;
   return {
     id: u.id ?? u.userId ?? u.uid ?? String(Math.random()),
     name: u.name ?? u.fullName ?? u.username ?? u.email?.split("@")[0] ?? "User",
     email: u.email ?? u.mail ?? "",
     phone: u.phone ?? u.mobile ?? u.contact ?? "",
     role: String(u.role ?? "user").toLowerCase(),
-    status: String(u.status ?? "active").toLowerCase(),
+    status,
     joinDate: u.joinDate ?? u.createdAt ?? u.created_at ?? "",
     lastLogin: u.lastLogin ?? u.last_seen ?? u.lastLoginAt ?? u.updatedAt ?? "",
     orders: Number(u.orders ?? u.orderCount ?? 0),
@@ -86,8 +90,11 @@ const Avatar = ({ name }) => {
 };
 
 const Pill = ({ type, value }) => {
-  if (type === "role") return <Badge className={roleColor[value] || roleColor.user}>{value}</Badge>;
-  if (type === "status") return <Badge className={statusColor[value] || statusColor.active}>{value}</Badge>;
+  if (type === "role") {return <Badge className={roleColor[value] || roleColor.user}>{value}</Badge>;}
+  if (type === "status") {
+    const label=prettyStatus(value)
+    return <Badge className={statusColor[label] || statusColor.active}>{label}</Badge>;
+  }
   return null;
 };
 
@@ -140,12 +147,12 @@ export default function Users() {
   const analytics = useMemo(() => {
     const total = rows.length;
     const active = rows.filter((u) => u.status === "active").length;
-    const inactive = rows.filter((u) => u.status === "inactive").length;
+    const suspended = rows.filter((u) => u.status === "suspended").length;
     const blocked = rows.filter((u) => u.status === "blocked").length;
     const deleted = rows.filter((u) => u.status === "deleted").length;
     const orders = rows.reduce((s, u) => s + (u.orders || 0), 0);
     const revenue = rows.reduce((s, u) => s + (u.totalSpent || 0), 0);
-    return { total, active, inactive, blocked, deleted, orders, revenue };
+    return { total, active, suspended, blocked, deleted, orders, revenue };
   }, [rows]);
 
   const filtered = useMemo(() => {
@@ -277,7 +284,7 @@ export default function Users() {
         busy={isBusy}
         onEdit={() => openEditor(u)}
         onToggleBlock={() => updateStatus(u, u.status === "blocked" ? "active" : "blocked")}
-        onToggleActive={() => updateStatus(u, u.status === "inactive" ? "active" : "inactive")}
+        onToggleActive={() => updateStatus(u, u.status === "suspended" ? "active" : "suspended")}
         onSoftDelete={() => deleteUser(u, false)}
       />
     );
@@ -333,12 +340,12 @@ export default function Users() {
             active={status === "active"}
           />
           <CardStat
-            title="Inactive"
-            value={analytics.inactive}
+            title="Suspended"
+            value={analytics.suspended}
             icon={UserX}
-            sub={`${Math.round((analytics.inactive / Math.max(1, analytics.total)) * 100)}% of total`}
-            onClick={() => setStatus("inactive")}
-            active={status === "inactive"}
+            sub={`${Math.round((analytics.suspended / Math.max(1, analytics.total)) * 100)}% of total`}
+            onClick={() => setStatus("suspended")}
+            active={status === "suspended"}
           />
           <CardStat
             title="Blocked"
@@ -367,7 +374,7 @@ export default function Users() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-500">Role:</span>
-            {["all", "user", "admin", "affiliate"].map((r) => (
+            {["all", "user", "admin"].map((r) => (
               <button
                 key={r}
                 className={cn(
@@ -383,7 +390,7 @@ export default function Users() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-500">Status:</span>
-            {["all", "active", "inactive", "blocked", "deleted"].map((s) => (
+            {["all", "active", "suspended", "blocked", "deleted"].map((s) => (
               <button
                 key={s}
                 className={cn(
@@ -561,7 +568,7 @@ function RoleSwitcher({ user, onChange, busy }) {
 }
 
 function StatusSwitcher({ user, onChange, busy }) {
-  const statuses = ["active", "inactive", "blocked", "deleted"];
+  const statuses = ["active", "suspended", "blocked", "deleted"];
   return (
     <select
       className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
@@ -646,7 +653,7 @@ function EditDrawer({ user, onClose, onSave, saving }) {
               >
                 <option value="user">user</option>
                 <option value="admin">admin</option>
-                <option value="affiliate">affiliate</option>
+                {/* <option value="affiliate">affiliate</option> */}
               </select>
             </Field>
 
@@ -657,7 +664,7 @@ function EditDrawer({ user, onClose, onSave, saving }) {
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
               >
                 <option value="active">active</option>
-                <option value="inactive">inactive</option>
+                <option value="suspended">Suspended</option>
                 <option value="blocked">blocked</option>
                 <option value="deleted">deleted</option>
               </select>
@@ -703,7 +710,7 @@ function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftD
   const btnRef = React.useRef(null);
 
   const blockLabel = user.status === "blocked" ? "Unblock" : "Block";
-  const activeLabel = user.status === "inactive" ? "Activate" : "Set Inactive";
+  const activeLabel = user.status === "suspended" ? "Activate" : "Set Suspend";
 
   const close = () => setOpen(false);
   const toggle = () => setOpen((o) => !o);

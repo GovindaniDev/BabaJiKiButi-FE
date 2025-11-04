@@ -54,6 +54,8 @@ import CartSection from "./page/cart/CartPage";
 import PaymentPage from "./page/payment/paymentPage";
 import ThankYou from "./page/order/ThankYou";
 import BlogPage from "./page/blog/BlogPage";
+import OrderDetails from "./page/orders/OrderDetails";
+import AnnouncementsPage from "./components/(admin)/src/component/campaigns/announcements/AnnouncementsPage";
 
 gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
 
@@ -129,6 +131,7 @@ const App = () => {
           <Route path="/service/therapy" element={<TherapyPage />} />
           <Route path="/blog" element={<BlogPage userId={userId}/>} />
           <Route path="/cart" element={<CartSection userId={userId} />} />
+          <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/order/thank-you" element={<ThankYou />} />
           {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
@@ -146,6 +149,7 @@ const App = () => {
               <Route path="users" element={<CustomerPage />} />
               <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
               <Route path="inventory/AddStockPage" element={<AddStockPage />} />
+              <Route path="/admin/campaigns/announcements" element={<AnnouncementsPage />} />
             </Route>
           </Route>
 
