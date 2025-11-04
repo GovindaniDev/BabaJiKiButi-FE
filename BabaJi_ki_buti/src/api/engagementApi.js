@@ -1,8 +1,9 @@
 import { app } from "../auth/http";
 import { getProductById, getProductBySlug } from "../auth/product/products";
 
+// Default to LIVE backend unless explicitly enabled via env
 const DEMO_ON =
-  (import.meta?.env?.VITE_USE_DEMO ?? "true").toString().toLowerCase() !== "false";
+  (import.meta?.env?.VITE_USE_DEMO ?? "false").toString().toLowerCase() !== "false";
 
 const PAGE_SIZE = 20;
 const LS_KEY = "demo-engagement-state:v1";
@@ -22,21 +23,21 @@ function loadState() {
       lifetimeRedeemed: 1365,
       expiringSoon: [
         { points: 120, expiresOn: "2025-11-15" },
-        { points: 90, expiresOn: "2025-12-05" },
+        { points: 90,  expiresOn: "2025-12-05" },
       ],
     },
     wallet: {
       balance: 1420,
       lastUpdated: new Date().toISOString(),
       tiers: [
-        { name: "Silver", cashbackRate: 0.01 },
-        { name: "Gold", cashbackRate: 0.02 },
+        { name: "Silver",   cashbackRate: 0.01 },
+        { name: "Gold",     cashbackRate: 0.02 },
         { name: "Platinum", cashbackRate: 0.03 },
       ],
       txns: [
-        { id: "w1", type: "Top-up", amount: 1000, at: "2025-10-10" },
-        { id: "w2", type: "Auto-refund", amount: 249, at: "2025-10-16" },
-        { id: "w3", type: "Cashback", amount: 99, at: "2025-10-18" },
+        { id: "w1", type: "Top-up",     amount: 1000, at: "2025-10-10" },
+        { id: "w2", type: "Auto-refund",amount: 249,  at: "2025-10-16" },
+        { id: "w3", type: "Cashback",   amount: 99,   at: "2025-10-18" },
       ],
     },
     referral: {
@@ -52,8 +53,8 @@ function loadState() {
       currentSpend: 12850,
       nextMilestone: 15000,
       tiers: [
-        { threshold: 5000, rewardLabel: "₹200 off", reached: true },
-        { threshold: 10000, rewardLabel: "₹500 off", reached: true },
+        { threshold:  5000, rewardLabel: "₹200 off",  reached: true  },
+        { threshold: 10000, rewardLabel: "₹500 off",  reached: true  },
         { threshold: 15000, rewardLabel: "₹1000 off", reached: false },
       ],
     },
@@ -383,6 +384,7 @@ export async function hydrateOrdersWithProductMeta(orders = []) {
 export async function getLoyaltySummary(userId) {
   if (DEMO_ON) return normalizeLoyalty(state.loyalty);
   try {
+    // baseURL '/api' => '/api/loyalty/summary'
     const { data } = await app.get(`/loyalty/summary`, { params: { userId } });
     return normalizeLoyalty(data?.data || data);
   } catch {
@@ -397,6 +399,7 @@ export async function redeemPoints({ userId, points }) {
     saveState(state);
     return { ok: true, demo: true };
   }
+  // baseURL '/api' => '/api/loyalty/redeem'
   const { data } = await app.post(`/loyalty/redeem`, { userId, points });
   return data?.data || data;
 }
@@ -567,7 +570,6 @@ export async function getOrdersByUserId(
   try {
     const resA = await app.get(`/users/${encodeURIComponent(userId)}/orders`, {
       params: { page, size, sort },
-      withCredentials: true,
     });
     const { total, content } = unwrap(resA?.data);
     const normalized = normalizeOrdersFromBackend(content);
@@ -578,7 +580,6 @@ export async function getOrdersByUserId(
   try {
     const resB = await app.get(`/orders`, {
       params: { userId, page, size, sort },
-      withCredentials: true,
     });
     const { total, content } = unwrap(resB?.data);
     const normalized = normalizeOrdersFromBackend(content);
@@ -635,7 +636,8 @@ export async function cancelOrder(orderId, { useDemo = false } = {}) {
 export async function getReferralStats(userId) {
   if (DEMO_ON) return normalizeReferral(state.referral);
   try {
-    const { data } = await app.get(`/referrals`, { params: { userId } });
+    // baseURL '/api' => '/api/referrals/summary'
+    const { data } = await app.get(`/referrals/summary`, { params: { userId } });
     return normalizeReferral(data?.data || data);
   } catch {
     return normalizeReferral(state.referral);
@@ -644,6 +646,7 @@ export async function getReferralStats(userId) {
 export async function getMilestones(userId) {
   if (DEMO_ON) return normalizeMilestones(state.milestones);
   try {
+    // baseURL '/api' => '/api/rewards/milestones'
     const { data } = await app.get(`/rewards/milestones`, { params: { userId } });
     return normalizeMilestones(data?.data || data);
   } catch {
