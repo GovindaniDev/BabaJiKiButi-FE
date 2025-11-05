@@ -1,75 +1,177 @@
 // ProductCatalog.jsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, ChevronDown, Filter, Package, Eye, DollarSign, Box, MoreVertical } from 'lucide-react';
-import { getAllProducts } from '../../../../../auth/product/products';
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Search, Plus, ChevronDown, Package, Eye, Box, MoreVertical, IndianRupee,
+} from "lucide-react";
+import { getAllProducts } from "../../../../../auth/product/products";
 
+/* ---------------------- helpers ---------------------- */
+const formatINR0 = (num) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
+    .format(Number(num || 0));
+
+// Parse LocalDateTime from string | number | Date | array | object
+const parseAnyDate = (v) => {
+  if (v == null) return null;
+
+  if (typeof v === "number") {
+    const ms = v < 1e12 ? v * 1000 : v;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v;
+
+  if (Array.isArray(v)) {
+    const [Y, M = 1, D = 1, h = 0, m = 0, s = 0, nanos = 0] = v;
+    const ms = Math.floor((nanos || 0) / 1e6);
+    const d = new Date(Y, (M || 1) - 1, D || 1, h || 0, m || 0, s || 0, ms);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  if (typeof v === "object") {
+    const Y = v.year, M = v.month, D = v.day || v.dayOfMonth || v.day_of_month;
+    const h = v.hour ?? 0, m = v.minute ?? 0, s = v.second ?? 0, nanos = v.nano ?? 0;
+    if (Y && M && D) {
+      const ms = Math.floor((nanos || 0) / 1e6);
+      const d = new Date(Y, M - 1, D, h, m, s, ms);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+
+  if (typeof v === "string") {
+    let s = v.trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) s = s.replace(" ", "T");
+    s = s.replace(/(\.\d{3})\d+$/, "$1");
+    let d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d;
+    if (!/[zZ]|[+\-]\d{2}:?\d{2}$/.test(s)) {
+      d = new Date(s + "Z");
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+};
+
+const toDate = (v) => {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const getRelativeTime = (input) => {
+  const date = toDate(input);
+  if (!date) return "—";
+  const now = new Date();
+  const diffMs = now - date;
+  if (diffMs < 60000) return "Just now";
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `${mins} min${mins > 1 ? "s" : ""} ago`;
+  const hours = Math.floor(diffMs / 3600000);
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  const days = Math.floor(diffMs / 86400000);
+  return `${days} day${days > 1 ? "s" : ""} ago`;
+};
+
+const fmtAbsDateTime = (input) => {
+  const d = toDate(input);
+  if (!d) return "";
+  return d.toLocaleString();
+};
+
+const stockBand = (n) => (n >= 50 ? "High" : n >= 15 ? "Medium" : "Low");
+
+const getStatusColor = (s) =>
+  s === "Published" ? "bg-green-100 text-green-700"
+    : s === "Scheduled" ? "bg-orange-100 text-orange-700"
+    : "bg-gray-100 text-gray-700";
+
+const getStockColor = (s) =>
+  s === "High" ? "bg-green-100 text-green-700"
+    : s === "Medium" ? "bg-orange-100 text-orange-700"
+    : "bg-red-100 text-red-700";
+
+/* ---------------------- component ---------------------- */
 export default function ProductCatalog() {
-  // ------- UI state -------
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All Status');
-  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
 
-  const formatINR = (num) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-      .format(Number(num || 0));
-
-  const stockBand = (n) => (n >= 50 ? 'High' : n >= 15 ? 'Medium' : 'Low');
-
-  const getRelativeTime = (date) => {
-    const now = new Date();
-    const diffMs = now - date;
-    const h = Math.floor(diffMs / 3600000);
-    const d = Math.floor(diffMs / 86400000);
-    if (h < 1) return 'Just now';
-    if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`;
-    return `${d} day${d > 1 ? 's' : ''} ago`;
-  };
-
-  const getStatusColor = (s) =>
-    s === 'Published' ? 'bg-green-100 text-green-700'
-      : s === 'Scheduled' ? 'bg-orange-100 text-orange-700'
-      : 'bg-gray-100 text-gray-700';
-
-  const getStockColor = (s) =>
-    s === 'High' ? 'bg-green-100 text-green-700'
-      : s === 'Medium' ? 'bg-orange-100 text-orange-700'
-      : 'bg-red-100 text-red-700';
-
   useEffect(() => {
     (async () => {
       try {
-        setLoading(true); setError(null);
+        setLoading(true);
+        setError(null);
         const apiItems = await getAllProducts();
 
-        const rows = (apiItems || []).map(p => {
-          const status = p.status === 'ACTIVE' ? 'Published' : (p.status || 'Draft');
-          const category = Array.isArray(p.categories) && p.categories.length
-            ? p.categories.map(c => c.categoryName).join(', ')
-            : 'Uncategorized';
+        if (import.meta.env?.DEV) {
+          console.log("[Catalog] /products/all raw:", apiItems);
+        }
+
+        const rows = (apiItems || []).map((p, idx) => {
+          const status = p.status === "ACTIVE" ? "Published" : (p.status || "Draft");
+          const category =
+            Array.isArray(p.categories) && p.categories.length
+              ? p.categories
+                  .map((c) => c.categoryName || c.name || c.title || "")
+                  .filter(Boolean)
+                  .join(", ")
+              : "Uncategorized";
           const variantsCount = Array.isArray(p.variants) ? p.variants.length : 0;
+
+          // Collect raw timestamp candidates to log
+          const rawUpdated =
+            p.updatedAt ?? p.updated_at ?? p.audit?.updatedAt ?? p.audit?.updated_at ?? null;
+          const rawCreated =
+            p.createdAt ?? p.created_at ?? p.audit?.createdAt ?? p.audit?.created_at ?? null;
+
+          const updatedAt = parseAnyDate(rawUpdated ?? rawCreated);
+
+          if (import.meta.env?.DEV) {
+            console.log(`[Catalog] row #${idx}`, {
+              id: p.productId ?? p.id,
+              slug: p.slug,
+              title: p.title ?? p.name,
+              rawUpdated,
+              rawCreated,
+              parsedUpdated: updatedAt,
+            });
+            if (!updatedAt) {
+              console.warn(`[Catalog] ⚠️ No parsable date for`, {
+                id: p.productId ?? p.id,
+                slug: p.slug,
+                rawUpdated,
+                rawCreated,
+              });
+            }
+          }
 
           return {
             id: p.productId ?? p.id,
             name: p.title ?? p.name ?? p.slug,
-            code: (p.slug || '').toUpperCase(),
-            image: p.productImg || '/images/box.svg',
+            code: (p.slug || "").toUpperCase(),
+            image: p.productImg || "/images/box.svg",
             status,
             category,
             variants: variantsCount,
-            priceRange: p.mrp && p.sellingPrice
-              ? `${formatINR(p.sellingPrice)} (MRP ${formatINR(p.mrp)})`
-              : (p.sellingPrice ? `${formatINR(p.sellingPrice)}` : '—'),
+            priceRange:
+              p.mrp && p.sellingPrice
+                ? `${formatINR0(p.sellingPrice)} (MRP ${formatINR0(p.mrp)})`
+                : p.sellingPrice
+                ? `${formatINR0(p.sellingPrice)}`
+                : "—",
             stock: stockBand(Number(p.stock ?? 0)),
-            updated: new Date()
+            updated: updatedAt,
           };
         });
 
         setProducts(rows);
-      } catch {
-        setError('Failed to load products');
+      } catch (e) {
+        console.error("[Catalog] Failed to load products", e);
+        setError("Failed to load products");
       } finally {
         setLoading(false);
       }
@@ -78,34 +180,48 @@ export default function ProductCatalog() {
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return products.filter(p => {
-      const matchesSearch = !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
-      const matchesStatus = statusFilter === 'All Status' || p.status === statusFilter;
-      const matchesCategory = categoryFilter === 'All Categories' ||
-        (p.category || '').split(',').map(s => s.trim()).includes(categoryFilter);
+    return products.filter((p) => {
+      const matchesSearch =
+        !q ||
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.code || "").toLowerCase().includes(q);
+      const matchesStatus =
+        statusFilter === "All Status" || p.status === statusFilter;
+      const matchesCategory =
+        categoryFilter === "All Categories" ||
+        (p.category || "")
+          .split(",")
+          .map((s) => s.trim())
+          .includes(categoryFilter);
       return matchesSearch && matchesStatus && matchesCategory;
     });
   }, [products, searchQuery, statusFilter, categoryFilter]);
 
   const stats = {
     totalProducts: products.length,
-    totalChange: '',
-    published: products.filter(p => p.status === 'Published').length,
+    totalChange: "",
+    published: products.filter((p) => p.status === "Published").length,
     publishedPercent: products.length
-      ? `${Math.round((products.filter(p => p.status === 'Published').length / products.length) * 100)}% of total products`
-      : '—',
-    lowStock: products.filter(p => p.stock === 'Low').length,
-    lowStockNote: 'Requires attention',
+      ? `${Math.round(
+          (products.filter((p) => p.status === "Published").length / products.length) * 100
+        )}% of total products`
+      : "—",
+    lowStock: products.filter((p) => p.stock === "Low").length,
+    lowStockNote: "Requires attention",
     avgPrice: (() => {
       const nums = products
-        .map(p => (p.priceRange?.match(/\₹?([\d,]+)/)?.[1] || '0'))
-        .map(s => Number(s.replace(/,/g, '')))
-        .filter(n => n > 0);
-      if (!nums.length) return '—';
+        .map((p) => p?.priceRange)
+        .map((pr) => {
+          const m = pr?.match(/([\d,]+)/);
+          const s = m?.[1] || "0";
+          return Number(s.replace(/,/g, ""));
+        })
+        .filter((n) => n > 0);
+      if (!nums.length) return "—";
       const avg = Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(avg);
+      return formatINR0(avg);
     })(),
-    avgPriceNote: 'Across all variants'
+    avgPriceNote: "Across all variants",
   };
 
   return (
@@ -156,7 +272,7 @@ export default function ProductCatalog() {
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-gray-600">Avg. Price</span>
-            <DollarSign className="w-5 h-5 text-gray-400" />
+            <IndianRupee className="w-5 h-5 text-gray-400" />
           </div>
           <div className="text-2xl font-bold text-gray-900 mb-1">{stats.avgPrice}</div>
           <div className="text-sm text-gray-500">{stats.avgPriceNote}</div>
@@ -214,11 +330,6 @@ export default function ProductCatalog() {
             </select>
             <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
           </div>
-
-          <button className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-            <Filter className="w-4 h-4" />
-            <span>More Filters</span>
-          </button>
         </div>
 
         {/* Table / Loading / Error */}
@@ -268,7 +379,11 @@ export default function ProductCatalog() {
                           {product.stock}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{getRelativeTime(product.updated)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <span title={fmtAbsDateTime(product.updated)}>
+                          {getRelativeTime(product.updated)}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                           <MoreVertical className="w-4 h-4 text-gray-600" />

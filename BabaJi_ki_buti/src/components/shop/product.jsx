@@ -15,6 +15,7 @@ import {
   Heart,
 } from "lucide-react";
 
+import toast from "react-hot-toast";
 import { useAuth } from "../../auth/AuthContext";
 import { useMe } from "../../auth/user/useMe";
 // ⚡ GSAP
@@ -598,8 +599,10 @@ function ProductCard({ product: p, userId }) {
   }, []);
 
   const handleAddToCart = async () => {
+
     if (!userId) {
-      alert("Please log in to add items to your cart.");
+      toast.error("Please log in to add items to your cart.");
+      navigate("/login", { state: { from: `/shop` } });
       return;
     }
     try {

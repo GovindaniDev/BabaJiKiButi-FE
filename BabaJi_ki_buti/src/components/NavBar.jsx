@@ -163,7 +163,7 @@ export default function NavBar() {
 
 
 
-  
+
   const authReady = !loading && (isAuthenticated && !!userId);
 
   // ------------------------ wishlist navigation ------------------------
@@ -174,44 +174,44 @@ export default function NavBar() {
     else navigate("/login", { state: { from: "/wishlist" } });
   };
 
- // ------------------------- wishlist count sync ------------------------
-useEffect(() => {
-  let alive = true;
+  // ------------------------- wishlist count sync ------------------------
+  useEffect(() => {
+    let alive = true;
 
-  async function fetchCount() {
-    if (!authReady) {
-      if (alive) setWishlistCount(0);
-      return;
+    async function fetchCount() {
+      if (!authReady) {
+        if (alive) setWishlistCount(0);
+        return;
+      }
+      try {
+        // Use the new count(userId)
+        const c = await wishlistApi.count(userId);
+        if (alive && Number.isFinite(+c)) setWishlistCount(+c);
+      } catch {
+        if (alive) setWishlistCount(0);
+      }
     }
-    try {
-      // Use the new count(userId)
-      const c = await wishlistApi.count(userId);
-      if (alive && Number.isFinite(+c)) setWishlistCount(+c);
-    } catch {
-      if (alive) setWishlistCount(0);
-    }
-  }
 
-  fetchCount();
+    fetchCount();
 
-  const onChanged = (e) => {
-    const d = e?.detail || {};
-    // Ignore events from other users (multi-tab/multi-session safety)
-    if (authReady && d.userId && String(d.userId) !== String(userId)) return;
+    const onChanged = (e) => {
+      const d = e?.detail || {};
+      // Ignore events from other users (multi-tab/multi-session safety)
+      if (authReady && d.userId && String(d.userId) !== String(userId)) return;
 
-    if (typeof d.count === "number") {
-      setWishlistCount(d.count);
-    } else {
-      fetchCount();
-    }
-  };
+      if (typeof d.count === "number") {
+        setWishlistCount(d.count);
+      } else {
+        fetchCount();
+      }
+    };
 
-  window.addEventListener("wishlist:changed", onChanged);
-  return () => {
-    alive = false;
-    window.removeEventListener("wishlist:changed", onChanged);
-  };
-}, [authReady, userId]);
+    window.addEventListener("wishlist:changed", onChanged);
+    return () => {
+      alive = false;
+      window.removeEventListener("wishlist:changed", onChanged);
+    };
+  }, [authReady, userId]);
 
 
   // -------------------------- auth redirects ---------------------------
@@ -238,7 +238,7 @@ useEffect(() => {
               onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
               className="flex items-center gap-2 shrink-0"
             >
-              <img src="/images/logoNav.gif" alt="nav-logo" className="h-8 sm:h-10 w-auto" />
+              <img src="/images/logo2.png" alt="nav-logo" className="h-8 sm:h-10 w-auto" />
             </Link>
 
             {/* Spacer to keep nav links away from logo on lg+ */}
@@ -246,9 +246,8 @@ useEffect(() => {
 
             {/* Desktop links */}
             <ul
-              className={`hidden lg:flex min-w-0 items-center gap-4 xl:gap-6 lg:pl-6 xl:pl-10 text-sm font-semibold text-gray-800 whitespace-nowrap ${
-                isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-hidden"
-              }`}
+              className={`hidden lg:flex min-w-0 items-center gap-4 xl:gap-6 lg:pl-6 xl:pl-10 text-sm font-semibold text-gray-800 whitespace-nowrap ${isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-hidden"
+                }`}
             >
               <li className="shrink-0">
                 <Link to="/" className="hover:text-amber-700" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
@@ -473,18 +472,28 @@ useEffect(() => {
                         ))}
                       </div>
                       <div className="flex justify-center">
-                        <a
-                          href="/all-categories"
+                        <Link
+                          to="/shop"
                           onClick={(e) => {
                             e.preventDefault();
                             setIsCategoryOpen(false);
                             window.scrollTo({ top: 0, behavior: "instant" });
                           }}
-                          className="px-6 md:px-8 py-2.5 md:py-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700 text-sm font-semibold"
+                          className="px-6 md:px-8 py-2.5 md:py-3 
+               border border-[#f6cfc0]
+               text-[#9f4c4c] rounded-xl 
+               font-semibold text-sm tracking-wide
+               bg-white/60 backdrop-blur-sm
+               hover:bg-[#faeade]/90 hover:text-[#6a2c2c]
+               shadow-sm hover:shadow-md
+               transition-all duration-200"
                         >
                           SHOP ALL
-                        </a>
+                        </Link>
                       </div>
+
+
+
                     </div>
                     <div className="relative h-16 md:h-20">
                       <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
@@ -510,7 +519,7 @@ useEffect(() => {
             </ul>
 
             {/* Desktop search (≥2xl) */}
-            <SearchBar/>
+            <SearchBar />
             {/* <div className="relative hidden 2xl:block" ref={searchRef}>
               <div className="relative w-full max-w-[22rem]">
                 <svg
@@ -685,11 +694,7 @@ useEffect(() => {
                   >
                     <path strokeWidth={1.5} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                   </svg>
-                  <input
-                    type="text"
-                    placeholder="Search for products..."
-                    className="w-full pl-10 pr-3 py-2 text-sm text-gray-700 placeholder-gray-400 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+                  <SearchBar />
                 </div>
               </div>
 

@@ -1,12 +1,15 @@
-// src/hooks/useCashfreeReturnVerifier.js
 import { useEffect } from "react";
-import { subscriptionApi } from "../auth/subscription/subscriptionApi";
 
 /**
- * Cashfree return verifier (no orderId required).
- * Recognizes: ?sub=cf&status=return[&paymentSessionId=...|payment_session_id=...|sessionId=...]
+ * Cashfree return handler for SUBSCRIPTIONS.
+ * Your backend handles activation at:
+ *   GET /api/subscriptions/payments/cashfree/return?order_id=...
+ * …and then redirects the browser to /subscribe.
+ *
+ * So on the FE, we only need to detect the "came from CF" markers,
+ * clean the URL, and refresh caller state.
  */
-export function useCashfreeReturnVerifier(userId, refresh) {
+export function useCashfreeReturnVerifier(refresh) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -14,33 +17,15 @@ export function useCashfreeReturnVerifier(userId, refresh) {
     const cameFromCf =
       params.get("sub") === "cf" && params.get("status") === "return";
 
-    // Early exit; don't touch anything unless this is Cashfree return
     if (!cameFromCf) return;
-
-    // Optional; backend should be able to resolve latest pending by userId
-    const paymentSessionId =
-      params.get("paymentSessionId") ||
-      params.get("payment_session_id") ||
-      params.get("sessionId") ||
-      null;
 
     (async () => {
       try {
-        if (userId) {
-          await subscriptionApi.verifyPayment({
-            userId,
-            paymentSessionId: paymentSessionId ?? undefined,
-          });
-        }
-      } catch (e) {
-        console.error("[verifyPayment] failed:", e);
+        // no verify call needed; backend already did activation during redirect
       } finally {
-        // Clean URL
         try {
           const url = new URL(window.location.href);
-          ["sub", "status", "paymentSessionId", "payment_session_id", "sessionId"].forEach(
-            (k) => url.searchParams.delete(k)
-          );
+          ["sub", "status", "order_id"].forEach((k) => url.searchParams.delete(k));
           window.history.replaceState({}, "", url.toString());
         } catch {}
         try {
@@ -48,5 +33,5 @@ export function useCashfreeReturnVerifier(userId, refresh) {
         } catch {}
       }
     })();
-  }, [userId, refresh]);
+  }, [refresh]);
 }

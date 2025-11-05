@@ -15,6 +15,7 @@ const navItems = [
   { title: 'Reviews & Q&A', url: '/admin/reviews' },
   { title: 'B2B', url: '/admin/b2b' },
   { title: 'Campaigns & Engagement', url: '/admin/campaigns' },
+  { title: 'Campaigns Announcement', url: '/admin/campaigns/announcements' },
   //{ title: 'Content', url: '/admin/content' },
   { title: 'Reports', url: '/admin/reports' },
 ];

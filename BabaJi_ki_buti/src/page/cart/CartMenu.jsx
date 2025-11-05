@@ -13,9 +13,34 @@ export default function CartMenu({ userId }) {
   const wrapperRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const hoverTimer=useRef(null);
 
   const open = useCallback(() => setIsCartOpen(true), []);
   const close = useCallback(() => setIsCartOpen(false), []);
+
+  const clearHoverTimer=()=>{
+    if(hoverTimer.current){
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current=null;
+    }
+  }
+
+  const hasHover=()=>window.matchMedia("(hover:hover)").matches;
+
+
+  const handleEnter=()=>{
+    if(!hasHover()) return;
+    clearHoverTimer();
+    open();
+  }
+
+  const handleLeave=()=>{
+     if(!hasHover()) return;
+    clearHoverTimer();
+    hoverTimer.current=setTimeout(()=>{
+      close();
+    },180)
+  }
 
   // preload when userId changes (so badge is correct)
   useEffect(() => {
@@ -74,6 +99,9 @@ export default function CartMenu({ userId }) {
     };
   }, [isCartOpen, close]);
 
+
+  useEffect(()=>()=>clearHoverTimer(),[]);
+
   const items = cart?.items ?? [];
   const count = useMemo(() => Number(cart?.totalQty ?? items.reduce((n, it) => n + (it.qty || 0), 0)), [cart, items]);
   const subtotal = useMemo(() => Number(cart?.subtotal ?? items.reduce((s, it) => s + (Number(it.unitPrice || 0) * Number(it.qty || 0)), 0)), [cart, items]);
@@ -91,9 +119,9 @@ export default function CartMenu({ userId }) {
   return (
     <div
       ref={wrapperRef}
-      className="relative"
-      onMouseEnter={() => window.matchMedia("(hover: hover)").matches && setIsCartOpen(true)}
-      onMouseLeave={() => window.matchMedia("(hover: hover)").matches && setIsCartOpen(false)}
+      className="relative pt-2"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
     >
       {/* icon navigates to /cart; hover still opens preview */}
       <button
@@ -113,7 +141,10 @@ export default function CartMenu({ userId }) {
       </button>
 
       {isCartOpen && (
-        <div role="dialog" aria-label="Cart preview" className="absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg z-50">
+        <div role="dialog" aria-label="Cart preview" className="absolute right-0 top-full w-80 rounded-lg border border-gray-200 bg-white shadow-lg z-50"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
           {loading ? (
             <div className="p-4 space-y-2"><SkeletonRow/><SkeletonRow/><SkeletonRow/></div>
           ) : items.length > 0 ? (
