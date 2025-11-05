@@ -1,11 +1,4 @@
-// Works with backend routes under /api/subscriptions
-// - credentials: "include" (cookie session OK)
-// - Sends JWT (if present) + Spring CSRF header (if cookie present)
-// - Unwraps ApiResponse<T> → { data, ... }
-// - Returns { ok, data?, error?, status }
-// - Emits "subscription:changed" on key state updates
-
-/* =========================== BASE =========================== */
+// src/auth/subscription/subscriptionApi.js
 const API_BASE =
   (typeof window !== "undefined" && window.API_BASE_URL) ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
@@ -25,7 +18,6 @@ const unwrap = (json) => {
   return json;
 };
 
-/* ====================== AUTH HEADERS ======================== */
 function getAuthHeaders() {
   const headers = {};
   try {
@@ -45,9 +37,6 @@ function getAuthHeaders() {
   return headers;
 }
 
-/// src/auth/subscription/subscriptionApi.js
-/* ... previous code ... */
-
 async function http(path, { method = "GET", body, params } = {}) {
   const base =
     (typeof window !== "undefined" && window.location.origin) || "http://localhost";
@@ -60,37 +49,56 @@ async function http(path, { method = "GET", body, params } = {}) {
   }
 
   const headers = { "Content-Type": "application/json", ...getAuthHeaders() };
-
-  const options = {
-    method,
-    credentials: "include",
-    headers,
-  };
+  const options = { method, credentials: "include", headers };
   if (body !== undefined && body !== null) options.body = JSON.stringify(body);
 
   let resp, text = null, json = null;
   try {
     resp = await fetch(url.toString(), options);
   } catch (e) {
-    return { ok: false, error: e?.message || "Network failure", status: 0 };
+    return { ok: false, error: e?.message || "Network failure", status: 0, raw: null, userMessage: "We couldn’t reach the server. Check your internet and try again." };
   }
 
-  // Try text first (handles empty body / non-JSON)
   try { text = await resp.text(); } catch {}
   if (text && text.trim().length) {
-    try { json = JSON.parse(text); } catch { /* leave as null */ }
+    try { json = JSON.parse(text); } catch {}
   }
+
+  // Helper to extract clean server text
+  const extractMsg = () => {
+    if (!json) return (text && text.slice(0, 200)) || "";
+    if (typeof json === "object") {
+      return (
+        json.message ||
+        json.error ||
+        json.detail ||
+        (typeof json.data === "string" ? json.data : "") ||
+        ""
+      );
+    }
+    return String(json);
+  };
 
   if (!resp.ok) {
-    const errorMsg =
-      (json && (json.message || json.error || json.detail)) ||
-      (text && text.slice(0, 200)) ||
-      `HTTP ${resp.status}`;
+    const errorMsg = extractMsg() || `HTTP ${resp.status}`;
+    // Build a friendly message here as well so callers can directly show it
+    let userMessage = errorMsg;
+    try {
+      // Lazy import to avoid circular deps if any
+      const { userErrorMessage } = await import("../../utils/userMessages.js");
+      userMessage = userErrorMessage({ status: resp.status, error: errorMsg, raw: json });
+    } catch {
+      // fallback keeps working even if import fails (e.g., build step)
+      if (resp.status === 0) userMessage = "We couldn’t reach the server. Check your internet and try again.";
+      else if (resp.status === 401) userMessage = "Please sign in to continue.";
+      else if (resp.status === 409) userMessage = "A subscription payment is already in progress. You can abort it and try again.";
+      else if (resp.status >= 500) userMessage = "We’re facing an issue on our side. Please try again in a minute.";
+    }
+
     console.error("❌ subscriptionApi error:", errorMsg, json);
-    return { ok: false, error: errorMsg, status: resp.status, raw: json ?? text };
+    return { ok: false, error: errorMsg, status: resp.status, raw: json ?? text, userMessage };
   }
 
-  // 204 No Content or non-JSON success
   if (!text || !text.trim().length) {
     return { ok: true, data: null, status: resp.status };
   }
@@ -98,8 +106,22 @@ async function http(path, { method = "GET", body, params } = {}) {
   return { ok: true, data: unwrap(json ?? text), status: resp.status };
 }
 
+/* ---------- Cashfree checkout ---------- */
+async function createCheckoutSession({ userId, planId, returnUrl }) {
+  return http("/api/subscriptions/payments/cashfree/checkout", {
+    method: "POST",
+    body: { userId, planId, returnUrl },
+  });
+}
 
-/* ==================== EVENTS (UI REACTIVITY) ==================== */
+/* ---------- Abort pending subscription (so user can retry) ---------- */
+async function abortPending(userId) {
+  return http("/api/subscriptions/payments/cashfree/abort", {
+    method: "POST",
+    body: { userId },
+  });
+}
+
 function emitSubscriptionChanged(type, data) {
   try {
     typeof window !== "undefined" &&
@@ -107,35 +129,9 @@ function emitSubscriptionChanged(type, data) {
   } catch {}
 }
 
-/* ==================== CASHFREE HELPERS ==================== */
-/**
- * Create a Cashfree payment session for subscription checkout.
- * Backend SHOULD return: { paymentSessionId }.
- * (Backend keeps/knows the Cashfree order; frontend doesn't need it.)
- */
-async function createCheckoutSession({ userId, planId, returnUrl }) {
-  return http("/api/subscriptions/checkout", {
-    method: "POST",
-    body: { userId, planId, returnUrl },
-  });
-}
-
-/**
- * Verify payment success IN BACKEND using the user's pending record.
- * Optional: pass `paymentSessionId` if you capture it in the URL,
- * but backend should be able to resolve by userId + latest pending.
- */
-async function verifyPayment({ userId, paymentSessionId } = {}) {
-  return http("/api/subscriptions/verify", {
-    method: "POST",
-    body: { userId, paymentSessionId: paymentSessionId ?? null },
-  });
-}
-
-/* ======================= PUBLIC API ========================= */
 export const subscriptionApi = {
   createCheckoutSession,
-  verifyPayment,
+  abortPending,
 
   async getPlan() {
     return http("/api/subscriptions/plan");

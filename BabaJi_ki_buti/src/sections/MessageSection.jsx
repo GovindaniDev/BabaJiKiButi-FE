@@ -1,5 +1,7 @@
 // MembersExclusivePage.jsx
 import React, { useState, useEffect, useRef } from "react";
+
+import { Link} from "react-router-dom";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
@@ -37,7 +39,7 @@ function MiniCardSlider() {
   return (
     <div className="relative rounded-3xl overflow-hidden">
       <div className="relative w-full aspect-[16/9]">
-        <AnimatePresence custom={dir} mode="wait">
+        <AnimatePresence custom={dir} initial={false}>
           <motion.img
             key={slides[idx].id}
             src={slides[idx].img}
@@ -48,7 +50,8 @@ function MiniCardSlider() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.25 } }}
+            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                    style={{ willChange: "transform, opacity" }}
             loading="eager"
             decoding="async"
             draggable="false"
@@ -109,7 +112,7 @@ function MiniCardSliderBottom() {
   return (
     <div className="relative rounded-3xl overflow-hidden">
       <div className="relative w-full aspect-[16/9]">
-        <AnimatePresence custom={dir} mode="wait">
+        <AnimatePresence custom={dir} initial={false}>
           <motion.img
             key={slidesBottom[idx].id}
             src={slidesBottom[idx].img}
@@ -120,7 +123,8 @@ function MiniCardSliderBottom() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.25 } }}
+            transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                    style={{ willChange: "transform, opacity" }}
             loading="eager"
             decoding="async"
             draggable="false"
@@ -156,14 +160,7 @@ function MiniCardSliderBottom() {
   );
 }
 
-  /* ------------------------- Icon (Shop by Need) row ------------------------- */
-
-
-  /* --------------------------- Product Card (4x) ---------------------------- */
-
-
-
-  /* -------------------------- Ayurveda feature strip ------------------------- */
+  
 
 /* ------------------------------ MAIN PAGE --------------------------------- */
 export default function MembersExclusivePage() {
@@ -289,25 +286,14 @@ export default function MembersExclusivePage() {
   /* ---------------------------------- UI ---------------------------------- */
   return (
     <div ref={pageRef} className="me-page relative z-[1] isolate bg-[#aa7a4f] pt-[72px]">
-      <div className="max-w-[1600px] mx-auto px-4 py-6 mt-6 me-loved-wrap">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="me-para">
-              <h2 className="me-loved text-white text-4xl lg:text-5xl font-extrabold">हर परेशानी का समाधान—सेहत का ध्यान।</h2>
-              <p className="text-white/90 max-w-7xl font-semibold mt-2">Members get extra love: exclusive prices, bundles & seasonal hampers.</p>
-            </div>
-            <a href="#" className=" bg-[#b83428] hover:bg-[#a02d20] text-white px-8 lg:px-10 py-3 lg:py-4 rounded-xl text-lg lg:text-xl font-semibold transition-all">
-              Shop More
-            </a>
-          </div>
-        </div>
-      {/* HERO: left big slider + right two minis */}
-      <div className="w-full bg-[#aa7a4f] py-8">
+      <div className="max-w-[1600px] mx-auto px-4 py-8 mt-8 me-loved-wrap">
+         <div className="w-full bg-[#aa7a4f] py-6">
         <div className="max-w-[1600px] mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 me-hero">
             {/* LEFT: Big hero slider */}
             <div className="lg:col-span-2 relative rounded-3xl overflow-hidden me-hero-clip">
               <div className="relative w-full aspect-video min-h-[320px] lg:min-h-[420px]">
-                <AnimatePresence custom={direction} mode="wait">
+                <AnimatePresence custom={direction} initial={false}>
                   <motion.img
                     key={offers[currentSlide].id}
                     src={offers[currentSlide].img}
@@ -318,7 +304,8 @@ export default function MembersExclusivePage() {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.3 } }}
+                    transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.25 } }}
+                    style={{ willChange: "transform, opacity" }}
                     loading="eager"
                     decoding="async"
                     fetchpriority="high"
@@ -368,6 +355,9 @@ export default function MembersExclusivePage() {
         {/* CTA */}
         
       </div>
+        </div>
+      {/* HERO: left big slider + right two minis */}
+      
     </div>
   );
 }

@@ -796,7 +796,8 @@ export default function DoshaTest() {
                           key={index}
                           onClick={() => handleAnswer(option.dosha)}
                           type="button"
-                          className="w-full text-left p-4 md:p-5 rounded-xl bg-white/80 hover:bg-white border border-[#e7d5c5] hover:border-[#d7c2ad] focus:outline-none focus:ring-2 focus:ring-[#7b5e57]/30 transition shadow-sm"
+                          className="w-full text-left p-4 md:p-5 rounded-xl bg-white/80 hover:bg-white border border-[#e7d5c5] 
+                          hover:border-[#d7c2ad] focus:outline-none focus:ring-2 focus:ring-[#7b5e57]/30 transition shadow-sm cursor-pointer"
                           whileHover={{ y: -1 }}
                           whileTap={{ scale: 0.98 }}
                           aria-label={L(option.text)}

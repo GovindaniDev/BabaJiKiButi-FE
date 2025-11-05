@@ -1,18 +1,45 @@
-// src/pages/subscription/SubscribeButton.jsx
 import { useCallback, useRef, useState } from "react";
 import { load } from "@cashfreepayments/cashfree-js";
 import { subscriptionApi } from "../../auth/subscription/subscriptionApi";
+import { userErrorMessage, confirmMessage } from "../../utils/userMessages";
+
+/**
+ * SubscribeButton
+ * - Creates a Cashfree Checkout session via your backend
+ * - Redirects user to Cashfree
+ * - Cashfree returns to:  {BACKEND}/api/subscriptions/payments/cashfree/return?order_id={order_id}
+ *   where your backend activates and then 302 → /account?tab=membership
+ *
+ * Props:
+ *  - userId (required)
+ *  - planId (required)
+ *  - planPrice (number/string, for quick FE validation)
+ *  - onAfterSuccess?: (paymentSessionId) => void   // fires right before redirect
+ *  - disabled?, className?, children?
+ */
+const API_BASE =
+  (typeof window !== "undefined" && window.API_BASE_URL) ||
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
+  ""; // "" = same-origin
+
+function backendOrigin() {
+  try {
+    return API_BASE ? new URL(API_BASE).origin : window.location.origin;
+  } catch {
+    return window.location.origin;
+  }
+}
 
 export default function SubscribeButton({
   userId,
   planId,
-  planPrice,       // number | string
+  planPrice,
   disabled = false,
   className = "",
-  onAfterSuccess,  // optional: (paymentSessionId) => void
+  onAfterSuccess,
   children,
 }) {
-  const cashfreeRef = useRef(null);
+  const cfRef = useRef(null);
   const [busy, setBusy] = useState(false);
 
   const MODE =
@@ -21,21 +48,28 @@ export default function SubscribeButton({
       : "sandbox";
 
   const init = useCallback(async () => {
-    if (!cashfreeRef.current) {
-      cashfreeRef.current = await load({ mode: MODE });
+    if (!cfRef.current) {
+      cfRef.current = await load({ mode: MODE });
     }
-    return cashfreeRef.current;
+    return cfRef.current;
   }, [MODE]);
 
   const start = useCallback(async () => {
     if (disabled || busy) return;
 
     // ---------- VALIDATIONS ----------
-    if (!userId) { alert("Please sign in first."); return; }
-    if (!planId) { alert("Plan not available. Please refresh and try again."); return; }
+    if (!userId) {
+      alert("Please sign in to start your membership.");
+      try { window.location.href = "/login?next=/subscribe"; } catch {}
+      return;
+    }
+    if (!planId) {
+      alert("The membership plan is currently unavailable. Please refresh and try again.");
+      return;
+    }
     const priceNum = Number(planPrice);
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      alert("Invalid plan price. Please contact support.");
+      alert("This plan price seems invalid. Please contact support.");
       return;
     }
     // ---------------------------------
@@ -44,16 +78,51 @@ export default function SubscribeButton({
     try {
       const cf = await init();
 
-      // Must be allow-listed in Cashfree dashboard
-      const returnUrl = `${window.location.origin}/subscribe?sub=cf&status=return`;
+      // ✅ Build return URL on the BACKEND origin and include Cashfree placeholder
+      const serverReturnUrl = `${backendOrigin()}/api/subscriptions/payments/cashfree/return?order_id={order_id}`;
 
-      // 1) Ask backend to create payment session
-      const s = await subscriptionApi.createCheckoutSession({
+      // 1) Ask backend to create PENDING subscription + Cashfree order
+      let s = await subscriptionApi.createCheckoutSession({
         userId,
         planId,
-        returnUrl,
+        returnUrl: serverReturnUrl,
       });
-      if (!s.ok) throw new Error(s.error || "Unable to start payment session.");
+
+      if (!s.ok) {
+        // Auth
+        if (s.status === 401) {
+          alert("Please sign in again to continue.");
+          try { window.location.href = "/login?next=/subscribe"; } catch {}
+          return;
+        }
+        // Duplicate/pending → allow abort + retry
+        if (s.status === 409 || /already.*in progress|pending/i.test(s.error || "")) {
+          const doAbort = window.confirm(
+            confirmMessage("abort-pending", { server: s.userMessage || s.error })
+          );
+          if (!doAbort) return;
+
+          const a = await subscriptionApi.abortPending(userId);
+          if (!a.ok) {
+            alert(userErrorMessage(a));
+            return;
+          }
+
+          // retry once
+          s = await subscriptionApi.createCheckoutSession({
+            userId,
+            planId,
+            returnUrl: serverReturnUrl,
+          });
+          if (!s.ok) {
+            alert(userErrorMessage(s));
+            return;
+          }
+        } else {
+          alert(userErrorMessage(s));
+          return;
+        }
+      }
 
       const paymentSessionId =
         s.data?.paymentSessionId ||
@@ -61,10 +130,11 @@ export default function SubscribeButton({
         s.data?.payment_sessionid;
 
       if (!paymentSessionId) {
-        throw new Error("Payment session not returned by server.");
+        console.error("Unexpected checkout payload:", s);
+        throw new Error("We couldn’t start the payment. Please try again.");
       }
 
-      // Optional callback (fires BEFORE redirect; useful for analytics)
+      // Optional analytics hook
       if (typeof onAfterSuccess === "function") {
         try { onAfterSuccess(paymentSessionId); } catch {}
       }
@@ -75,10 +145,11 @@ export default function SubscribeButton({
         redirectTarget: "_self",
       });
 
-      // After redirect-back, useCashfreeReturnVerifier() runs.
+      // Flow:
+      // Cashfree -> BACKEND /return (activates) -> 302 /account?tab=membership&sub=cf&status=return
     } catch (e) {
       console.error(e);
-      alert(e?.message || "Unable to open payment. Please try again.");
+      alert(userErrorMessage(e));
     } finally {
       setBusy(false);
     }

@@ -29,7 +29,7 @@ export default function SearchBar() {
   useEffect(() => {
     // build a clean, unique list of category names
     namesRef.current = Array.from(
-      new Set(CATEGORIES.map(c => ("Search For "+c?.name ?? "").toString().trim()).filter(Boolean))
+      new Set(CATEGORIES.map(c => (("Search For "+c?.name) ?? "").toString().trim()).filter(Boolean))
     );
     if (namesRef.current.length) tick();
 
@@ -78,26 +78,25 @@ export default function SearchBar() {
     if (!value) tick();
   }
 
-  return (
-    <div className="relative hidden 2xl:block">
-      <div className="relative w-full max-w-[22rem]">
-        <svg
-          className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-        >
-          <path strokeWidth={1.5} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-        </svg>
+ return (
+  <div className="relative">
+    <div className="relative w-full max-w-[22rem]">
+      <svg
+        className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+      >
+        <path strokeWidth={1.5} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
 
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={onFocus}
-          onBlur={onBlur}
-        
-          className="w-full pl-10 pr-3 py-2 text-sm text-gray-700 placeholder-gray-400 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-        />
-      </div>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        className="w-full pl-10 pr-3 py-2 text-sm text-gray-700 placeholder-gray-400 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+      />
     </div>
-  );
+  </div>
+);
 }
