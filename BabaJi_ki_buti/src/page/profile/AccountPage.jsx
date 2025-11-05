@@ -439,17 +439,19 @@ export default function AccountPage() {
     Boolean(me?.subscription?.active) || Boolean(me?.isSubscribed) || Boolean(me?.plan);
 
   const handleDeleteAccount = async () => {
-    if (!confirm("Are you sure you want to permanently delete your account?")) return;
-    try {
-      if (typeof userApi?.deleteMe === "function") await userApi.deleteMe();
-      else await app.delete("/users/me");
-      toast.success("Your account has been deleted");
-      if (typeof logout === "function") logout();
-      navigate("/", { replace: true });
-    } catch (e) {
-      toast.error(e?.response?.data?.message || e?.message || "Delete failed");
-    }
-  };
+  if (!confirm("Are you sure you want to permanently delete your account?")) return;
+  try {
+    if (typeof userApi?.deleteMe === "function") await userApi.deleteMe();
+    else await app.delete("/users/me");
+    try { localStorage.removeItem("userId"); } catch {}
+    toast.success("Your account has been deleted");
+    if (typeof logout === "function") logout();
+    navigate("/", { replace: true });
+  } catch (e) {
+    toast.error(e?.response?.data?.message || e?.message || "Delete failed");
+  }
+};
+
 
   // compute-only
   const deliveredCount = Array.isArray(orders)
