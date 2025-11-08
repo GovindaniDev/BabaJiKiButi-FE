@@ -52,6 +52,13 @@ body::-webkit-scrollbar {
   
 }
 
+#smooth-wrapper {
+  overflow: hidden;
+  min-height: 100%;
+}
+#smooth-content {
+  will-change: transform;
+}
 
 
 @layer components {
