@@ -489,7 +489,7 @@ const FlavorSlider = () => {
               <img
                 src={`/images/${flavor.product}-prodbg.webp`}
                 alt=""
-                className="drinks pointer-events-none select-none"
+                className="drinks pointer-events-none h-[82%] select-none"
               />
 
               {/* Floating elements */}
@@ -507,7 +507,7 @@ const FlavorSlider = () => {
               {/* Theme-aware button */}
               <div
                 className={`z-40 ${
-                  isTablet ? "static mt-3" : "absolute bottom-10 right-10"
+                  isTablet ? "static mt-3" : "absolute bottom-10  right-10"
                 }`}
               >
                 <ThemeButton

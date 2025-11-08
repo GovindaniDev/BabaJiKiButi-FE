@@ -193,7 +193,7 @@ function CategoryRibbon({ categories, onPick }) {
   }, [categories]);
 
   return (
-    <div className="fixed bottom-4 left-0 w-full z-[60] py-4 md:py-5">
+    <div className="fixed bottom-0 left-0 w-full z-[60] py-2 md:py-2">
       <div className="mx-auto w-full px-4">
         <div
           ref={maskRef}
@@ -250,7 +250,6 @@ const HeroSection = () => {
    const rootRef = useRef(null);
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const titleRef = useRef(null);
   const textScrollRef = useRef(null);
 
   // NEW: single source of truth for media
@@ -478,7 +477,7 @@ const didAnimRef = useRef(false);
           <img
             src={hero.media.mobileImage}
             alt=""
-            className="absolute bottom-40 w-full h-full object-cover pointer-events-none"
+            className="absolute bottom-20 w-full h-full object-cover pointer-events-none"
             style={{ opacity: 0.999 }} // ensure its own layer
           />
         )}
@@ -544,7 +543,7 @@ const didAnimRef = useRef(false);
         aria-hidden={!showRibbon}
         className={[
           "transition-all duration-700 ease-out",
-          showRibbon ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none",
+          showRibbon ? "opacity-100 translate-y-0 " : "opacity-0 translate-y-2 pointer-events-none",
         ].join(" ")}
       >
         {showRibbon && <CategoryRibbon categories={categories} onPick={() => goToMessages()} />}
