@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/user/useMe";
 import { wishlistApi } from "../auth/wishlist/wishlistApi"; // 👈 NEW
 import SearchBar from "../utils/SearchBar";
+import styled from "styled-components"; // 👈 used for the floating buttons
 
 export default function NavBar() {
   // ---------------------------- local state ----------------------------
@@ -161,9 +162,6 @@ export default function NavBar() {
     }
   };
 
-
-
-
   const authReady = !loading && (isAuthenticated && !!userId);
 
   // ------------------------ wishlist navigation ------------------------
@@ -184,7 +182,6 @@ export default function NavBar() {
         return;
       }
       try {
-        // Use the new count(userId)
         const c = await wishlistApi.count(userId);
         if (alive && Number.isFinite(+c)) setWishlistCount(+c);
       } catch {
@@ -196,7 +193,6 @@ export default function NavBar() {
 
     const onChanged = (e) => {
       const d = e?.detail || {};
-      // Ignore events from other users (multi-tab/multi-session safety)
       if (authReady && d.userId && String(d.userId) !== String(userId)) return;
 
       if (typeof d.count === "number") {
@@ -213,7 +209,6 @@ export default function NavBar() {
     };
   }, [authReady, userId]);
 
-
   // -------------------------- auth redirects ---------------------------
   useEffect(() => {
     if (loading) return;
@@ -224,6 +219,23 @@ export default function NavBar() {
       navigate("/profile", { replace: true });
     }
   }, [loading, isAuthenticated, location.pathname, navigate]);
+
+  // -------------------------- WhatsApp button --------------------------
+  const waNumber = "919873033339"; // ✅ your number
+  const waMessage = `Hi Baba Ji Ki Buti! I want to know more about...`; // ✅ your default message
+  const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+
+  // -------------------------- Ask AI button ----------------------------
+  const handleOpenAI = () => {
+    // Change this to open your AI assistant UX (route, modal, etc.)
+    // Example: route to a chat page
+    try {
+      navigate("/assistant");
+    } catch {
+      // fallback: no-op
+      console.log("Open AI Assistant");
+    }
+  };
 
   // ------------------------------- render ------------------------------
   return (
@@ -246,8 +258,9 @@ export default function NavBar() {
 
             {/* Desktop links */}
             <ul
-              className={`hidden lg:flex min-w-0 items-center gap-4 xl:gap-6 lg:pl-6 xl:pl-10 text-sm font-semibold text-gray-800 whitespace-nowrap ${isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-hidden"
-                }`}
+              className={`hidden lg:flex min-w-0 items-center gap-4 xl:gap-6 lg:pl-6 xl:pl-10 text-sm font-semibold text-gray-800 whitespace-nowrap ${
+                isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-hidden"
+              }`}
             >
               <li className="shrink-0">
                 <Link to="/" className="hover:text-amber-700" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
@@ -491,9 +504,6 @@ export default function NavBar() {
                           SHOP ALL
                         </Link>
                       </div>
-
-
-
                     </div>
                     <div className="relative h-16 md:h-20">
                       <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
@@ -519,25 +529,7 @@ export default function NavBar() {
             </ul>
 
             {/* Desktop search (≥2xl) */}
-            <SearchBar />
-            {/* <div className="relative hidden 2xl:block" ref={searchRef}>
-              <div className="relative w-full max-w-[22rem]">
-                <svg
-                  className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeWidth={1.5} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search for products..."
-                  className="w-full pl-10 pr-3 py-2 text-sm text-gray-700 placeholder-gray-400 bg-white/80 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-             
-            </div> */}
+            <SearchBar ref={searchRef} />
 
             {/* Desktop actions */}
             <div className="hidden lg:flex items-center gap-3 xl:gap-4 shrink-0">
@@ -805,7 +797,7 @@ export default function NavBar() {
                   >
                     <span className="flex items-center gap-2">
                       <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M11.645 20.91l-.007-.003-..." />
+                        <path d="M11.645 20.91l-.007-.003-.022-.01a15.247 15.247 0 01-.383-.187 25.18 25.18 0 01-4.244-2.832C4.688 15.36 2.25 12.686 2.25 9.5 2.25 7.014 4.285 5 6.75 5c1.494 0 2.904.73 3.75 1.874A4.725 4.725 0 0114.25 5c2.465 0 4.5 2.014 4.5 4.5 0 3.186-2.438 5.86-4.739 8.378a25.175 25.175 0 01-4.244 2.832 15.247 15.247 0 01-.383.187l-.022.01-.007.003-.003.001a.75.75 0 01-.644 0l-.003-.001z" />
                       </svg>
                       <span>Wishlist</span>
                     </span>
@@ -861,6 +853,12 @@ export default function NavBar() {
           </div>
         )}
       </header>
+
+      {/* ✅ Floating WhatsApp Button (expand-on-hover/touch) */}
+      <WhatsAppFab href={waHref} />
+
+      {/* ✅ Floating Ask AI Button (mirrors WhatsApp behavior) */}
+      <AIFab onClick={handleOpenAI} />
     </>
   );
 }
@@ -880,3 +878,232 @@ function NavMobileLink({ to, children, onDone, className = "" }) {
     </Link>
   );
 }
+
+/* =================== New WhatsApp FAB (expandable) =================== */
+function WhatsAppFab({ href }) {
+  return (
+    <WhatsAppWrapper className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-[70]">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat with us on WhatsApp"
+        title="Chat with us on WhatsApp"
+        className="Btn"
+      >
+        <div className="sign">
+          <svg className="socialSvg whatsappSvg" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
+          </svg>
+        </div>
+        <div className="text">Whatsapp</div>
+      </a>
+    </WhatsAppWrapper>
+  );
+}
+
+const WhatsAppWrapper = styled.div`
+  pointer-events: auto;
+
+  .Btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 45px;
+    height: 45px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition-duration: 0.3s;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
+    background-color: #00d757; /* WhatsApp green */
+    text-decoration: none; /* because it's an <a> */
+  }
+
+  .sign {
+    width: 100%;
+    transition-duration: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sign svg {
+    width: 25px;
+  }
+
+  .sign svg path {
+    fill: white;
+  }
+
+  .text {
+    position: absolute;
+    right: 0%;
+    width: 0%;
+    opacity: 0;
+    color: white;
+    font-size: 1.1em;
+    font-weight: 600;
+    transition-duration: 0.3s;
+    letter-spacing: 0.2px;
+  }
+
+  .Btn:hover {
+    width: 150px;
+    border-radius: 40px;
+    transition-duration: 0.3s;
+  }
+
+  .Btn:hover .sign {
+    width: 30%;
+    transition-duration: 0.3s;
+    padding-left: 10px;
+  }
+
+  .Btn:hover .text {
+    opacity: 1;
+    width: 70%;
+    transition-duration: 0.3s;
+    padding-right: 10px;
+  }
+
+  .Btn:active {
+    transform: translate(2px, 2px);
+  }
+
+  /* Mobile: expand on focus/active for no-hover devices */
+  @media (hover: none) and (pointer: coarse) {
+    .Btn:focus,
+    .Btn:active {
+      width: 150px;
+      border-radius: 40px;
+    }
+    .Btn:focus .sign,
+    .Btn:active .sign {
+      width: 30%;
+      padding-left: 10px;
+    }
+    .Btn:focus .text,
+    .Btn:active .text {
+      opacity: 1;
+      width: 70%;
+      padding-right: 10px;
+    }
+  }
+`;
+
+/* =================== Ask AI FAB (mirrors WhatsApp behavior) =================== */
+function AIFab({ onClick, label = "Ask AI" }) {
+  return (
+    <AIFabWrapper className="fixed left-4 bottom-4 md:left-6 md:bottom-6 z-[70]">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        className="Btn"
+      >
+        <div className="sign">
+          {/* You can swap this icon for your preferred AI icon */}
+          <svg viewBox="0 0 24 24" className="aiSvg" aria-hidden="true">
+            <g fill="currentColor">
+              <path d="M19 2a1 1 0 0 1 .9.56l.35 1.03 1.03.35a1 1 0 0 1 0 1.89l-1.03.35-.35 1.03a1 1 0 0 1-1.89 0l-.35-1.03-1.03-.35a1 1 0 0 1 0-1.89l1.03-.35.35-1.03A1 1 0 0 1 19 2Z"/>
+              <path d="M9.107 5.448c.598-1.75 3.016-1.803 3.725-.159l.867 2.52a4 4 0 0 0 2.493 2.492l2.52.867c1.75.598 1.803 3.016.16 3.725l-2.52.867a4 4 0 0 0-2.492 2.493l-.867 2.52c-.598 1.75-3.016 1.803-3.724.16l-.868-2.52A4 4 0 0 0 5.748 16.3l-2.52-.868c-1.75-.598-1.803-3.016-.159-3.724l2.52-.868a4 4 0 0 0 2.493-2.492z"/>
+            </g>
+          </svg>
+        </div>
+        <div className="text">{label}</div>
+      </button>
+    </AIFabWrapper>
+  );
+}
+
+const AIFabWrapper = styled.div`
+  pointer-events: auto;
+
+  .Btn {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 45px;
+    height: 45px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition-duration: 0.3s;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.199);
+    background: #111; /* AI theme */
+    color: #fff;
+  }
+
+  .sign {
+    width: 100%;
+    transition-duration: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .aiSvg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .text {
+    position: absolute;
+    right: 0%;
+    width: 0%;
+    opacity: 0;
+    color: white;
+    font-size: 1.05em;
+    font-weight: 600;
+    transition-duration: 0.3s;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  .Btn:hover {
+    width: 150px;
+    border-radius: 40px;
+    transition-duration: 0.3s;
+  }
+  .Btn:hover .sign {
+    width: 30%;
+    transition-duration: 0.3s;
+    padding-left: 10px;
+  }
+  .Btn:hover .text {
+    opacity: 1;
+    width: 70%;
+    transition-duration: 0.3s;
+    padding-right: 10px;
+  }
+
+  .Btn:active {
+    transform: translate(2px, 2px);
+  }
+
+  /* Mobile: expand on focus/active for no-hover devices */
+  @media (hover: none) and (pointer: coarse) {
+    .Btn:focus,
+    .Btn:active {
+      width: 150px;
+      border-radius: 40px;
+    }
+    .Btn:focus .sign,
+    .Btn:active .sign {
+      width: 30%;
+      padding-left: 10px;
+    }
+    .Btn:focus .text,
+    .Btn:active .text {
+      opacity: 1;
+      width: 70%;
+      padding-right: 10px;
+    }
+  }
+`;
