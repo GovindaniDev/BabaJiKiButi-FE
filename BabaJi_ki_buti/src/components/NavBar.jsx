@@ -292,7 +292,7 @@ export default function NavBar() {
                   ref={servicesRef}
                   onClick={() => setIsServicesOpen((v) => !v)}
                   onMouseEnter={() => isPointerFineNow() && (clearTimeout(hoverTimers.current.services), hoverTimers.current.services = setTimeout(() => setIsServicesOpen(true), 70))}
-                  onMouseLeave={() => isPointerFineNow() && (clearTimeout(hoverTimers.current.services), hoverTimers.current.services = setTimeout(() => setIsServicesOpen(false), 120))}
+                 
                   onKeyDown={onServicesKeyDown}
                   aria-haspopup="menu"
                   aria-expanded={isServicesOpen}
@@ -308,7 +308,7 @@ export default function NavBar() {
                   <div
                     ref={servicesMenuRef}
                     onMouseEnter={() => isPointerFineNow() && setIsServicesOpen(true)}
-                    onMouseLeave={() => isPointerFineNow() && setIsServicesOpen(false)}
+                    
                     role="menu"
                     className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg py-2 z-50 border border-amber-100"
                   >

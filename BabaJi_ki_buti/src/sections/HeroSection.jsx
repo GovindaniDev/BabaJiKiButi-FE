@@ -405,65 +405,60 @@ const HeroSection = () => {
       document.removeEventListener("visibilitychange", onVis);
     };
   }, [isTablet]);
-const didAnimRef = useRef(false);
-  useGSAP(
-  () => {
-    // Guard for React 18 StrictMode double-invoke in dev
-    if (didAnimRef.current) return;
-    didAnimRef.current = true;
+ 
+const didOnce = useRef(false);
 
-    try {
-      // Initial states controlled by GSAP (not Tailwind)
-      gsap.set(contentRef.current, { opacity: 0, y: 16, force3D: true });
-      gsap.set(textScrollRef.current, {
-        clipPath: "polygon(50% 0, 50% 0, 50% 100%, 50% 100%)",
-        willChange: "clip-path",
-        force3D: true,
-      });
+useGSAP(() => {
+  if (didOnce.current) return;   // guard StrictMode double-invoke
+  didOnce.current = true;
 
-      // Entrance timeline
-      const tl = gsap.timeline({ delay: 0.3, defaults: { ease: "power1.out" } });
-      tl.to(contentRef.current, { opacity: 1, y: 0, duration: 0.6, overwrite: "auto" })
-        .to(
-          textScrollRef.current,
-          {
-            clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
-            duration: 0.9,
-            ease: "circ.out",
-            overwrite: "auto",
-          },
-          "-=0.3"
-        );
+  ScrollTrigger.getById("heroParallax")?.kill();
 
-      // Parallax / rotate on scroll (stable; no re-init)
-      gsap.timeline({
-        scrollTrigger: {
-          id: "heroParallax",
-          trigger: containerRef.current,
-          start: "1% top",
-          end: "bottom top",
-          scrub: true,
-          invalidateOnRefresh: false,
-        },
-        defaults: { overwrite: "auto" },
-      })
-      .to(containerRef.current, {
-        rotate: 7,
-        scale: 0.9,
-        yPercent: 30,
-        ease: "none",
-      });
+  gsap.set(contentRef.current, { opacity: 0, y: 16, force3D: true });
+  gsap.set(textScrollRef.current, {
+    clipPath: "polygon(50% 0, 50% 0, 50% 100%, 50% 100%)",
+    willChange: "clip-path",
+    force3D: true,
+  });
 
-      // After fonts/media load, refresh once (not many times)
-      const onLoadOnce = () => ScrollTrigger.refresh();
-      window.addEventListener("load", onLoadOnce, { once: true });
-    } catch (e) {
-      console.warn("[HeroSection] GSAP animation error:", e);
-    }
-  },
-  { scope: rootRef, dependencies: [] } // explicit: run once
-);
-  return (
+  const tl = gsap.timeline({ delay: 0.3, defaults: { ease: "power1.out" } });
+  tl.to(contentRef.current, { opacity: 1, y: 0, duration: 0.6, overwrite: "auto" })
+    .to(textScrollRef.current, {
+      clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)",
+      duration: 0.9,
+      ease: "circ.out",
+      overwrite: "auto",
+    }, "-=0.3");
+
+  gsap.timeline({
+    scrollTrigger: {
+      id: "heroParallax",
+      trigger: containerRef.current,
+      start: "top top",
+      end: "bottom top",
+      scrub: true,
+      invalidateOnRefresh: true,
+      refreshPriority: 1,   // ensure this sets up after Smoother
+    },
+  }).to(containerRef.current, {
+    rotate: 7,
+    scale: 0.9,
+    yPercent: 30,
+    ease: "none",
+    immediateRender: false,
+  });
+
+  const onLoadOnce = () => ScrollTrigger.refresh();
+  window.addEventListener("load", onLoadOnce, { once: true });
+  return () => {
+    window.removeEventListener("load", onLoadOnce);
+    ScrollTrigger.getById("heroParallax")?.kill();
+  };
+}, { scope: rootRef, dependencies: [] });
+
+
+
+return (
     <section className="bg-main-bg" ref={rootRef}> 
       <div ref={containerRef} className="hero-container"
        style={{ ["--ticker-speed"]: `${ticker.speedSec || 35}s` }}
@@ -484,29 +479,19 @@ const didAnimRef = useRef(false);
           
           </>
         ) : (
-          <video
-            ref={videoRef}
-            src={hero.media.desktopVideo}
-            
-            autoPlay
-            muted
-            playsInline
-            preload="auto"
-            onEnded={() => {
-             
-              setShowRibbon(true);
-            }}
-           
-            onPlay={() => {
-              // confirm video is active; keep ribbon timing independent
-            }}
-            className="absolute inset-0 w-full h-full object-cover gpu-smooth"
-            tabIndex={-1}
-            style={{
-              opacity: useImage ? 0 : 1,
-              transition: "opacity 200ms ease-out",
-            }}
-          />
+         <video
+  ref={videoRef}
+  src={hero.media.desktopVideo}
+  autoPlay
+  muted
+  playsInline
+  preload="auto"
+  onLoadedData={() => ScrollTrigger.refresh()}
+  onPlay={() => ScrollTrigger.refresh()}
+  className="absolute inset-0 w-full h-full object-cover gpu-smooth"
+  style={{ opacity: useImage ? 0 : 1, transition: "opacity 200ms ease-out" }}
+/>
+
         )}
         <div  className="hero-content opacity-0">
           <div className="overflow-hidden">
@@ -528,12 +513,13 @@ const didAnimRef = useRef(false);
           </h2>
 
           
-            <button
-    onClick={() => window.location.href = '/shop'}
-   className="@apply md:mt-16 mt-10 text-dark-brown bg-light-brown uppercase font-bold text-lg rounded-full md:p-5 p-3 md:px-16 px-10;"
-  >
-    Shop Now
-  </button>
+           <button
+  onClick={() => window.location.href = '/shop'}
+  className="md:mt-16 mt-10 text-dark-brown bg-light-brown uppercase font-bold text-lg rounded-full md:p-5 p-3 md:px-16 px-10"
+>
+  Shop Now
+</button>
+
         
         </div>
       </div>

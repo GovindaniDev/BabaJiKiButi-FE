@@ -38,6 +38,8 @@ function getUserIdFromStorage() {
   }
 }
 
+
+//Default Response for Header Section
 async function fetchPageCopy(signal) {
   try {
     const res = await fetch("/api/pages/nutrition", { credentials: "include", signal });

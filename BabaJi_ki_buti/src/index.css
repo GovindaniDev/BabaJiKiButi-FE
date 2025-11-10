@@ -60,6 +60,13 @@ body::-webkit-scrollbar {
   will-change: transform;
 }
 
+/* keep your existing .section-base etc. */
+
+.flavor-section { position: relative; isolation: isolate; z-index: 0; }
+.nutrition-section { position: relative; isolation: isolate; z-index: 0; }
+
+
+
 
 @layer components {
   .paragraph-line {

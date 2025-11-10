@@ -2,9 +2,13 @@
 import { useGSAP } from "@gsap/react";
 import { flavorlists } from "../constants";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useRef } from "react";
 import { useMediaQuery } from "react-responsive";
 import { Link } from "react-router-dom";
+
+// Register ScrollTrigger plugin
+gsap.registerPlugin(ScrollTrigger);
 
 /* -------- Theme presets -------- */
 const THEME = {
@@ -18,7 +22,7 @@ const THEME = {
     glowH: "rgba(230,180,92,.85)",
   },
   green: {
-    from: "#A7F3D0", // tailwind-mint → emerald
+    from: "#A7F3D0",
     to: "#34D399",
     text: "#052B11",
     border: "#34D399",
@@ -26,10 +30,9 @@ const THEME = {
     glow: "rgba(16,185,129,.45)",
     glowH: "rgba(16,185,129,.80)",
   },
-  /* NEW: dark green */
   darkGreen: {
     from: "#34D399",
-    to: "#059669", // emerald-600
+    to: "#059669",
     text: "#03170C",
     border: "#059669",
     ring: "rgba(5,150,105,.35)",
@@ -65,7 +68,7 @@ const THEME = {
   },
 };
 
-/* ---------- Aliases (now includes dark green) ---------- */
+/* ---------- Aliases ---------- */
 const COLOR_ALIASES = [
   [/^(black|dark|charcoal|graphite|onyx)$/i, "black"],
   [/^(green|mint|lime|jade|olive)$/i, "green"],
@@ -75,7 +78,7 @@ const COLOR_ALIASES = [
   [/^(gold|amber|yellow|mustard)$/i, "gold"],
 ];
 
-/* ---------- Color parsers (unchanged) ---------- */
+/* ---------- Color parsers ---------- */
 function hexToRgb(hex) {
   const h = hex.replace("#", "").trim();
   if (h.length === 3) {
@@ -146,7 +149,6 @@ function normalizeThemeKey(raw) {
   const v = String(raw || "").trim();
   if (!v) return "";
 
-  // exact keys (accept both camel & spaced "dark green")
   if (THEME[v]) return v;
   if (/^dark\s*green$/i.test(v)) return "darkGreen";
 
@@ -167,11 +169,10 @@ function normalizeThemeKey(raw) {
   return "";
 }
 
-/* ---------- STRICT SEQUENCE per your order ---------- */
+/* ---------- SEQUENCE ---------- */
 const SEQUENCE = ["black", "green", "darkGreen", "maroon", "darkGreen", "blue"];
 
 function themeFor(flavor, idx = 0) {
-  // explicit theme still wins if present
   const explicit =
     flavor.themeKey ||
     flavor.color ||
@@ -185,11 +186,8 @@ function themeFor(flavor, idx = 0) {
     "";
 
   let key = normalizeThemeKey(explicit);
-
-  // otherwise use fixed sequence
   if (!key) key = SEQUENCE[idx % SEQUENCE.length];
-
-  if (!THEME[key]) key = "gold"; // hard safety
+  if (!THEME[key]) key = "gold";
 
   return { key, ...THEME[key] };
 }
@@ -234,7 +232,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
   );
 
   switch (key) {
-    /* 1) BLACK → Luxe capsule with gold rim + animated sheen */
     case "black":
       return (
         <Link
@@ -269,7 +266,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
         </Link>
       );
 
-    /* 2) GREEN → Soft organic pill */
     case "green":
       return (
         <Link
@@ -294,7 +290,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
         </Link>
       );
 
-    /* 3 & 5) DARK GREEN → Deeper organic pill (same shape, darker tone) */
     case "darkGreen":
       return (
         <Link
@@ -319,7 +314,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
         </Link>
       );
 
-    /* 4) MAROON → Ribbon tag */
     case "maroon":
       return (
         <Link
@@ -355,7 +349,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
         </Link>
       );
 
-    /* 6) BLUE → Frosted glass */
     case "blue":
       return (
         <Link
@@ -381,7 +374,6 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
         </Link>
       );
 
-    /* safety fallback (unused with your sequence) */
     default:
       return (
         <Link
@@ -426,8 +418,8 @@ const FlavorSlider = () => {
         scrollTrigger: {
           trigger: ".flavor-section",
           start: "2% top",
-          end: `+=${scrollAmount + 1500}px`,
-          scrub: true,
+          end: `+=${scrollAmount * 2.5 + 2000}px`,  // Slower: increased multiplier and base
+          scrub: 2.5,                                // Very smooth scrub
           pin: true,
         },
       });
@@ -451,19 +443,19 @@ const FlavorSlider = () => {
       .to(".first-text-split", { xPercent: -30, ease: "power1.inOut" })
       .to(".flavor-text-scroll", { xPercent: -22, ease: "power1.inOut" }, "<")
       .to(".second-text-split", { xPercent: -10, ease: "power1.inOut" }, "<");
-  });
+  }, [isTablet]);
 
   return (
     <div ref={sliderRef} className="slider-wrapper">
       <div className="flavors">
         {flavorlists.map((flavor, i) => {
           const toHref = `/product/${flavor.slug || flavor.product}`;
-          const t = themeFor(flavor, i); // uses fixed sequence
+          const t = themeFor(flavor, i);
 
           return (
             <div
               key={flavor.name || i}
-              className={`relative z-30 lg:w-[50vw] w-96 lg:h-[70vh] md:w-[90vw] md:h-[50vh] h-80 flex-none ${flavor.rotation || ""} ${/* reserve space for CTA on mobile */""} pb-16 md:pb-0`}
+              className={`relative z-30 lg:w-[50vw] w-96 lg:h-[70vh] md:w-[90vw] md:h-[50vh] h-80 flex-none ${flavor.rotation || ""} pb-16 md:pb-0`}
               data-theme-source={(
                 flavor.themeKey ||
                 flavor.color ||
@@ -483,6 +475,7 @@ const FlavorSlider = () => {
                 src={`/images/${flavor.product}-bg.svg`}
                 alt=""
                 className="absolute bottom-0 pointer-events-none select-none"
+                draggable={false}
               />
 
               {/* Product image */}
@@ -490,6 +483,7 @@ const FlavorSlider = () => {
                 src={`/images/${flavor.product}-prodbg.webp`}
                 alt=""
                 className="drinks pointer-events-none h-[82%] select-none"
+                draggable={false}
               />
 
               {/* Floating elements */}
@@ -497,6 +491,7 @@ const FlavorSlider = () => {
                 src={`/images/${(flavor.color || "").toString()}-elements.webp`}
                 alt=""
                 className="elements pointer-events-none select-none"
+                draggable={false}
               />
 
               {/* Title */}
@@ -507,7 +502,7 @@ const FlavorSlider = () => {
               {/* Theme-aware button */}
               <div
                 className={`z-40 ${
-                  isTablet ? "static mt-3" : "absolute bottom-10  right-10"
+                  isTablet ? "static mt-3" : "absolute bottom-10 right-10"
                 }`}
               >
                 <ThemeButton
