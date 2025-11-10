@@ -151,8 +151,8 @@ const CardContent = ({ children, className }) => (
 /* --------------------------- page-specific consts -------------------------- */
 const CHANNELS = [
   { id: "TICKER", label: "Top Ticker" },
-  { id: "HERO", label: "Hero Subtitle" },
-  { id: "BANNER", label: "Sitewide Banner" },
+  // { id: "HERO", label: "Hero Subtitle" },
+  // { id: "BANNER", label: "Sitewide Banner" },
 ];
 
 const DEFAULT_FORM = {

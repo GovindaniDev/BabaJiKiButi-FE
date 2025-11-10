@@ -380,9 +380,9 @@ export default function ShopNow() {
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#f5d5b3]/40 -z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#f5d5b3]/40 -z-10 " />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-2">
           <h1
             data-stagger
             className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-amber-200 tracking-tight drop-shadow"
@@ -742,7 +742,8 @@ function ProductCard({ product: p, userId }) {
     e.stopPropagation();
     if (!productId) return;
     if (!userId) {
-      navigate("/login", { state: { from: `/shop` } });
+           navigate("/login", { state: { from: `/shop` } });
+      window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
     try {
