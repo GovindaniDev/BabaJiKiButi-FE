@@ -14,14 +14,13 @@ import { useNavigate } from "react-router-dom";
  * UX notes:
  * - No direct redeem here. We only show a summary and lead users to shop.
  * - "Expiring soon" is pruned to reflect remaining balance only.
+ *
+ * SECURITY FIX: Do NOT trust localStorage for userId. Resolve from prop => /users/me.
  */
-
-const INR = (n) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })
-    .format(Number(n || 0));
 
 export default function LoyaltyPoints({ userId: userIdProp }) {
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [resolvedUserId, setResolvedUserId] = useState(null);
   const [resolvingUserId, setResolvingUserId] = useState(true);
@@ -33,7 +32,7 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
     expiringSoon: [],
   });
 
-  // --- Resolve userId (prop -> cache -> /users/me)
+  // --- Resolve userId (prop -> /users/me). DO NOT use localStorage.
   useEffect(() => {
     let alive = true;
     async function resolve() {
@@ -44,27 +43,14 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
         return;
       }
       try {
-        const cached = localStorage.getItem("userId");
-        if (cached) {
-          if (!alive) return;
-          setResolvedUserId(Number(cached));
-          setResolvingUserId(false);
-          return;
-        }
-      } catch {}
-      try {
         const meRes = await app.get(`/users/me`, { withCredentials: true });
         const me = meRes?.data?.data ?? meRes?.data;
         const uid =
-          Number(me?.id) || Number(me?.userId) || (typeof me?.sub === "string" ? Number(me.sub) : null);
-        if (uid) {
-          try { localStorage.setItem("userId", String(uid)); } catch {}
-          if (!alive) return;
-          setResolvedUserId(uid);
-        } else {
-          if (!alive) return;
-          setResolvedUserId(null);
-        }
+          Number(me?.id) ||
+          Number(me?.userId) ||
+          (typeof me?.sub === "string" ? Number(me.sub) : null);
+        if (!alive) return;
+        setResolvedUserId(uid || null);
       } catch (e) {
         console.error("Unable to resolve user id via /users/me:", e);
         if (!alive) return;
@@ -74,7 +60,9 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
       }
     }
     resolve();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [userIdProp]);
 
   // --- Fetch summary
@@ -96,7 +84,10 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
     let mounted = true;
     (async () => {
       if (resolvingUserId) return;
-      if (!resolvedUserId) { setLoading(false); return; }
+      if (!resolvedUserId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         await fetchSummary(resolvedUserId);
@@ -106,7 +97,9 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [resolvedUserId, resolvingUserId]);
 
   // --- UI helpers
@@ -134,14 +127,16 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
   })();
 
   // Friendly “what is this worth?” message without exposing raw rules.
-  // (We approximate: 50 pts ≈ 1% off, capped at 30%. You asked to keep it high-level.)
-  const approxPercent = Math.max(0, Math.min(30, Math.floor(Number(loyalty?.balance || 0) / 50)));
-  const headline = loyalty.balance > 0
-    ? `You’ve earned ${loyalty.balance} pts — worth around ${approxPercent}% off on your next order!`
-    : `Start earning points on every purchase and unlock instant discounts at checkout.`;
+  const approxPercent = Math.max(
+    0,
+    Math.min(30, Math.floor(Number(loyalty?.balance || 0) / 50))
+  );
+  const headline =
+    loyalty.balance > 0
+      ? `You’ve earned ${loyalty.balance} pts — worth around ${approxPercent}% off on your next order!`
+      : `Start earning points on every purchase and unlock instant discounts at checkout.`;
 
   const goShop = () => {
-    // Adjust this path to your products/catalog route.
     navigate("/products");
   };
 
@@ -156,7 +151,9 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
       }
     >
       {!resolvedUserId && !resolvingUserId ? (
-        <div className="text-sm text-gray-600">Please sign in to view your loyalty benefits.</div>
+        <div className="text-sm text-gray-600">
+          Please sign in to view your loyalty benefits.
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
           {/* Left column: Feel-good summary + CTA */}
@@ -172,7 +169,7 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
-                  onClick="/shop"
+                  onClick={goShop}
                   disabled={loading}
                   className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-gray-900 text-white disabled:opacity-50"
                 >
@@ -215,14 +212,18 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td className="p-3 text-gray-500" colSpan={2}>Loading…</td>
+                      <td className="p-3 text-gray-500" colSpan={2}>
+                        Loading…
+                      </td>
                     </tr>
                   ) : prunedExpiries.length ? (
                     prunedExpiries.map((r, idx) => (
                       <tr key={`${r.expiresOn}-${idx}`} className="border-t">
                         <td className="p-3">{r.points}</td>
                         <td className="p-3">
-                          {r?.expiresOn ? new Date(r.expiresOn).toLocaleDateString() : "—"}
+                          {r?.expiresOn
+                            ? new Date(r.expiresOn).toLocaleDateString()
+                            : "—"}
                         </td>
                       </tr>
                     ))
@@ -239,7 +240,8 @@ export default function LoyaltyPoints({ userId: userIdProp }) {
 
             {/* Soft reassurance */}
             <div className="mt-3 text-xs text-gray-500">
-              Your points apply automatically on the checkout page—no coupon needed.
+              Your points apply automatically on the checkout page—no coupon
+              needed.
             </div>
           </div>
         </div>

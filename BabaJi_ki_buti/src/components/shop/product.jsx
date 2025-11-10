@@ -1,5 +1,6 @@
+// src/page/products/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getAllProducts } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
@@ -13,11 +14,15 @@ import {
   BadgePercent,
   Search,
   Heart,
+  Sparkles,
+  Flame,
+  Tag,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
 import { useAuth } from "../../auth/AuthContext";
 import { useMe } from "../../auth/user/useMe";
+
 // ⚡ GSAP
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -25,7 +30,6 @@ gsap.registerPlugin(ScrollTrigger);
 
 // ⚡ Framer Motion
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import Button from "../ui/Button";
 import Loader from "../ui/Loader";
 
 // CART (backend only)
@@ -44,6 +48,8 @@ const PLACEHOLDER =
   "https://placehold.co/1024x1024/f6f6f6/9aa1a9?text=Product+Image";
 const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
+const norm = (s) => (s ?? "")?.toString()?.trim()?.toLowerCase();
+
 const getRating = (p) => {
   if (!p) return 0;
   const direct = Number(p.rating ?? p.avgRating ?? p.averageRating ?? 0) || 0;
@@ -59,6 +65,24 @@ const getReviewCount = (p) => {
     Number(p.totalReviews ?? p.reviewCount ?? 0) ||
     (Array.isArray(p.reviews) ? p.reviews.length : 0)
   );
+};
+
+const isNew = (p) => {
+  const dt = p?.createdAt ? new Date(p.createdAt) : null;
+  if (!dt || Number.isNaN(+dt)) return false;
+  const days = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
+  return days <= 30; // new within 30 days
+};
+
+const isTrending = (p) => {
+  const tags = new Set(
+    [
+      ...(p?.tags || []),
+      ...(p?.tagsEn || []),
+      ...(p?.tagsHi || []),
+    ].map(norm)
+  );
+  return Boolean(p?.trending || p?.isTrending || tags.has("trending"));
 };
 
 /* -------------------------- motion variants -------------------------- */
@@ -95,7 +119,6 @@ export default function ShopNow() {
 
   // UI state
   const [query, setQuery] = useState("");
-  const [view, setView] = useState("grid");
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -108,13 +131,13 @@ export default function ShopNow() {
   const [ratingAtLeast, setRatingAtLeast] = useState(0);
   const [sort, setSort] = useState("relevance");
 
-  const [, setSearchParams] = useSearchParams();
   const headerRef = useRef(null);
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
+
   useEffect(() => {
     let mounted = true;
-    const MIN_LOADER_MS = 1000;
+    const MIN_LOADER_MS = 700;
     const start = Date.now();
 
     (async () => {
@@ -166,10 +189,10 @@ export default function ShopNow() {
       gsap.utils.toArray(".shop-card").forEach((card) => {
         gsap.from(card, {
           opacity: 0,
-          y: 25,
-          duration: 0.4,
+          y: 22,
+          duration: 0.35,
           ease: "power2.out",
-          scrollTrigger: { trigger: card, start: "top 90%" },
+          scrollTrigger: { trigger: card, start: "top 92%" },
         });
       });
     }, gridRef);
@@ -191,7 +214,7 @@ export default function ShopNow() {
     const set = new Set();
     products.forEach((p) => {
       const cat = p?.category || p?.categoryName || p?.categoryEn || p?.type;
-      if (cat) set.add(cat);
+      if (cat) set.add(cat.toString());
     });
     return Array.from(set);
   }, [products]);
@@ -206,40 +229,84 @@ export default function ShopNow() {
     return Array.from(set).slice(0, 30);
   }, [products]);
 
+  // initialize price slider bounds once we know overall stats
   useEffect(() => {
     if (priceStats.max && maxPrice === 0) setMaxPrice(priceStats.max);
     if (priceStats.min && minPrice === 0) setMinPrice(priceStats.min);
-  }, [priceStats]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceStats]);
+
+  // ✅ Whenever filters/search change, go back to page 1
+  useEffect(() => {
+    setPage(1);
+  }, [
+    query,
+    selectedCategories,
+    selectedTags,
+    inStockOnly,
+    ratingAtLeast,
+    minPrice,
+    maxPrice,
+    sort,
+  ]);
 
   const filtered = useMemo(() => {
     let list = [...products];
-    const q = query.toLowerCase();
-    if (q)
-      list = list.filter((p) =>
-        (p.productName || p.name || "").toLowerCase().includes(q)
-      );
 
-    // categories
-    if (selectedCategories.length > 0) {
+    const q = norm(query);
+    if (q)
       list = list.filter((p) => {
-        const cat = (p?.category || p?.categoryName || p?.categoryEn || p?.type || "").toString();
-        return selectedCategories.includes(cat);
+        const hay = [
+          p.productName,
+          p.name,
+          p.title,
+          ...(p?.tags || []),
+          ...(p?.tagsEn || []),
+          ...(p?.tagsHi || []),
+          p?.benefits?.join?.(" ") || "",
+        ]
+          .filter(Boolean)
+          .map(norm)
+          .join(" ");
+        return hay.includes(q);
+      });
+
+    // categories (case-insensitive)
+    if (selectedCategories.length > 0) {
+      const chosen = new Set(selectedCategories.map(norm));
+      list = list.filter((p) => {
+        const cat = norm(
+          p?.category || p?.categoryName || p?.categoryEn || p?.type
+        );
+        return chosen.has(cat);
       });
     }
 
-    // tags
+    // tags (case-insensitive, any-match)
     if (selectedTags.length > 0) {
+      const chosen = new Set(selectedTags.map(norm));
       list = list.filter((p) => {
-        const tags = new Set([...(p?.tags || []), ...(p?.tagsEn || []), ...(p?.tagsHi || [])]);
-        return selectedTags.some((t) => tags.has(t));
+        const tags = new Set(
+          [
+            ...(p?.tags || []),
+            ...(p?.tagsEn || []),
+            ...(p?.tagsHi || []),
+          ].map(norm)
+        );
+        for (const t of chosen) if (tags.has(t)) return true;
+        return false;
       });
     }
 
     if (inStockOnly) list = list.filter((p) => Number(p?.stock ?? 0) > 0);
     if (ratingAtLeast > 0) list = list.filter((p) => getRating(p) >= ratingAtLeast);
+
     list = list.filter((p) => {
       const price = Number(p?.sellingPrice || p?.price || 0);
-      return price >= minPrice && price <= maxPrice;
+      return (
+        (minPrice ? price >= minPrice : true) &&
+        (maxPrice ? price <= maxPrice : true)
+      );
     });
 
     if (sort === "price_low")
@@ -252,11 +319,11 @@ export default function ShopNow() {
         (a, b) =>
           (b?.sellingPrice || b?.price || 0) - (a?.sellingPrice || a?.price || 0)
       );
-    else if (sort === "reviews")
-      list.sort((a, b) => getRating(b) - getRating(a));
+    else if (sort === "reviews") list.sort((a, b) => getRating(b) - getRating(a));
     else if (sort === "newest")
       list.sort(
-        (a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
+        (a, b) =>
+          new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
       );
 
     return list;
@@ -287,7 +354,7 @@ export default function ShopNow() {
           <p className="font-semibold text-gray-700">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-5 py-2.5 bg-black text-white rounded-full"
+            className="mt-4 px-5 py-2.5 bg-neutral-900 text-white rounded-full"
           >
             <RefreshCcw className="inline w-4 h-4 mr-1" /> Retry
           </button>
@@ -296,9 +363,11 @@ export default function ShopNow() {
     );
 
   return (
-    <div className="bg-[#fffdf9] min-h-screen text-neutral-900">
+    <div className="bg-[#fffdfa] min-h-screen text-neutral-900">
       {/* Top banner */}
-    
+      <div className="bg-neutral-900 text-white py-2 sm:py-3 text-center text-sm sm:text-base">
+        <InfiniteNewsTicker />
+      </div>
 
       {/* Header */}
       <section
@@ -324,13 +393,14 @@ export default function ShopNow() {
             data-stagger
             className="mt-3 text-[#4a2e16] font-semibold text-base sm:text-lg md:text-xl"
           >
-            Curated range inspired by ancient wisdom, crafted for modern wellness.
+            Curated range inspired by ancient wisdom, crafted for modern
+            wellness.
           </p>
 
           <motion.div
             data-stagger
-            whileHover={!useReducedMotion ? hoverScale : undefined}
-            whileTap={!useReducedMotion ? tapScale : undefined}
+            whileHover={!prefersReducedMotion ? hoverScale : undefined}
+            whileTap={!prefersReducedMotion ? tapScale : undefined}
             className="mt-6 sm:mt-8 flex flex-wrap justify-center sm:justify-end gap-3"
           >
             <div className="relative w-full sm:w-2/3 md:w-1/2">
@@ -338,13 +408,28 @@ export default function ShopNow() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name or benefit..."
+                placeholder="Search by name, tag, benefit..."
                 className="w-full pl-10 pr-3 py-2 sm:py-2.5 rounded-xl border border-amber-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm sm:text-base"
               />
             </div>
           </motion.div>
 
-          <p className="mt-4 text-xs sm:text-sm text-slate-100">
+          <div className="mt-4 flex items-center gap-3 justify-center sm:justify-end">
+            <label className="text-xs sm:text-sm text-slate-900/80">Sort:</label>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="px-2 py-1.5 rounded-lg border border-amber-200 bg-white text-sm"
+            >
+              <option value="relevance">Relevance</option>
+              <option value="newest">Newest</option>
+              <option value="reviews">Top rated</option>
+              <option value="price_low">Price: Low to High</option>
+              <option value="price_high">Price: High to Low</option>
+            </select>
+          </div>
+
+          <p className="mt-3 text-xs sm:text-sm text-slate-100">
             Showing <span className="font-semibold">{visible.length}</span> of{" "}
             {filtered.length} results
           </p>
@@ -381,6 +466,7 @@ export default function ShopNow() {
                   setRatingAtLeast(0);
                   setMinPrice(priceStats.min);
                   setMaxPrice(priceStats.max);
+                  setSort("relevance");
                 }}
               />
             </div>
@@ -391,9 +477,9 @@ export default function ShopNow() {
             {/* Mobile Filters */}
             <div className="flex justify-between items-center mb-4 md:hidden">
               <motion.button
-                whileTap={!useReducedMotion ? tapScale : undefined}
+                whileTap={!prefersReducedMotion ? tapScale : undefined}
                 onClick={() => setShowFilters(true)}
-                className="flex items-center gap-2 px-3 py-2 border border-amber-300 rounded-lg bg-white text-sm"
+                className="flex items-center gap-2 px-3 py-2 border border-amber-300 rounded-lg bg-white text-sm shadow-sm"
               >
                 <SlidersHorizontal className="w-4 h-4" /> Filters
               </motion.button>
@@ -413,6 +499,7 @@ export default function ShopNow() {
                     animate="visible"
                     exit="exit"
                     variants={backdropVariants}
+                    onClick={() => setShowFilters(false)}
                   />
                   <motion.div
                     key="drawer"
@@ -428,7 +515,7 @@ export default function ShopNow() {
                           <SlidersHorizontal className="w-4 h-4" /> Filters
                         </h3>
                         <motion.button
-                          whileTap={!useReducedMotion ? tapScale : undefined}
+                          whileTap={!prefersReducedMotion ? tapScale : undefined}
                           onClick={() => setShowFilters(false)}
                           className="p-2 rounded hover:bg-gray-100"
                         >
@@ -460,6 +547,7 @@ export default function ShopNow() {
                           setRatingAtLeast(0);
                           setMinPrice(priceStats.min);
                           setMaxPrice(priceStats.max);
+                          setSort("relevance");
                         }}
                       />
                     </div>
@@ -470,7 +558,7 @@ export default function ShopNow() {
 
             <div
               ref={gridRef}
-              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-10 sm:gap-y-14 pt-8"
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-5 sm:gap-x-7 gap-y-10 sm:gap-y-12 pt-8"
             >
               {visible.map((p) => (
                 <ProductCard
@@ -485,7 +573,7 @@ export default function ShopNow() {
             {totalPages > 1 && (
               <div className="mt-10 flex items-center justify-center gap-2 flex-wrap">
                 <motion.button
-                  whileTap={!useReducedMotion ? tapScale : undefined}
+                  whileTap={!prefersReducedMotion ? tapScale : undefined}
                   onClick={() => setPage((n) => clamp(n - 1, 1, totalPages))}
                   className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                   disabled={safePage === 1}
@@ -497,12 +585,12 @@ export default function ShopNow() {
                   const active = num === safePage;
                   return (
                     <motion.button
-                      whileTap={!useReducedMotion ? tapScale : undefined}
+                      whileTap={!prefersReducedMotion ? tapScale : undefined}
                       key={num}
                       onClick={() => setPage(num)}
                       className={`h-9 w-9 rounded-full border flex items-center justify-center text-sm ${
                         active
-                          ? "bg-neutral-900 text-white border-neutral-900"
+                          ? "bg-neutral-900 text-white border-neutral-900 shadow"
                           : "border-gray-300 hover:bg-gray-100"
                       }`}
                     >
@@ -511,7 +599,7 @@ export default function ShopNow() {
                   );
                 })}
                 <motion.button
-                  whileTap={!useReducedMotion ? tapScale : undefined}
+                  whileTap={!prefersReducedMotion ? tapScale : undefined}
                   onClick={() => setPage((n) => clamp(n + 1, 1, totalPages))}
                   className="h-9 w-9 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
                   disabled={safePage === totalPages}
@@ -542,6 +630,16 @@ function Stars({ value = 0, size = 16 }) {
   );
 }
 
+function Badge({ icon: Icon, children, color = "bg-black/80 text-white" }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-medium ${color}`}>
+      {Icon ? <Icon className="w-3.5 h-3.5" /> : null}
+      {children}
+    </span>
+  );
+}
+
+/** Product Card with Quantity + fixed flows (Add to Cart / Buy Now) */
 function ProductCard({ product: p, userId }) {
   const navigate = useNavigate();
   const imgSrc = p?.productImg || p?.image || p?.image1 || PLACEHOLDER;
@@ -554,13 +652,18 @@ function ProductCard({ product: p, userId }) {
 
   const ratingVal = getRating(p);
   const reviewCount = getReviewCount(p);
-  const imgWrapRef = useRef(null);
-  const cartPillRef = useRef(null);
 
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [wish, setWish] = useState(false);
+
   const productId = p?.id ?? p?.productId;
+
+  // ⬇️ Quantity state (like Product page)
+  const stock = Math.max(0, Number(p?.stock ?? 0));
+  const MAX_QTY = stock > 0 ? Math.min(stock, 10) : 10;
+  const [qty, setQty] = useState(1);
+  const clampQty = (n) => clamp(n, 1, MAX_QTY);
 
   // Initialize wishlist state from backend (async-safe)
   useEffect(() => {
@@ -582,41 +685,58 @@ function ProductCard({ product: p, userId }) {
     };
   }, [userId, productId]);
 
-  useEffect(() => {
-    if (!imgWrapRef.current || !cartPillRef.current) return;
-    gsap.set(cartPillRef.current, { y: 16, opacity: 0 });
-    const enter = () => gsap.to(cartPillRef.current, { y: 0, opacity: 1, duration: 0.25 });
-    const leave = () => gsap.to(cartPillRef.current, { y: 16, opacity: 0, duration: 0.25 });
-    const node = imgWrapRef.current;
-    node.addEventListener("mouseenter", enter);
-    node.addEventListener("mouseleave", leave);
-    return () => {
-      node.removeEventListener("mouseenter", enter);
-      node.removeEventListener("mouseleave", leave);
-    };
-  }, []);
-
   const handleAddToCart = async () => {
-
+    if (!productId) return;
     if (!userId) {
       toast.error("Please log in to add items to your cart.");
       navigate("/login", { state: { from: `/shop` } });
       return;
     }
+    if (stock === 0) {
+      toast.error("Out of stock.");
+      return;
+    }
     try {
       setAdding(true);
-      await cartApi.addItem(userId, productId, 1);
+      await cartApi.addItem(userId, productId, qty);
       setAdded(true);
       window.dispatchEvent(new CustomEvent("cart:changed"));
+      toast.success("Added to cart");
       setTimeout(() => setAdded(false), 1500);
     } catch (e) {
       console.error(e);
+      toast.error("Couldn't add to cart. Please try again.");
     } finally {
       setAdding(false);
     }
   };
 
-  // Heart click – only toggle wishlist, don't navigate / click image
+  // ✅ Fixed Buy Now flow (like Product page)
+  const handleBuyNow = async () => {
+    if (!productId) return;
+    const addressUrl = "/address?buynow=1";
+    if (!userId) {
+      const next = encodeURIComponent(addressUrl);
+      navigate(`/login?next=${next}`, {
+        replace: true,
+        state: { from: `/shop` },
+      });
+      return;
+    }
+    if (stock === 0) {
+      toast.error("Out of stock.");
+      return;
+    }
+    try {
+      await cartApi.addItem(userId, productId, qty); // ensure item in server cart with selected qty
+      window.dispatchEvent(new CustomEvent("cart:changed"));
+      navigate(addressUrl);
+    } catch (e) {
+      console.error(e);
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
+
   const handleWishlistClick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -641,13 +761,27 @@ function ProductCard({ product: p, userId }) {
 
   return (
     <motion.article
-      className="shop-card flex flex-col"
+      className="shop-card flex flex-col rounded-2xl bg-white border border-neutral-200 shadow-sm hover:shadow-md transition-shadow"
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       transition={{ type: "tween", duration: 0.15 }}
     >
-      <div ref={imgWrapRef} className="relative rounded-xl overflow-hidden p-2">
-        {/* Wishlist button (top-right over the image) */}
+      <div className="relative rounded-t-2xl overflow-hidden p-2">
+        {/* Top-left badges */}
+        <div className="absolute left-3 top-3 z-10 flex gap-1.5 flex-wrap max-w-[80%]">
+          {isTrending(p) && (
+            <Badge icon={Flame} color="bg-rose-600 text-white">
+              Trending
+            </Badge>
+          )}
+          {isNew(p) && (
+            <Badge icon={Sparkles} color="bg-amber-500 text-black">
+              New
+            </Badge>
+          )}
+        </div>
+
+        {/* Wishlist button */}
         <button
           type="button"
           onClick={handleWishlistClick}
@@ -655,7 +789,11 @@ function ProductCard({ product: p, userId }) {
           className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 border border-neutral-200 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
           title={wish ? "In your wishlist" : "Add to wishlist"}
         >
-          <Heart className={`w-5 h-5 ${wish ? "text-red-500 fill-red-500" : "text-neutral-700"}`} />
+          <Heart
+            className={`w-5 h-5 ${
+              wish ? "text-red-500 fill-red-500" : "text-neutral-700"
+            }`}
+          />
         </button>
 
         <Link to={`/products/${p?.slug || p?.id}`} className="block">
@@ -663,40 +801,123 @@ function ProductCard({ product: p, userId }) {
             src={imgSrc}
             alt={title}
             onError={(e) => (e.currentTarget.src = PLACEHOLDER)}
-            className="w-full h-48 sm:h-56 md:h-64 object-contain pointer-events-auto"
+            className="w-full aspect-[4/3] object-contain pointer-events-auto bg-neutral-50"
             whileHover={{ scale: 1.02 }}
             transition={{ type: "tween", duration: 0.2 }}
+            loading="lazy"
           />
         </Link>
-
-        <div ref={cartPillRef} className="absolute bottom-3 right-3 opacity-0">
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={adding}
-            className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-sm font-semibold hover:bg-amber-300 disabled:opacity-60"
-            title="Add to Cart"
-          >
-            {adding ? "Adding..." : added ? "Added ✓" : "Add to Cart"}
-          </button>
-        </div>
       </div>
 
-      <div className="mt-3 text-center">
-        <Link to={`/products/${p?.slug || p?.id}`}>
-          <h3 className="text-[15px] md:text-[16px] font-semibold leading-snug">{title}</h3>
-        </Link>
+      {/* Card body – order: rating → name → price → qty → buttons → tags */}
+      <div className="px-3 pb-3 pt-1 text-center">
         <div className="mt-1 flex justify-center items-center gap-1">
           <Stars value={ratingVal} size={14} />
           <span className="text-xs text-gray-500">({reviewCount})</span>
         </div>
+
+        <Link to={`/products/${p?.slug || p?.id}`}>
+          <h3 className="mt-1 text-[15px] md:text-[16px] font-semibold leading-snug line-clamp-2 min-h-[40px]">
+            {title}
+          </h3>
+        </Link>
+
         <div className="mt-2 flex justify-center items-center gap-2">
-          <span className="font-semibold text-sm sm:text-base">{formatINR(selling)}</span>
+          <span className="font-semibold text-sm sm:text-base">
+            {formatINR(selling)}
+          </span>
           {hasDiscount && (
             <>
-              <span className="line-through text-gray-400 text-xs">{formatINR(mrp)}</span>
-              <span className="text-emerald-600 text-xs font-semibold">Save {savePct}%</span>
+              <span className="line-through text-gray-400 text-xs">
+                {formatINR(mrp)}
+              </span>
+              <span className="text-emerald-600 text-xs font-semibold">
+                Save {savePct}%
+              </span>
             </>
+          )}
+        </div>
+
+        {/* Quantity selector (compact, like Product page) */}
+        <div className="mt-3 flex items-center justify-center gap-3">
+          <div className="inline-flex items-center border border-amber-200 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              className="px-2 py-1 hover:bg-amber-50 disabled:opacity-40"
+              onClick={() => setQty((q) => clampQty(q - 1))}
+              disabled={qty <= 1}
+              aria-label="decrease"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              inputMode="numeric"
+              className="w-14 text-center outline-none py-1"
+              value={qty}
+              min={1}
+              max={MAX_QTY}
+              onChange={(e) => {
+                const v = parseInt(e.target.value || "1", 10);
+                setQty(clampQty(Number.isFinite(v) ? v : 1));
+              }}
+            />
+            <button
+              type="button"
+              className="px-2 py-1 hover:bg-amber-50 disabled:opacity-40"
+              onClick={() => setQty((q) => clampQty(q + 1))}
+              disabled={qty >= MAX_QTY}
+              aria-label="increase"
+            >
+              +
+            </button>
+          </div>
+
+          <span className="text-[11px] text-gray-500">
+            {stock > 0 ? `${stock} in stock` : "Out of stock"}
+          </span>
+        </div>
+
+        {/* CTA buttons */}
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={handleBuyNow}
+            disabled={stock === 0}
+            className="px-3 py-2 rounded-xl bg-neutral-900 text-white text-xs sm:text-sm font-semibold hover:bg-neutral-800 disabled:opacity-60"
+            type="button"
+          >
+            Buy Now
+          </button>
+          <button
+            onClick={handleAddToCart}
+            disabled={adding || stock === 0}
+            className="px-3 py-2 rounded-xl bg-amber-400 text-black text-xs sm:text-sm font-semibold hover:bg-amber-300 disabled:opacity-60"
+            type="button"
+          >
+            {adding ? "Adding..." : added ? "Added ✓" : "Add to Cart"}
+          </button>
+        </div>
+
+        {/* Tag strip */}
+        <div className="mt-3 flex items-center justify-center gap-2 flex-wrap min-h-[22px]">
+          {p?.tags || p?.tagsEn || p?.tagsHi ? (
+            Array.from(
+              new Set([...(p?.tags || []), ...(p?.tagsEn || []), ...(p?.tagsHi || [])])
+            )
+              .slice(0, 3)
+              .map((t) => (
+                <span
+                  key={t}
+                  className="text-[10px] px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-700"
+                >
+                  #{t}
+                </span>
+              ))
+          ) : (
+            <span className="text-[10px] px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-700">
+              <Tag className="inline w-3 h-3 mr-1" />
+              wellness
+            </span>
           )}
         </div>
       </div>
@@ -733,25 +954,17 @@ function FiltersPanel(props) {
   const psMin = Number(priceStats?.min ?? 0);
   const psMax = Number(priceStats?.max ?? 0);
 
-  const toggleCategory = (c, checked) =>
-    setSelectedCategories((prev = []) =>
-      checked ? [...prev, c] : prev.filter((x) => x !== c)
-    );
-
-  const toggleTag = (t) =>
-    setSelectedTags((prev = []) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
-    );
-
   const handleMinChange = (v) => {
     const n = Number(v);
     if (Number.isNaN(n)) return;
-    setMinPrice(Math.min(Math.max(n, psMin), Math.max(psMin, maxPrice)));
+    const bounded = Math.min(Math.max(n, psMin), Math.max(psMin, maxPrice || psMax));
+    setMinPrice(bounded);
   };
   const handleMaxChange = (v) => {
     const n = Number(v);
     if (Number.isNaN(n)) return;
-    setMaxPrice(Math.max(Math.min(n, psMax), Math.min(psMax, minPrice)));
+    const bounded = Math.max(Math.min(n, psMax), Math.min(psMax, minPrice || psMin));
+    setMaxPrice(bounded);
   };
 
   return (
@@ -812,7 +1025,7 @@ function FiltersPanel(props) {
                 )}
                 {ratingAtLeast > 0 && (
                   <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800">
-                    {ratingAtLeast}★ &amp; up
+                    {ratingAtLeast}★ & up
                   </span>
                 )}
               </div>
@@ -830,7 +1043,11 @@ function FiltersPanel(props) {
                     <input
                       type="checkbox"
                       checked={selectedCategories.includes(c)}
-                      onChange={(e) => toggleCategory(c, e.target.checked)}
+                      onChange={(e) =>
+                        setSelectedCategories((prev = []) =>
+                          e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)
+                        )
+                      }
                     />
                     <span className="truncate">{c}</span>
                   </label>
@@ -874,9 +1091,7 @@ function FiltersPanel(props) {
                   onChange={(e) => handleMinChange(e.target.value)}
                   className="w-full"
                 />
-                <span className="text-xs text-neutral-600">
-                  {formatINR(minPrice)}
-                </span>
+                <span className="text-xs text-neutral-600">{formatINR(minPrice)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
@@ -887,9 +1102,7 @@ function FiltersPanel(props) {
                   onChange={(e) => handleMaxChange(e.target.value)}
                   className="w-full"
                 />
-                <span className="text-xs text-neutral-600">
-                  {formatINR(maxPrice)}
-                </span>
+                <span className="text-xs text-neutral-600">{formatINR(maxPrice)}</span>
               </div>
             </div>
 
@@ -916,9 +1129,7 @@ function FiltersPanel(props) {
                   />
                   <span className="flex items-center gap-1">
                     <Stars value={r} />{" "}
-                    <span className="text-xs text-neutral-600">
-                      &nbsp;and up
-                    </span>
+                    <span className="text-xs text-neutral-600">&nbsp;and up</span>
                   </span>
                 </label>
               ))}
@@ -949,7 +1160,7 @@ function FiltersPanel(props) {
           </details>
 
           {Array.isArray(tagOptions) && tagOptions.length > 0 && (
-            <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5">
+            <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
               <summary className="cursor-pointer list-none font-medium">
                 Popular Tags
               </summary>
@@ -961,10 +1172,8 @@ function FiltersPanel(props) {
                       key={t}
                       type="button"
                       onClick={() =>
-                        setSelectedTags(
-                          active
-                            ? selectedTags.filter((x) => x !== t)
-                            : [...selectedTags, t]
+                        setSelectedTags((prev) =>
+                          active ? prev.filter((x) => x !== t) : [...prev, t]
                         )
                       }
                       className={`px-3 py-1.5 rounded-full text-xs border ${
