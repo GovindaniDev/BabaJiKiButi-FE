@@ -128,117 +128,150 @@ const ContactSection = () => {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-2 gap-12 items-start">
-              {/* Contact Form */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20">
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Send us a message</h2>
-                  <p className="text-gray-600">
-                    Have questions about our products or need personalized recommendations? 
-                    We'd love to hear from you!
-                  </p>
-                </div>
+         {/* CONTACT + MAP SECTION */}
+<section className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-12">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:items-stretch">
+    
+    {/* 📨 FORM CARD */}
+    <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 sm:p-8 md:p-12 shadow-2xl border border-white/20 h-full flex flex-col">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
+          Send us a message
+        </h2>
+        <p className="text-gray-600 text-sm sm:text-base">
+          Have questions about our products or need personalized recommendations? 
+          We'd love to hear from you!
+        </p>
+      </div>
 
-                {isSubmitted && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="text-green-800 font-medium">Thank you! We received your message and will get back to you soon.</span>
-                  </div>
-                )}
+      {/* Success message */}
+      {isSubmitted && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600" />
+          <span className="text-green-800 font-medium text-sm sm:text-base">
+            Thank you! We received your message and will get back to you soon.
+          </span>
+        </div>
+      )}
 
-                <div className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Full Name *</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={form.name}
-                        onChange={onChange}
-                        required
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                        placeholder="Enter your full name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Phone Number *</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={form.phone}
-                        onChange={onChange}
-                        required
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                        placeholder="+91 XXXXX XXXXX"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Email Address *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={onChange}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                      placeholder="your.email@example.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Your Message *</label>
-                    <textarea
-                      name="message"
-                      value={form.message}
-                      onChange={onChange}
-                      required
-                      rows={5}
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all resize-none"
-                      placeholder="Tell us how we can help you..."
-                    />
-                  </div>
+      {/* Form fields */}
+      <div className="space-y-6 flex-grow">
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Full Name *</label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={onChange}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+              placeholder="Enter your full name"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Phone Number *</label>
+            <input
+              type="tel"
+              name="phone"
+              value={form.phone}
+              onChange={onChange}
+              required
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+              placeholder="+91 XXXXX XXXXX"
+            />
+          </div>
+        </div>
 
-                  <button
-                    onClick={onSubmit}
-                    disabled={isSubmitting}
-                    className="w-full bg-[#a26833] hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        Send Message
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Email Address *</label>
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={onChange}
+            required
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+            placeholder="your.email@example.com"
+          />
+        </div>
 
-              {/* Map */}
-              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/20">
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">Find Our Location</h2>
-                <div className="aspect-square rounded-2xl overflow-hidden border-4 border-gray-100 shadow-inner">
-                  <iframe
-                    title="Baba Ji Ki Buti Location"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                    allowFullScreen
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d424646.02828249306!2d76.993119!3d28.980219000000005!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390dbb183d826345%3A0x79f9532049e22b8!2sBABA%20JI%20KI%20BUTI!5e1!3m2!1sen!2sin!4v1743501904626!5m2!1sen!2sin"
-                    className="grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-                </div>
-               
-              </div>
-            </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Your Message *</label>
+          <textarea
+            name="message"
+            value={form.message}
+            onChange={onChange}
+            required
+            rows={5}
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all resize-none"
+            placeholder="Tell us how we can help you..."
+          />
+        </div>
+      </div>
+
+      {/* Submit button pinned at bottom */}
+      <button
+        onClick={onSubmit}
+        disabled={isSubmitting}
+        className="mt-8 w-full bg-[#a26833] hover:bg-[#91582b] text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+      >
+        {isSubmitting ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            Sending...
+          </>
+        ) : (
+          <>
+            <Send className="w-5 h-5" />
+            Send Message
+          </>
+        )}
+      </button>
+    </div>
+
+    {/* 📍 MAP CARD */}
+    <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 sm:p-8 md:p-12 shadow-2xl border border-white/20 h-full flex flex-col">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
+          Find Our Location
+        </h2>
+
+        <div className="relative rounded-2xl overflow-hidden border-4 border-gray-100 shadow-inner
+                        h-56 sm:h-72 md:h-full min-h-[18rem]">
+          <iframe
+            title="Baba Ji Ki Buti Location"
+            src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d424646.02828249306!2d76.993119!3d28.980219000000005!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390dbb183d826345%3A0x79f9532049e22b8!2sBABA%20JI%20KI%20BUTI!5e1!3m2!1sen!2sin!4v1743501904626!5m2!1sen!2sin"
+            className="absolute inset-0 w-full h-full grayscale hover:grayscale-0 transition-all duration-500"
+            style={{ border: 0 }}
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+            loading="eager"
+          />
+        </div>
+
+        <div className="mt-12 text-center">
+         <a
+  href="https://www.google.com/maps/place/BABA+JI+KI+BUTI/data=!4m2!3m1!1s0x0:0x79f9532049e22b8?sa=X&ved=1t:2428&ictx=111"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+             bg-gradient-to-r from-amber-100 to-orange-50 text-[#a26833] font-semibold
+             border border-amber-300 shadow-sm transition-all duration-300
+             hover:from-orange-100 hover:to-amber-50 hover:shadow-md hover:-translate-y-[1px]"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 12l4.243-4.243M6 12h11.657" />
+  </svg>
+  Open in Google Maps
+</a>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
           </div>
         </section>
 

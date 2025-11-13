@@ -1,29 +1,25 @@
+// App.jsx
 import { Routes, Route, useLocation } from "react-router-dom";
 import NavBar from "./components/NavBar";
-import HeroSection from "./sections/HeroSection";
-import { ScrollSmoother, ScrollTrigger } from "gsap/all";
-import gsap from "gsap";
-import MessageSection from "./sections/MessageSection";
-import FlavorSection from "./sections/FlavorSection";
-import { useGSAP } from "@gsap/react";
-import NutritionSection from "./sections/NutritionSection";
-import BenefitSection from "./sections/BenefitSection";
-import TestimonialSection from "./sections/TestimonialSection";
-import FooterSection from "./sections/FooterSection";
+import Loading from "./components/loading";
+import { Toaster } from "react-hot-toast";
+import { useEffect, useState } from "react";
+import { useMe } from "./auth/user/useMe";
+import ProtectedRoute from "./auth/ProtectedRoute";
+import RequireAdmin from "./auth/RequireAuth";
+
+/* Sections & Pages */
+import HomePage from "./page/home/HomePage";
 import Product from "./page/shopNow/shop";
 import Wishlist from "./page/wishlist/Wishlist";
 import NotFound from "./page/error/NotFound";
 import LoginPage from "./page/login/LoginPage";
 import SignUpPage from "./page/register/SignUpPage";
-import Loading from "./components/loading";
-import { useEffect, useState } from "react";
 import PrivacySection from "./page/privacy/PrivacyPage";
 import ReturnRefundSection from "./page/returns/ReturnRefundPage";
 import TermSection from "./page/terms/TermPage";
 import ContactPage from "./page/contact/ContactPage";
 import AboutPage from "./page/about/AboutPage";
-import ProtectedRoute from "./auth/ProtectedRoute";
-import { Toaster } from "react-hot-toast";
 import SessionsPage from "./page/account/SessionsPage";
 import BMIPage from "./page/BMI/BMIPage";
 import NutrientPage from "./page/service/Nutrient/NutrientPage";
@@ -32,40 +28,37 @@ import OPDPage from "./page/OPD/OPDPage";
 import NaadiPage from "./page/naadi/NaadiPage";
 import RemediosPage from "./page/service/remedios/RemediosPage";
 import TherapyPage from "./page/service/therapy/TherapyPage";
-import ProductCatalog from "./components/(admin)/src/component/catalog/ProductCatalog";
-import DashboardBody from "./components/(admin)/src/component/Dashboard";
+import BlogPage from "./page/blog/BlogPage";
+import CartSection from "./page/cart/CartPage";
+import PaymentPage from "./page/payment/paymentPage";
+import ThankYou from "./page/order/ThankYou";
+import AccountPage from "./page/profile/AccountPage";
+import AddressPage from "./page/address/AddressPage";
+import PDPpage from "./page/shopNow/products/PDPpage";
+import OrderDetails from "./page/orders/OrderDetails";
+import FooterSection from "./sections/FooterSection";
 import AdminShell from "./components/(admin)/AdminShell";
+import DashboardBody from "./components/(admin)/src/component/Dashboard";
 import CatalogPage from "./page/admin/catalog/CatalogPage";
 import InventoryPage from "./page/admin/inventory/InventoryPage";
 import PricingPage from "./page/admin/pricing/PricingPage";
 import OrderPage from "./page/admin/orders/OrderPage";
-import DoshaPage from "./page/dosha/DoshaPage";
 import AddProductPage from "./page/admin/catalog/AddProdPage";
-import PDPpage from "./page/shopNow/products/PDPpage";
 import ReturnPage from "./page/admin/return/ReturnPage";
 import CustomerPage from "./page/admin/users/CustomerPage";
 import CouponPage from "./page/admin/pricing/coupon/CouponPage";
 import AddStockPage from "./page/admin/inventory/AddStockPage";
-import AccountPage from "./page/profile/AccountPage";
-import RequireAdmin from "./auth/RequireAuth";
-import AddressPage from "./page/address/AddressPage";
-import { useMe } from "./auth/user/useMe";
-import CartSection from "./page/cart/CartPage";
-import PaymentPage from "./page/payment/paymentPage";
-import ThankYou from "./page/order/ThankYou";
-import BlogPage from "./page/blog/BlogPage";
-import OrderDetails from "./page/orders/OrderDetails";
 import AnnouncementsPage from "./components/(admin)/src/component/campaigns/announcements/AnnouncementsPage";
-
-gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+import DoshaPage from "./page/dosha/DoshaPage";
+import RootRedirect from "./RootRedirect";
 
 const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
-  const isHome = location.pathname === "/";
   const isAdminRoute = location.pathname.startsWith("/admin");
+  const isHome = location.pathname === "/home";
 
-  // ✅ now this runs inside AuthProvider (moved to main.jsx)
+
   const { me, loading: meLoading } = useMe();
   const userId = me?.id ?? null;
 
@@ -74,79 +67,6 @@ const App = () => {
     return () => clearTimeout(timer);
   }, []);
 
- // inside App.jsx
-
-const HomePage = () => {
-  const isTouch =
-    typeof window !== "undefined" &&
-    matchMedia("(pointer: coarse)").matches;
-
-  useGSAP(() => {
-    // Kill any stale Smoother/Triggers before creating a new one
-    const prev = ScrollSmoother.get();
-    if (prev) prev.kill();
-    ScrollTrigger.getAll().forEach(t => {
-      if (t.vars && t.vars.id === "HOME_TMP") t.kill(false);
-    });
-
-    // Base smoother
-    const smoother = ScrollSmoother.create({
-      wrapper: "#smooth-wrapper",
-      content: "#smooth-content",
-      smooth: isTouch ? 0 : 1.4,   // subtle easing on desktop only
-      smoothTouch: 0,               // never interpolate on touch
-      normalizeScroll: true,
-      effects: false,               // no parallax unless you turn it on explicitly
-    });
-
-    // Refresh after any media loads to lock layout
-    const onWindowLoad = () => ScrollTrigger.refresh();
-    window.addEventListener("load", onWindowLoad);
-
-    // Observe images inside smooth-content for first paint refresh
-    const imgs = Array.from(document.querySelectorAll("#smooth-content img"));
-    const refreshOnce = () => ScrollTrigger.refresh();
-    imgs.forEach(img => img.addEventListener("load", refreshOnce, { once: true }));
-
-    // Optional: route-height sanity trigger (helps when content injects)
-    ScrollTrigger.create({
-      id: "HOME_TMP",
-      trigger: "#smooth-content",
-      start: "top top",
-      onRefresh: () => {}, // existence alone can help certain devtools resizes
-    });
-
-    return () => {
-      window.removeEventListener("load", onWindowLoad);
-      imgs.forEach(img => img.removeEventListener("load", refreshOnce));
-      // Full cleanup in correct order
-      const s = ScrollSmoother.get();
-      if (s) s.kill();
-      ScrollTrigger.getAll().forEach(t => t.kill(false));
-      gsap.set("#smooth-content", { clearProps: "transform,willChange" });
-    };
-  }, { dependencies: [isTouch] });
-
-  return (
-    <div id="smooth-wrapper">
-      <div id="smooth-content">
-        {/* Make sure none of these contain sticky/fixed items.
-            If they must, render those sticky/fixed bits via portals outside #smooth-content */}
-        <HeroSection />
-        <MessageSection />
-        <FlavorSection />
-        <NutritionSection />
-        <BenefitSection />
-        <TestimonialSection />
-        <FooterSection />
-      </div>
-    </div>
-  );
-};
-
-
-
-  // Optional: block routes until we know auth
   if (meLoading) return <Loading label="Loading account..." />;
 
   return (
@@ -154,12 +74,15 @@ const HomePage = () => {
       <Toaster reverseOrder={false} />
       <main>
         {loading && <Loading label="Please wait..." />}
-
         {!isAdminRoute && <NavBar />}
 
         <Routes>
+         
+<Route path="/" element={<RootRedirect />} />
+ <Route path="/home" element={<HomePage />} />
+
+
           {/* Public */}
-          <Route path="/" element={<HomePage />} />
           <Route path="/shop" element={<Product userId={userId} />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<SignUpPage />} />
@@ -176,14 +99,13 @@ const HomePage = () => {
           <Route path="/naadi" element={<NaadiPage />} />
           <Route path="/service/remedios" element={<RemediosPage />} />
           <Route path="/service/therapy" element={<TherapyPage />} />
-          <Route path="/blog" element={<BlogPage userId={userId}/>} />
+          <Route path="/blog" element={<BlogPage userId={userId} />} />
           <Route path="/cart" element={<CartSection userId={userId} />} />
           <Route path="/orders/:id" element={<OrderDetails />} />
           <Route path="/order/thank-you" element={<ThankYou />} />
-          {/* User Account */}
           <Route path="/profile" element={<AccountPage />} />
 
-          {/* Admin (role-restricted) */}
+          {/* Admin */}
           <Route element={<RequireAdmin />}>
             <Route path="/admin" element={<AdminShell />}>
               <Route index element={<DashboardBody />} />
@@ -196,25 +118,26 @@ const HomePage = () => {
               <Route path="users" element={<CustomerPage />} />
               <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
               <Route path="inventory/AddStockPage" element={<AddStockPage />} />
-              <Route path="/admin/campaigns/announcements" element={<AnnouncementsPage />} />
+              <Route path="campaigns/announcements" element={<AnnouncementsPage />} />
             </Route>
           </Route>
 
-          {/* Authed-only (non-admin) */}
+          {/* User Auth Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/sessions" element={<SessionsPage />} />
-            <Route path="/address" element={<AddressPage/>} />
+            <Route path="/address" element={<AddressPage />} />
             <Route path="/payment" element={<PaymentPage />} />
           </Route>
 
-          {/* Product Pages */}
+          {/* Product */}
           <Route path="/products/:slug" element={<PDPpage />} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
 
+        {/* Only show global footer on non-admin and non-home pages */}
         {!isAdminRoute && !isHome && <FooterSection />}
       </main>
     </>

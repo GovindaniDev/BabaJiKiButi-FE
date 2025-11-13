@@ -236,63 +236,163 @@ body::-webkit-scrollbar {
     }
   }
 
-  .benefit-section {
-    color: #523122;
+ .benefit-section {
+  color: #523122;
   font-family: "Antonio", sans-serif;
-    @apply min-h-dvh bg-[#222123] overflow-hidden relative;
+  /* mobile-first height; let content define height, video section handles its own */
+  @apply bg-[#222123] overflow-hidden relative;
 
-    p {
-      @apply text-milk font-paragraph text-center text-lg;
-    }
-
-    .first-title {
-      @apply rotate-[3deg] relative z-10;
-    }
-
-    .second-title {
-      @apply rotate-[-1deg] md:-translate-y-5;
-    }
-
-    .third-title {
-      @apply rotate-[1deg] md:-translate-y-12 relative z-10;
-    }
-
-    .fourth-title {
-      @apply rotate-[-5deg] md:-translate-y-12;
-    }
-
-    .vd-pin-section {
-      @apply md:h-[110vh] h-dvh overflow-hidden md:!-translate-y-[15%] md:mt-0 mt-20;
-
-      video {
-        @apply size-full absolute inset-0 object-cover;
-      }
-
-      .play-btn {
-        @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[9vw] flex justify-center items-center bg-[#ffffff1a] backdrop-blur-xl rounded-full;
-      }
-
-      img:first-of-type {
-        @apply size-[15vw];
-      }
-    }
+  p {
+    @apply text-milk font-paragraph text-center;
   }
 
+  /* On small screens keep titles mostly straight to avoid clipping */
+  .first-title,
+  .second-title,
+  .third-title,
+  .fourth-title {
+    @apply relative z-10 opacity-0; /* start hidden for reveal timeline */
+    transform: rotate(0deg);
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); /* hidden polygon */
+  }
+
+  /* Bring back playful rotations from md and up */
+  @screen md {
+    .first-title { transform: rotate(3deg); }
+    .second-title { transform: rotate(-1deg); @apply -translate-y-5; }
+    .third-title { transform: rotate(1deg); @apply -translate-y-12; }
+    .fourth-title { transform: rotate(-5deg); @apply -translate-y-12; }
+  }
+
+/* benefit.css (same file you shared) */
+.vd-pin-section {
+  @apply relative w-full overflow-hidden mt-30 md:mt-0;
+}
+
+/* keep the container stable */
+@screen md {
+  .vd-pin-section { height: 100svh; } /* better than 100vh on many UAs */
+}
+
+/* the element you animate */
+.vd-pin-section .video-box {
+  position: relative;        /* fixed on desktop is set in JS when pinning */
+  width: 100%;
+  height: auto;
+  /* IMPORTANT: start at final shape so first paint equals “after refresh” */
+  clip-path: circle(100% at 50% 50%);
+}
+
+/* the video should always fully cover and be centered deterministically */
+.vd-pin-section video {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: 50% 50%;  /* explicit center */
+  aspect-ratio: 16/9;        /* stable intrinsic ratio on first paint (desktop becomes full in JS) */
+  display: block;
+}
+
+@screen md {
+  .vd-pin-section .video-box { height: 100%; }
+  .vd-pin-section video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;      /* now real full-bleed */
+  }
+}
+
+
+  
+}
+
+@media (max-width: 767px) {
   .testimonials-section {
     @apply bg-milk relative w-full h-[120dvh];
 
     .pin-box {
-      @apply flex items-center justify-center w-full ps-52 absolute 2xl:bottom-32 bottom-[50vh];
-
-      .vd-card {
-        @apply md:w-96 w-80 flex-none md:rounded-[2vw] rounded-3xl -ms-44 overflow-hidden 2xl:relative absolute border-[.5vw] border-milk;
-      }
+      /* centered, a bit higher so cards can float upward */
+      @apply absolute inset-x-0 bottom-[64vh] flex justify-center items-center px-4;
+      gap: 1rem;
+      will-change: transform;
+      transform: translateZ(0);
+      perspective: 1000px;
+      transform-style: preserve-3d;
+      pointer-events: none; /* prevent accidental taps while pinned */
     }
 
+    .pin-box .vd-card {
+      @apply w-80 flex-none rounded-3xl overflow-hidden border-[.5vw] border-milk absolute;
+      left: 0; right: 0; margin-left: auto; margin-right: auto;
+      margin-inline-start: 0 !important;  /* neutralize any -ms-* utilities */
+      will-change: transform, opacity, filter;
+      backface-visibility: hidden;
+      transform: translateZ(0);
+      filter: blur(0);
+      pointer-events: auto; /* keep videos/buttons tappable if needed */
+    }
+
+    /* friendlier title sizing/spacing on small screens */
     h1 {
-      @apply uppercase text-[20.5vw] leading-[105%] tracking-[-.4vw] ml-[2vw] font-bold;
+      @apply uppercase text-[18.5vw] leading-[105%] tracking-[-.2vw] ml-[2vw] font-bold;
     }
   }
+}
+
+
+@media (min-width: 768px) {
+  .testimonials-section {
+    @apply bg-milk relative w-full h-[120dvh];
+    overflow: visible;              /* allow edges to show */
+    direction: ltr;
+    --card-w: 24rem;                /* base card width (≈ w-96) */
+    --overlap: clamp(-6rem, -10vw, -3.5rem); /* responsive negative gap */
+    --side-gutter: clamp(2rem, 8vw, 6rem);   /* keep first/last fully visible */
+  }
+
+  .testimonials-section .pin-box {
+    @apply flex items-end justify-center w-full absolute 2xl:bottom-32;
+    bottom: clamp(12vh, 30vh, 22vh); /* avoid bottom clipping across screens */
+    padding-inline: var(--side-gutter);  /* left/right safety space */
+    gap: 0;
+    perspective: 1200px;
+    transform-style: preserve-3d;
+  }
+
+  /* relative cards so flex can lay them out in one row */
+  .testimonials-section .pin-box .vd-card {
+    /* width scales down a bit on tighter desktops to avoid clipping */
+    width: clamp(18rem, 22vw, var(--card-w));
+    @apply flex-none md:rounded-[2vw] rounded-3xl overflow-hidden border-[.5vw] border-milk relative;
+    left: auto; right: auto; top: auto; bottom: auto;
+    will-change: transform;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  /* overlap between cards (responsive) */
+  .testimonials-section .pin-box .vd-card + .vd-card {
+    margin-left: var(--overlap);    /* replaces -ml-* so ends don’t get cut */
+  }
+
+  /* keep first/last cards inside the gutters on all browsers */
+  .testimonials-section .pin-box .vd-card:first-child { margin-left: 0; }
+  .testimonials-section .pin-box .vd-card:last-child  { margin-right: 0; }
+
+  .testimonials-section h1 {
+    @apply uppercase text-[20.5vw] leading-[105%] tracking-[-.4vw] ml-[2vw] font-bold;
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    .testimonials-section { height: 120svh; }
+  }
+}
+
+
+
+
 
   .footer-section {
   @apply 2xl:min-h-dvh overflow-hidden relative bg-[#222123];
