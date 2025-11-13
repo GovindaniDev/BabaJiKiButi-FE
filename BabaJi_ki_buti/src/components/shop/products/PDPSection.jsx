@@ -1,4 +1,3 @@
-// src/page/products/ProductPageAlt.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -715,6 +714,20 @@ function KeyHerbs({ data, language = "en" }) {
         ) : (
           <p className="text-center text-slate-500 italic">No key herbs added</p>
         )}
+
+        {/* Optional: why these herbs */}
+        {whyherbsSafe.length ? (
+          <div className="mt-10 bg-white rounded-2xl p-6 border border-emerald-100">
+            <h3 className="text-xl font-bold mb-3">
+              {language === "en" ? "Why These Herbs?" : "ये जड़ी-बूटियाँ क्यों?"}
+            </h3>
+            <ul className="list-disc pl-6 text-slate-800 space-y-1">
+              {whyherbsSafe.map((row, i) => (
+                <li key={i}>{language === "en" ? row.en || row.hi : row.hi || row.en}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </div>
   );

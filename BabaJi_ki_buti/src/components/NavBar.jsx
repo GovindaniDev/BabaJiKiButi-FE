@@ -4,9 +4,9 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import CartMenu from "../page/cart/CartMenu";
 import { useAuth } from "../auth/AuthContext";
 import { useMe } from "../auth/user/useMe";
-import { wishlistApi } from "../auth/wishlist/wishlistApi"; // 👈 NEW
+import { wishlistApi } from "../auth/wishlist/wishlistApi";
 import SearchBar from "../utils/SearchBar";
-import styled from "styled-components"; // 👈 used for the floating buttons
+import styled from "styled-components";
 
 export default function NavBar() {
   // ---------------------------- local state ----------------------------
@@ -17,7 +17,7 @@ export default function NavBar() {
   const [isTherapyOpen, setIsTherapyOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // ✅ NEW: wishlist count
+  // ✅ wishlist count
   const [wishlistCount, setWishlistCount] = useState(0);
 
   // ---------------------------- element refs ---------------------------
@@ -29,7 +29,7 @@ export default function NavBar() {
   const profileRef = useRef(null);
   const firstServicesItemRef = useRef(null);
   const firstTherapyItemRef = useRef(null);
-  const searchRef = useRef(null); // keep for desktop 2xl search
+  const searchRef = useRef(null);
 
   const hoverTimers = useRef({ services: null, therapy: null, category: null });
 
@@ -87,17 +87,18 @@ export default function NavBar() {
   }, [isMobileMenuOpen]);
 
   // ------------------------------ data ---------------------------------
+  // If you have real category IDs from DB, put them here (replace null with the Long id).
   const categories = [
-    { name: "Energy & Stamina", icon: "/images/c1.png", path: "/oil" },
-    { name: "Pain Relief", icon: "/images/c2.png", path: "/rice" },
-    { name: "Hair & Skin Care", icon: "/images/c3.png", path: "/jaggery" },
-    { name: "Digestive Health", icon: "/images/c4.png", path: "/spices" },
-    { name: "Men's Health", icon: "/images/c5.png", path: "/immunity" },
-    { name: "Women's Health", icon: "/images/c6.png", path: "/breakfast-snacks" },
-    { name: "Weight Management", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Specialized Health", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Nutritional Supplements", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Immunity & General Wellness", icon: "/images/c7.png", path: "/grains-pulses" },
+    { id: null, name: "Energy & Stamina",            icon: "/images/c1.png" },
+    { id: null, name: "Pain Relief",                 icon: "/images/c2.png" },
+    { id: null, name: "Hair & Skin Care",            icon: "/images/c3.png" },
+    { id: null, name: "Digestive Health",            icon: "/images/c4.png" },
+    { id: null, name: "Men's Health",                icon: "/images/c5.png" },
+    { id: null, name: "Women's Health",              icon: "/images/c6.png" },
+    { id: null, name: "Weight Management",           icon: "/images/c7.png" },
+    { id: null, name: "Specialized Health",          icon: "/images/c7.png" },
+    { id: null, name: "Nutritional Supplements",     icon: "/images/c7.png" },
+    { id: null, name: "Immunity & General Wellness", icon: "/images/c7.png" },
   ];
 
   // --------------------------- keyboard a11y ---------------------------
@@ -221,26 +222,36 @@ export default function NavBar() {
   }, [loading, isAuthenticated, location.pathname, navigate]);
 
   // -------------------------- WhatsApp button --------------------------
-  const waNumber = "919873033339"; // ✅ your number
-  const waMessage = `Hi Baba Ji Ki Buti! I want to know more about...`; // ✅ your default message
+  const waNumber = "919873033339"; // your number
+  const waMessage = `Hi Baba Ji Ki Buti! I want to know more about...`;
   const waHref = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
 
   // -------------------------- Ask AI button ----------------------------
   const handleOpenAI = () => {
-    // Change this to open your AI assistant UX (route, modal, etc.)
-    // Example: route to a chat page
     try {
       navigate("/assistant");
     } catch {
-      // fallback: no-op
       console.log("Open AI Assistant");
     }
+  };
+
+  // helper to go to a category (keeps scroll + closes menus)
+  const goToCategory = (cat) => {
+    const { id, name } = cat || {};
+    setIsCategoryOpen(false);
+    setIsMobileMenuOpen(false);
+    if (id != null) {
+      navigate(`/shop?categoryId=${encodeURIComponent(id)}&category=${encodeURIComponent(name || "")}`);
+    } else {
+      navigate(`/shop?category=${encodeURIComponent(name || "")}`);
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
   };
 
   // ------------------------------- render ------------------------------
   return (
     <>
-      {/* Keep below announcement bar (top-10). */}
+      {/* Announcement bar offset */}
       <header className="fixed inset-x-0 top-10 lg:top-0 z-50 bg-transparent pointer-events-none">
         <div className="container mx-auto px-2 sm:px-3 md:px-4 mb-2 lg:mb-0 lg:mt-10">
           <div className="flex items-center justify-between gap-3 lg:gap-6 xl:gap-8 min-h-14 py-2 rounded-full bg-white/70 backdrop-blur-md shadow-lg lg:shadow-md ring-1 ring-black/5 px-2 sm:px-3 md:px-4 pointer-events-auto">
@@ -253,7 +264,7 @@ export default function NavBar() {
               <img src="/images/logo2.png" alt="nav-logo" className="h-8 sm:h-10 w-auto" />
             </Link>
 
-            {/* Spacer to keep nav links away from logo on lg+ */}
+            {/* Spacer */}
             <div className="hidden lg:block w-6 xl:w-8 shrink-0" aria-hidden />
 
             {/* Desktop links */}
@@ -454,22 +465,18 @@ export default function NavBar() {
                     onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
                     onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
                     role="menu"
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,1200px)] rounded-[32px] shadow-xl bg-white z-50 overflow-hidden border border-amber-100"
-                    style={{ backgroundColor: "#fefcf8" }}
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 rounded-[32px] shadow-xl bg-white z-50 overflow-hidden border border-amber-100"
+                    style={{ backgroundColor: "#fefcf8", width: "min(92vw, 1200px)" }}
                   >
                     <div className="relative px-6 md:px-10 py-10 md:py-12">
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 md:gap-8 mb-8">
                         {categories.map((category, i) => (
-                          <a
+                          <button
                             key={i}
-                            href={category.path}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setIsCategoryOpen(false);
-                              window.scrollTo({ top: 0, behavior: "instant" });
-                            }}
+                            onClick={() => goToCategory(category)}
                             className="group flex flex-col items-center text-center"
                             role="menuitem"
+                            type="button"
                           >
                             <div className="mx-auto h-16 w-16 rounded-full grid place-items-center bg-white border border-amber-100 shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:bg-amber-50">
                               <img
@@ -481,14 +488,13 @@ export default function NavBar() {
                             <span className="mt-3 text-xs md:text-sm font-semibold text-[#5a6d52] leading-tight max-w-[120px] group-hover:text-amber-700 transition-colors">
                               {category.name}
                             </span>
-                          </a>
+                          </button>
                         ))}
                       </div>
                       <div className="flex justify-center">
                         <Link
                           to="/shop"
-                          onClick={(e) => {
-                            e.preventDefault();
+                          onClick={() => {
                             setIsCategoryOpen(false);
                             window.scrollTo({ top: 0, behavior: "instant" });
                           }}
@@ -536,7 +542,7 @@ export default function NavBar() {
               <div className="w-px h-6 2xl:h-8 bg-gray-200 hidden 2xl:block" />
               <CartMenu userId={userId} />
 
-              {/* ✅ Desktop Wishlist with badge */}
+              {/* Wishlist with badge */}
               <button
                 type="button"
                 onClick={onWishlistClick}
@@ -716,19 +722,15 @@ export default function NavBar() {
                   {isCategoryOpen && (
                     <div className="mt-1 ml-1 grid grid-cols-2 gap-2">
                       {categories.map((c, i) => (
-                        <Link
+                        <button
                           key={i}
-                          to={c.path}
-                          onClick={() => {
-                            setIsCategoryOpen(false);
-                            setIsMobileMenuOpen(false);
-                            window.scrollTo({ top: 0, behavior: "instant" });
-                          }}
+                          onClick={() => goToCategory(c)}
                           className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50"
+                          type="button"
                         >
                           <img src={c.icon} alt={c.name} className="h-10 w-10 object-contain" />
                           <span className="text-sm text-gray-700">{c.name}</span>
-                        </Link>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -783,7 +785,7 @@ export default function NavBar() {
                 </NavMobileLink>
 
                 <div className="pt-2 border-t border-gray-200">
-                  {/* ✅ Mobile wishlist with badge */}
+                  {/* Mobile wishlist with badge */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -854,10 +856,10 @@ export default function NavBar() {
         )}
       </header>
 
-      {/* ✅ Floating WhatsApp Button (expand-on-hover/touch) */}
+      {/* Floating WhatsApp Button */}
       <WhatsAppFab href={waHref} />
 
-      {/* ✅ Floating Ask AI Button (mirrors WhatsApp behavior) */}
+      {/* Floating Ask AI Button */}
       <AIFab onClick={handleOpenAI} />
     </>
   );
@@ -918,8 +920,8 @@ const WhatsAppWrapper = styled.div`
     overflow: hidden;
     transition-duration: 0.3s;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
-    background-color: #00d757; /* WhatsApp green */
-    text-decoration: none; /* because it's an <a> */
+    background-color: #00d757;
+    text-decoration: none;
   }
 
   .sign {
@@ -973,7 +975,6 @@ const WhatsAppWrapper = styled.div`
     transform: translate(2px, 2px);
   }
 
-  /* Mobile: expand on focus/active for no-hover devices */
   @media (hover: none) and (pointer: coarse) {
     .Btn:focus,
     .Btn:active {
@@ -1006,7 +1007,6 @@ function AIFab({ onClick, label = "Ask AI" }) {
         className="Btn"
       >
         <div className="sign">
-          {/* You can swap this icon for your preferred AI icon */}
           <svg viewBox="0 0 24 24" className="aiSvg" aria-hidden="true">
             <g fill="currentColor">
               <path d="M19 2a1 1 0 0 1 .9.56l.35 1.03 1.03.35a1 1 0 0 1 0 1.89l-1.03.35-.35 1.03a1 1 0 0 1-1.89 0l-.35-1.03-1.03-.35a1 1 0 0 1 0-1.89l1.03-.35.35-1.03A1 1 0 0 1 19 2Z"/>
@@ -1036,7 +1036,7 @@ const AIFabWrapper = styled.div`
     overflow: hidden;
     transition-duration: 0.3s;
     box-shadow: 2px 2px 10px rgba(0,0,0,0.199);
-    background: #111; /* AI theme */
+    background: #111;
     color: #fff;
   }
 
@@ -1054,15 +1054,15 @@ const AIFabWrapper = styled.div`
   }
 
   .text {
-    position: absolute;
-    right: 0%;
-    width: 0%;
-    opacity: 0;
-    color: white;
-    font-size: 1.05em;
-    font-weight: 600;
-    transition-duration: 0.3s;
-    letter-spacing: 0.2px;
+    position: absolute,
+    right: 0%,
+    width: 0%,
+    opacity: 0,
+    color: white,
+    font-size: 1.05em,
+    font-weight: 600,
+    transition-duration: 0.3s,
+    letter-spacing: 0.2px,
     white-space: nowrap;
   }
 
@@ -1087,7 +1087,6 @@ const AIFabWrapper = styled.div`
     transform: translate(2px, 2px);
   }
 
-  /* Mobile: expand on focus/active for no-hover devices */
   @media (hover: none) and (pointer: coarse) {
     .Btn:focus,
     .Btn:active {

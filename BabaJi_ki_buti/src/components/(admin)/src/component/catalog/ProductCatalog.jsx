@@ -84,12 +84,15 @@ const stockBand = (n) => (n >= 50 ? "High" : n >= 15 ? "Medium" : "Low");
 const getStatusColor = (s) =>
   s === "Published" ? "bg-green-100 text-green-700"
     : s === "Scheduled" ? "bg-orange-100 text-orange-700"
-    : "bg-gray-100 text-gray-700";
+      : "bg-gray-100 text-gray-700";
 
 const getStockColor = (s) =>
   s === "High" ? "bg-green-100 text-green-700"
     : s === "Medium" ? "bg-orange-100 text-orange-700"
-    : "bg-red-100 text-red-700";
+      : "bg-red-100 text-red-700";
+
+const stockClassFromCount = (n) => getStockColor(stockBand(Number(n || 0)));
+
 
 /* ---------------------- component ---------------------- */
 export default function ProductCatalog() {
@@ -116,9 +119,9 @@ export default function ProductCatalog() {
           const category =
             Array.isArray(p.categories) && p.categories.length
               ? p.categories
-                  .map((c) => c.categoryName || c.name || c.title || "")
-                  .filter(Boolean)
-                  .join(", ")
+                .map((c) => c.categoryName || c.name || c.title || "")
+                .filter(Boolean)
+                .join(", ")
               : "Uncategorized";
           const variantsCount = Array.isArray(p.variants) ? p.variants.length : 0;
 
@@ -161,9 +164,9 @@ export default function ProductCatalog() {
               p.mrp && p.sellingPrice
                 ? `${formatINR0(p.sellingPrice)} (MRP ${formatINR0(p.mrp)})`
                 : p.sellingPrice
-                ? `${formatINR0(p.sellingPrice)}`
-                : "—",
-            stock: stockBand(Number(p.stock ?? 0)),
+                  ? `${formatINR0(p.sellingPrice)}`
+                  : "—",
+            stock: Number(p.stock ?? 0),
             updated: updatedAt,
           };
         });
@@ -203,10 +206,10 @@ export default function ProductCatalog() {
     published: products.filter((p) => p.status === "Published").length,
     publishedPercent: products.length
       ? `${Math.round(
-          (products.filter((p) => p.status === "Published").length / products.length) * 100
-        )}% of total products`
+        (products.filter((p) => p.status === "Published").length / products.length) * 100
+      )}% of total products`
       : "—",
-    lowStock: products.filter((p) => p.stock === "Low").length,
+    lowStock: products.filter((p) => stockBand(p.stock) === "Low").length,
     lowStockNote: "Requires attention",
     avgPrice: (() => {
       const nums = products
@@ -375,10 +378,11 @@ export default function ProductCatalog() {
                       <td className="px-6 py-4 text-sm text-gray-700">{product.variants} variants</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{product.priceRange}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStockColor(product.stock)}`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${stockClassFromCount(product.stock)}`}>
                           {product.stock}
                         </span>
                       </td>
+
                       <td className="px-6 py-4 text-sm text-gray-500">
                         <span title={fmtAbsDateTime(product.updated)}>
                           {getRelativeTime(product.updated)}

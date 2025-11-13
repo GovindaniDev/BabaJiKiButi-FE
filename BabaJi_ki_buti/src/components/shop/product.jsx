@@ -1,7 +1,6 @@
-// src/page/products/ShopNow.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { getAllProducts } from "../../auth/product/products";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { getAllProducts, getProductsByCategoryId } from "../../auth/product/products";
 import { InfiniteNewsTicker } from "../../sections/HeroSection";
 import {
   Star,
@@ -12,11 +11,12 @@ import {
   X,
   RefreshCcw,
   BadgePercent,
-  Search,
+  Search as SearchIcon,
   Heart,
   Sparkles,
   Flame,
-  Tag,
+  BadgeCheck,
+  TrendingUp,
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -49,6 +49,22 @@ const PLACEHOLDER =
 const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
 
 const norm = (s) => (s ?? "")?.toString()?.trim()?.toLowerCase();
+const upper = (s) => (s ?? "")?.toString()?.trim()?.toUpperCase();
+
+// Get all category names from ProductDto.categories (Set<CategoryDto>)
+const categoryNamesOf = (p) => {
+  const set = new Set();
+  // existing loose fields if present
+  const loose = p?.category || p?.categoryName || p?.categoryEn || p?.type;
+  if (loose) set.add(String(loose));
+  // Set<CategoryDto>
+  const cats = Array.isArray(p?.categories) ? p?.categories : [...(p?.categories ?? [])];
+  cats.forEach((c) => {
+    const n = c?.categoryName ?? c?.name;
+    if (n) set.add(String(n));
+  });
+  return Array.from(set);
+};
 
 const getRating = (p) => {
   if (!p) return 0;
@@ -68,21 +84,37 @@ const getReviewCount = (p) => {
 };
 
 const isNew = (p) => {
-  const dt = p?.createdAt ? new Date(p.createdAt) : null;
-  if (!dt || Number.isNaN(+dt)) return false;
-  const days = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
-  return days <= 30; // new within 30 days
-};
-
-const isTrending = (p) => {
-  const tags = new Set(
+  const tagSetU = new Set(
     [
       ...(p?.tags || []),
       ...(p?.tagsEn || []),
       ...(p?.tagsHi || []),
-    ].map(norm)
+    ].map(upper)
   );
-  return Boolean(p?.trending || p?.isTrending || tags.has("trending"));
+  if (tagSetU.has("NEW")) return true;
+
+  const dt = p?.createdAt ? new Date(p.createdAt) : null;
+  if (!dt || Number.isNaN(+dt)) return false;
+  const days = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
+  return days <= 30;
+};
+
+const tagFlags = (p) => {
+  const tagSetU = new Set(
+    [
+      ...(p?.tags || []),
+      ...(p?.tagsEn || []),
+      ...(p?.tagsHi || []),
+    ].map(upper)
+  );
+  return {
+    bestseller:
+      tagSetU.has("BESTSELLER") || Boolean(p?.bestseller || p?.isBestseller),
+    trending:
+      tagSetU.has("TRENDING") || Boolean(p?.trending || p?.isTrending),
+    hot: tagSetU.has("HOT_ITEM") || Boolean(p?.hot || p?.isHot),
+    isNew: isNew(p),
+  };
 };
 
 /* -------------------------- motion variants -------------------------- */
@@ -128,38 +160,60 @@ export default function ShopNow() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [ratingAtLeast, setRatingAtLeast] = useState(0);
   const [sort, setSort] = useState("relevance");
+
+  // 🔽 Autocomplete local state
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchBoxRef = useRef(null);
+  const inputRef = useRef(null);
 
   const headerRef = useRef(null);
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
+  const location = useLocation();
 
+  // Read params and fetch (all or by categoryId) when the URL changes
   useEffect(() => {
-    let mounted = true;
-    const MIN_LOADER_MS = 700;
+    let alive = true;
+    const params = new URLSearchParams(location.search);
+    const categoryId = params.get("categoryId"); // server-side fetch
+    const MIN_LOADER_MS = 500;
     const start = Date.now();
+
+    setLoading(true);
+    setError("");
 
     (async () => {
       try {
-        const data = await getAllProducts();
-        if (mounted) setProducts(Array.isArray(data) ? data : []);
-      } catch {
-        if (mounted) setError("Could not load products. Please try again.");
+        if (categoryId) {
+          // server-side: fetch only that category
+          const { items } = await getProductsByCategoryId(categoryId, { page: 0, size: 100 });
+          if (alive) setProducts(Array.isArray(items) ? items : []);
+        } else {
+          // client-side: fetch all
+          const data = await getAllProducts();
+          if (alive) setProducts(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        if (alive) {
+          setProducts([]);
+          setError("Could not load products. Please try again.");
+        }
       } finally {
         const elapsed = Date.now() - start;
         const delay = Math.max(0, MIN_LOADER_MS - elapsed);
-        const timer = setTimeout(() => {
-          if (mounted) setLoading(false);
+        const t = setTimeout(() => {
+          if (alive) setLoading(false);
         }, delay);
-        return () => clearTimeout(timer);
+        // cleanup the timeout
+        if (!alive) clearTimeout(t);
       }
     })();
 
     return () => {
-      mounted = false;
+      alive = false;
     };
-  }, []);
+  }, [location.search]);
 
   // ✅ Warm wishlist cache for instant heart state
   useEffect(() => {
@@ -212,10 +266,7 @@ export default function ShopNow() {
 
   const categoryOptions = useMemo(() => {
     const set = new Set();
-    products.forEach((p) => {
-      const cat = p?.category || p?.categoryName || p?.categoryEn || p?.type;
-      if (cat) set.add(cat.toString());
-    });
+    products.forEach((p) => categoryNamesOf(p).forEach((n) => set.add(n)));
     return Array.from(set);
   }, [products]);
 
@@ -236,7 +287,18 @@ export default function ShopNow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceStats]);
 
-  // ✅ Whenever filters/search change, go back to page 1
+  // ✅ Pick up ?category=Name from URL and apply filter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const categoryName = params.get("category");
+    if (categoryName) {
+      setSelectedCategories([categoryName]);
+      setQuery("");
+      setPage(1);
+    }
+  }, [location.search]);
+
+  // keep pagination sane on filter changes
   useEffect(() => {
     setPage(1);
   }, [
@@ -244,26 +306,35 @@ export default function ShopNow() {
     selectedCategories,
     selectedTags,
     inStockOnly,
-    ratingAtLeast,
     minPrice,
     maxPrice,
     sort,
   ]);
 
+  // 🔎 Smarter search: also matches category + description fields
   const filtered = useMemo(() => {
     let list = [...products];
 
     const q = norm(query);
     if (q)
       list = list.filter((p) => {
+        const cat = categoryNamesOf(p).join(" ");
+        const desc =
+          p?.description ||
+          p?.shortDescription ||
+          p?.longDescription ||
+          p?.details ||
+          "";
         const hay = [
           p.productName,
           p.name,
           p.title,
+          cat,
           ...(p?.tags || []),
           ...(p?.tagsEn || []),
           ...(p?.tagsHi || []),
           p?.benefits?.join?.(" ") || "",
+          desc,
         ]
           .filter(Boolean)
           .map(norm)
@@ -275,10 +346,8 @@ export default function ShopNow() {
     if (selectedCategories.length > 0) {
       const chosen = new Set(selectedCategories.map(norm));
       list = list.filter((p) => {
-        const cat = norm(
-          p?.category || p?.categoryName || p?.categoryEn || p?.type
-        );
-        return chosen.has(cat);
+        const names = categoryNamesOf(p).map(norm);
+        return names.some((n) => chosen.has(n));
       });
     }
 
@@ -299,7 +368,6 @@ export default function ShopNow() {
     }
 
     if (inStockOnly) list = list.filter((p) => Number(p?.stock ?? 0) > 0);
-    if (ratingAtLeast > 0) list = list.filter((p) => getRating(p) >= ratingAtLeast);
 
     list = list.filter((p) => {
       const price = Number(p?.sellingPrice || p?.price || 0);
@@ -322,8 +390,7 @@ export default function ShopNow() {
     else if (sort === "reviews") list.sort((a, b) => getRating(b) - getRating(a));
     else if (sort === "newest")
       list.sort(
-        (a, b) =>
-          new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
+        (a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
       );
 
     return list;
@@ -331,7 +398,6 @@ export default function ShopNow() {
     products,
     query,
     inStockOnly,
-    ratingAtLeast,
     minPrice,
     maxPrice,
     sort,
@@ -339,10 +405,65 @@ export default function ShopNow() {
     selectedTags,
   ]);
 
+  // ✨ Autocomplete: build suggestions from names, categories, tags
+  const suggestions = useMemo(() => {
+    const q = norm(query);
+    if (!q) return [];
+
+    const names = new Set();
+    const cats = new Set(categoryOptions);
+    const tags = new Set(tagOptions);
+
+    products.forEach((p) => {
+      const n = p?.productName || p?.name || p?.title;
+      if (n) names.add(n.toString());
+    });
+
+    const all = [
+      ...Array.from(names).map((v) => ({ type: "Product", value: v })),
+      ...Array.from(cats).map((v) => ({ type: "Category", value: v })),
+      ...Array.from(tags).map((v) => ({ type: "Tag", value: v })),
+    ];
+
+    const matched = all.filter((s) => norm(s.value).includes(q));
+
+    const scored = matched
+      .map((s) => {
+        const v = norm(s.value);
+        let score = 0;
+        if (v === q) score += 100;
+        if (v.startsWith(q)) score += 20;
+        if (s.type === "Product") score += 10;
+        if (s.type === "Category") score += 5;
+        return { ...s, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12);
+
+    const seen = new Set();
+    return scored.filter((s) => {
+      if (seen.has(s.value)) return false;
+      seen.add(s.value);
+      return true;
+    });
+  }, [query, products, categoryOptions, tagOptions]);
+
   const perPage = 12;
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const safePage = clamp(page, 1, totalPages);
   const visible = filtered.slice((safePage - 1) * perPage, safePage * perPage);
+
+  // close autocomplete when clicking outside
+  useEffect(() => {
+    const onClick = (e) => {
+      if (!searchBoxRef.current) return;
+      if (!searchBoxRef.current.contains(e.target)) {
+        setSearchFocused(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
 
   /* ------------------------------ render ------------------------------ */
   if (loading) return <Loader />;
@@ -374,52 +495,100 @@ export default function ShopNow() {
         ref={headerRef}
         className="relative pt-16 sm:pt-20 pb-10 overflow-hidden text-center sm:text-right"
         style={{
-          backgroundImage: `url('/images/shopbg.jpg')`,
+          backgroundImage: `url('/images/shop-hero1.png')`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#f5d5b3]/40 -z-10" />
+        <div className="absolute inset-0 bg-black/50 sm:bg-black/55 -z-10" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
           <h1
             data-stagger
-            className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-amber-200 tracking-tight drop-shadow"
+            className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-yellow-300 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
           >
             Shop Ayurvedic Products
           </h1>
           <p
             data-stagger
-            className="mt-3 text-[#4a2e16] font-semibold text-base sm:text-lg md:text-xl"
+            className="mt-3 text-amber-200/95 font-semibold text-base sm:text-lg md:text-xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
           >
-            Curated range inspired by ancient wisdom, crafted for modern
-            wellness.
+            Curated range inspired by ancient wisdom, crafted for modern wellness.
           </p>
 
+          {/* Search with Autocomplete */}
           <motion.div
             data-stagger
             whileHover={!prefersReducedMotion ? hoverScale : undefined}
             whileTap={!prefersReducedMotion ? tapScale : undefined}
             className="mt-6 sm:mt-8 flex flex-wrap justify-center sm:justify-end gap-3"
           >
-            <div className="relative w-full sm:w-2/3 md:w-1/2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
+            <div
+              ref={searchBoxRef}
+              className="relative w-full sm:w-2/3 md:w-1/2"
+            >
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-200/90 w-5 h-5" />
               <input
+                ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, tag, benefit..."
-                className="w-full pl-10 pr-3 py-2 sm:py-2.5 rounded-xl border border-amber-200 bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm sm:text-base"
+                onFocus={() => setSearchFocused(true)}
+                placeholder="Search by name, category, tag, benefit, description..."
+                className="w-full pl-10 pr-3 py-2 sm:py-2.5 rounded-xl border border-amber-300/60 bg-white/85 focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm sm:text-base"
               />
+
+              {/* Autocomplete dropdown */}
+              <AnimatePresence>
+                {searchFocused && query && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="absolute z-20 mt-2 w-full bg-white border border-amber-200/60 rounded-xl shadow-lg overflow-hidden"
+                  >
+                    <ul className="max-h-72 overflow-auto py-1">
+                      {suggestions.map((s, idx) => (
+                        <li key={`${s.type}-${s.value}-${idx}`}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              // If user picks a category from suggestions, apply as category filter
+                              if (s.type === "Category") {
+                                setSelectedCategories([s.value]);
+                                setQuery("");
+                                const url = new URL(window.location.href);
+                                url.searchParams.set("category", s.value);
+                                window.history.replaceState({}, "", url.toString());
+                              } else {
+                                setQuery(s.value);
+                              }
+                              setSearchFocused(false);
+                              inputRef.current?.blur();
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 flex items-center gap-2"
+                          >
+                            <span className="inline-flex items-center justify-center text-[11px] px-1.5 py-0.5 rounded-full border border-amber-300/70 bg-amber-100/60 text-amber-900">
+                              {s.type}
+                            </span>
+                            <span className="truncate">{s.value}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
 
           <div className="mt-4 flex items-center gap-3 justify-center sm:justify-end">
-            <label className="text-xs sm:text-sm text-slate-900/80">Sort:</label>
+            <label className="text-xs sm:text-sm text-amber-200/90">Sort:</label>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="px-2 py-1.5 rounded-lg border border-amber-200 bg-white text-sm"
+              className="px-2 py-1.5 rounded-lg border border-amber-300/60 bg-white text-sm"
             >
               <option value="relevance">Relevance</option>
               <option value="newest">Newest</option>
@@ -429,7 +598,7 @@ export default function ShopNow() {
             </select>
           </div>
 
-          <p className="mt-3 text-xs sm:text-sm text-slate-100">
+          <p className="mt-3 text-xs sm:text-sm text-amber-100/95">
             Showing <span className="font-semibold">{visible.length}</span> of{" "}
             {filtered.length} results
           </p>
@@ -445,14 +614,24 @@ export default function ShopNow() {
               <FiltersPanel
                 categoryOptions={categoryOptions}
                 selectedCategories={selectedCategories}
-                setSelectedCategories={setSelectedCategories}
+                setSelectedCategories={(next) => {
+                  // sync URL with selected categories (taking first one for URL)
+                  if (Array.isArray(next) && next.length > 0) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("category", next[0]);
+                    window.history.replaceState({}, "", url.toString());
+                  } else {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete("category");
+                    window.history.replaceState({}, "", url.toString());
+                  }
+                  return setSelectedCategories(next);
+                }}
                 priceStats={priceStats}
                 minPrice={minPrice}
                 setMinPrice={setMinPrice}
                 maxPrice={maxPrice}
                 setMaxPrice={setMaxPrice}
-                ratingAtLeast={ratingAtLeast}
-                setRatingAtLeast={setRatingAtLeast}
                 inStockOnly={inStockOnly}
                 setInStockOnly={setInStockOnly}
                 tagOptions={tagOptions}
@@ -463,10 +642,12 @@ export default function ShopNow() {
                   setSelectedCategories([]);
                   setSelectedTags([]);
                   setInStockOnly(false);
-                  setRatingAtLeast(0);
                   setMinPrice(priceStats.min);
                   setMaxPrice(priceStats.max);
                   setSort("relevance");
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("category");
+                  window.history.replaceState({}, "", url.toString());
                 }}
               />
             </div>
@@ -526,14 +707,23 @@ export default function ShopNow() {
                       <FiltersPanel
                         categoryOptions={categoryOptions}
                         selectedCategories={selectedCategories}
-                        setSelectedCategories={setSelectedCategories}
+                        setSelectedCategories={(next) => {
+                          if (Array.isArray(next) && next.length > 0) {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("category", next[0]);
+                            window.history.replaceState({}, "", url.toString());
+                          } else {
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete("category");
+                            window.history.replaceState({}, "", url.toString());
+                          }
+                          return setSelectedCategories(next);
+                        }}
                         priceStats={priceStats}
                         minPrice={minPrice}
                         setMinPrice={setMinPrice}
                         maxPrice={maxPrice}
                         setMaxPrice={setMaxPrice}
-                        ratingAtLeast={ratingAtLeast}
-                        setRatingAtLeast={setRatingAtLeast}
                         inStockOnly={inStockOnly}
                         setInStockOnly={setInStockOnly}
                         tagOptions={tagOptions}
@@ -544,10 +734,12 @@ export default function ShopNow() {
                           setSelectedCategories([]);
                           setSelectedTags([]);
                           setInStockOnly(false);
-                          setRatingAtLeast(0);
                           setMinPrice(priceStats.min);
                           setMaxPrice(priceStats.max);
                           setSort("relevance");
+                          const url = new URL(window.location.href);
+                          url.searchParams.delete("category");
+                          window.history.replaceState({}, "", url.toString());
                         }}
                       />
                     </div>
@@ -556,9 +748,10 @@ export default function ShopNow() {
               )}
             </AnimatePresence>
 
+            {/* ✅ Mobile grid fix: 1 col on phones, 2 on sm, 3 on md+ */}
             <div
               ref={gridRef}
-              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-x-5 sm:gap-x-7 gap-y-10 sm:gap-y-12 pt-8"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-5 sm:gap-x-7 gap-y-10 sm:gap-y-12 pt-8"
             >
               {visible.map((p) => (
                 <ProductCard
@@ -659,7 +852,7 @@ function ProductCard({ product: p, userId }) {
 
   const productId = p?.id ?? p?.productId;
 
-  // ⬇️ Quantity state (like Product page)
+  // ⬇️ Quantity state
   const stock = Math.max(0, Number(p?.stock ?? 0));
   const MAX_QTY = stock > 0 ? Math.min(stock, 10) : 10;
   const [qty, setQty] = useState(1);
@@ -711,7 +904,6 @@ function ProductCard({ product: p, userId }) {
     }
   };
 
-  // ✅ Fixed Buy Now flow (like Product page)
   const handleBuyNow = async () => {
     if (!productId) return;
     const addressUrl = "/address?buynow=1";
@@ -728,7 +920,7 @@ function ProductCard({ product: p, userId }) {
       return;
     }
     try {
-      await cartApi.addItem(userId, productId, qty); // ensure item in server cart with selected qty
+      await cartApi.addItem(userId, productId, qty);
       window.dispatchEvent(new CustomEvent("cart:changed"));
       navigate(addressUrl);
     } catch (e) {
@@ -746,17 +938,43 @@ function ProductCard({ product: p, userId }) {
       return;
     }
     try {
-      // optimistic
       setWish((v) => !v);
       const res = await wishlistApi.toggle(userId, productId);
-      setWish(!!res.added); // finalize
+      setWish(!!res.added);
     } catch (err) {
       console.error(err);
-      // revert on error
       setWish((v) => !v);
       alert(err?.message || "Couldn't update wishlist.");
     }
   };
+
+  const flags = tagFlags(p);
+  const topBadges = [
+    flags.bestseller && {
+      key: "BESTSELLER",
+      label: "Bestseller",
+      Icon: BadgeCheck,
+      color: "bg-emerald-600 text-white",
+    },
+    flags.trending && {
+      key: "TRENDING",
+      label: "Trending",
+      Icon: TrendingUp,
+      color: "bg-rose-600 text-white",
+    },
+    flags.isNew && {
+      key: "NEW",
+      label: "New",
+      Icon: Sparkles,
+      color: "bg-amber-500 text-black",
+    },
+    flags.hot && {
+      key: "HOT_ITEM",
+      label: "Hot Item",
+      Icon: Flame,
+      color: "bg-orange-600 text-white",
+    },
+  ].filter(Boolean);
 
   return (
     <motion.article
@@ -768,16 +986,11 @@ function ProductCard({ product: p, userId }) {
       <div className="relative rounded-t-2xl overflow-hidden p-2">
         {/* Top-left badges */}
         <div className="absolute left-3 top-3 z-10 flex gap-1.5 flex-wrap max-w-[80%]">
-          {isTrending(p) && (
-            <Badge icon={Flame} color="bg-rose-600 text-white">
-              Trending
+          {topBadges.map((b) => (
+            <Badge key={b.key} icon={b.Icon} color={b.color}>
+              {b.label}
             </Badge>
-          )}
-          {isNew(p) && (
-            <Badge icon={Sparkles} color="bg-amber-500 text-black">
-              New
-            </Badge>
-          )}
+          ))}
         </div>
 
         {/* Wishlist button */}
@@ -808,7 +1021,7 @@ function ProductCard({ product: p, userId }) {
         </Link>
       </div>
 
-      {/* Card body – order: rating → name → price → qty → buttons → tags */}
+      {/* Card body */}
       <div className="px-3 pb-3 pt-1 text-center">
         <div className="mt-1 flex justify-center items-center gap-1">
           <Stars value={ratingVal} size={14} />
@@ -837,7 +1050,7 @@ function ProductCard({ product: p, userId }) {
           )}
         </div>
 
-        {/* Quantity selector (compact, like Product page) */}
+        {/* Quantity selector (compact) */}
         <div className="mt-3 flex items-center justify-center gap-3">
           <div className="inline-flex items-center border border-amber-200 rounded-lg overflow-hidden">
             <button
@@ -896,29 +1109,6 @@ function ProductCard({ product: p, userId }) {
             {adding ? "Adding..." : added ? "Added ✓" : "Add to Cart"}
           </button>
         </div>
-
-        {/* Tag strip */}
-        <div className="mt-3 flex items-center justify-center gap-2 flex-wrap min-h-[22px]">
-          {p?.tags || p?.tagsEn || p?.tagsHi ? (
-            Array.from(
-              new Set([...(p?.tags || []), ...(p?.tagsEn || []), ...(p?.tagsHi || [])])
-            )
-              .slice(0, 3)
-              .map((t) => (
-                <span
-                  key={t}
-                  className="text-[10px] px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-700"
-                >
-                  #{t}
-                </span>
-              ))
-          ) : (
-            <span className="text-[10px] px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-700">
-              <Tag className="inline w-3 h-3 mr-1" />
-              wellness
-            </span>
-          )}
-        </div>
       </div>
     </motion.article>
   );
@@ -935,8 +1125,6 @@ function FiltersPanel(props) {
     setMinPrice = () => {},
     maxPrice = 0,
     setMaxPrice = () => {},
-    ratingAtLeast = 0,
-    setRatingAtLeast = () => {},
     inStockOnly = false,
     setInStockOnly = () => {},
     tagOptions = [],
@@ -997,8 +1185,7 @@ function FiltersPanel(props) {
         <div id={panelId} aria-labelledby={summaryId} className="space-y-4">
           {(selectedCategories.length > 0 ||
             selectedTags.length > 0 ||
-            inStockOnly ||
-            ratingAtLeast > 0) && (
+            inStockOnly) && (
             <div className="bg-white border border-neutral-200 rounded-xl p-3 sm:p-4">
               <div className="flex flex-wrap gap-2 text-xs">
                 {selectedCategories.map((c) => (
@@ -1022,39 +1209,11 @@ function FiltersPanel(props) {
                     In stock
                   </span>
                 )}
-                {ratingAtLeast > 0 && (
-                  <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800">
-                    {ratingAtLeast}★ & up
-                  </span>
-                )}
               </div>
             </div>
           )}
 
-          {Array.isArray(categoryOptions) && categoryOptions.length > 0 && (
-            <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
-              <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
-                <Filter className="w-4 h-4" /> Category
-              </summary>
-              <div className="mt-3 sm:mt-4 max-h-48 overflow-auto pr-1 space-y-2">
-                {categoryOptions.map((c) => (
-                  <label key={c} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(c)}
-                      onChange={(e) =>
-                        setSelectedCategories((prev = []) =>
-                          e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)
-                        )
-                      }
-                    />
-                    <span className="truncate">{c}</span>
-                  </label>
-                ))}
-              </div>
-            </details>
-          )}
-
+          {/* Price */}
           <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
             <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
               <BadgePercent className="w-4 h-4" /> Price
@@ -1110,38 +1269,32 @@ function FiltersPanel(props) {
             </p>
           </details>
 
-          <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
-            <summary className="cursor-pointer list-none font-medium">
-              Customer Reviews
-            </summary>
-            <div className="mt-3">
-              {[5, 4, 3, 2, 1].map((r) => (
-                <label
-                  key={r}
-                  className="flex items-center gap-2 text-sm mb-1 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="rating"
-                    checked={ratingAtLeast === r}
-                    onChange={() => setRatingAtLeast(r)}
-                  />
-                  <span className="flex items-center gap-1">
-                    <Stars value={r} />{" "}
-                    <span className="text-xs text-neutral-600">&nbsp;and up</span>
-                  </span>
-                </label>
-              ))}
-              <button
-                onClick={() => setRatingAtLeast(0)}
-                className="mt-2 text-xs hover:underline"
-                type="button"
-              >
-                Clear
-              </button>
-            </div>
-          </details>
+          {/* ✅ Category */}
+          {Array.isArray(categoryOptions) && categoryOptions.length > 0 && (
+            <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
+              <summary className="cursor-pointer list-none flex items-center gap-2 font-medium">
+                <Filter className="w-4 h-4" /> Category
+              </summary>
+              <div className="mt-3 sm:mt-4 max-h-48 overflow-auto pr-1 space-y-2">
+                {categoryOptions.map((c) => (
+                  <label key={c} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(c)}
+                      onChange={(e) =>
+                        setSelectedCategories((prev = []) =>
+                          e.target.checked ? [...prev, c] : prev.filter((x) => x !== c)
+                        )
+                      }
+                    />
+                    <span className="truncate">{c}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          )}
 
+          {/* Availability */}
           <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
             <summary className="cursor-pointer list-none font-medium">
               Availability
@@ -1158,6 +1311,7 @@ function FiltersPanel(props) {
             </div>
           </details>
 
+          {/* Popular Tags (these are general product tags; keep or remove as you prefer) */}
           {Array.isArray(tagOptions) && tagOptions.length > 0 && (
             <details className="bg-white rounded-xl border border-neutral-200 p-4 sm:p-5" open>
               <summary className="cursor-pointer list-none font-medium">
