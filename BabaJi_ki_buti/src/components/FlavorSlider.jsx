@@ -193,15 +193,25 @@ function themeFor(flavor, idx = 0) {
 }
 
 /* ---------- Per-theme button ---------- */
-function ThemeButton({ theme, to, label = "Buy Now" }) {
+// change signature
+function ThemeButton({ theme, to, label = "Buy Now", compact = false }) {
   const { key, from, to: toCol, text, border, ring, glow, glowH } = theme;
 
-  const baseStyle = {
-    boxShadow: `0 0 0 1px ${ring} inset, 0 10px 24px ${glow}, 0 0 22px ${glow}`,
-    filter: `drop-shadow(0 6px 14px ${glow})`,
-    backgroundColor: "transparent",
-  };
+  // softer shadows for mobile
+  const baseStyle = compact
+    ? {
+        boxShadow: `0 0 0 1px ${ring} inset, 0 4px 10px ${glow}`,
+        filter: `drop-shadow(0 2px 6px ${glow})`,
+        backgroundColor: "transparent",
+      }
+    : {
+        boxShadow: `0 0 0 1px ${ring} inset, 0 10px 24px ${glow}, 0 0 22px ${glow}`,
+        filter: `drop-shadow(0 6px 14px ${glow})`,
+        backgroundColor: "transparent",
+      };
+
   const onEnter = (e) => {
+    if (compact) return; // no hover glow boost on mobile
     e.currentTarget.style.boxShadow = `0 0 0 1px ${ring} inset, 0 14px 32px ${glowH}, 0 0 28px ${glowH}`;
     e.currentTarget.style.filter = `drop-shadow(0 8px 18px ${glowH})`;
   };
@@ -210,27 +220,11 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
     e.currentTarget.style.filter = baseStyle.filter;
   };
 
-  const Arrow = (
-    <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M13 5l7 7-7 7M5 12h14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-  const Leaf = (
-    <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5 19c8-1 13-6 14-14 0 0-9 1-13 5S5 19 5 19Z" />
-    </svg>
-  );
-  const Spark = (
-    <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z" />
-    </svg>
-  );
-  const Heart = (
-    <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12.1 21.35l-1.1-1.02C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4 8 4 9.4 4.8 10.1 6c.7-1.2 2.1-2 3.6-2C16 4 18 6 18 8.5c0 3.78-3.4 6.86-8.9 11.83l-1 1.02z" />
-    </svg>
-  );
+  // handy size classes for compact mode
+  const sizeCls = compact ? "px-4 py-2 text-sm rounded-lg" : "px-6 py-3 rounded-full text-base";
 
+  // ↓ inside each return, replace hardcoded paddings/sizes with sizeCls
+  // Example for one branch (do similarly in the other cases):
   switch (key) {
     case "black":
       return (
@@ -239,177 +233,51 @@ function ThemeButton({ theme, to, label = "Buy Now" }) {
           aria-label={label}
           onMouseEnter={onEnter}
           onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: `linear-gradient(90deg, ${from}, ${toCol})`,
-            borderColor: border,
-          }}
-          className="
-            relative group inline-flex items-center justify-center
-            px-6 py-3 rounded-full border-2 font-semibold text-base tracking-wide
-            transition-all duration-300 hover:scale-110 active:scale-95
-          "
+          style={{ ...baseStyle, color: text, backgroundImage: `linear-gradient(90deg, ${from}, ${toCol})`, borderColor: border }}
+          className={`relative group inline-flex items-center justify-center border-2 font-semibold tracking-wide transition-all duration-300 ${sizeCls} ${compact ? "" : "hover:scale-110 active:scale-95"}`}
         >
           <span className="relative z-[1]">Buy Now</span>
-          {Arrow}
-          <span
-            className="pointer-events-none absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{
-              background:
-                "linear-gradient(75deg, rgba(255,255,255,.0) 30%, rgba(255,255,255,.25) 50%, rgba(255,255,255,.0) 70%)",
-              transform: "translateX(-120%)",
-              animation: "sheen 1s ease-in-out forwards",
-            }}
-          />
-          <style>{`@keyframes sheen { to { transform: translateX(120%); } }`}</style>
+          {!compact && (
+            <>
+              <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 5l7 7-7 7M5 12h14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="pointer-events-none absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "linear-gradient(75deg, rgba(255,255,255,.0) 30%, rgba(255,255,255,.25) 50%, rgba(255,255,255,.0) 70%)", transform: "translateX(-120%)", animation: "sheen 1s ease-in-out forwards" }} />
+              <style>{`@keyframes sheen { to { transform: translateX(120%); } }`}</style>
+            </>
+          )}
         </Link>
       );
-
     case "green":
-      return (
-        <Link
-          to={to}
-          aria-label={label}
-          onMouseEnter={onEnter}
-          onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: `linear-gradient(180deg, ${from}, ${toCol})`,
-            borderColor: border,
-            backdropFilter: "saturate(120%) blur(2px)",
-          }}
-          className="
-            inline-flex items-center justify-center px-6 py-3 rounded-full border font-semibold
-            transition-all duration-300 hover:translate-y-[-2px] active:scale-95
-          "
-        >
-          <span>Buy Now</span>
-          {Leaf}
-        </Link>
-      );
-
     case "darkGreen":
-      return (
-        <Link
-          to={to}
-          aria-label={label}
-          onMouseEnter={onEnter}
-          onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: `linear-gradient(180deg, ${from}, ${toCol})`,
-            borderColor: border,
-            backdropFilter: "saturate(140%) blur(2px)",
-          }}
-          className="
-            inline-flex items-center justify-center px-6 py-3 rounded-full border font-semibold
-            transition-all duration-300 hover:translate-y-[-2px] active:scale-95
-          "
-        >
-          <span>Buy Now</span>
-          {Leaf}
-        </Link>
-      );
-
     case "maroon":
-      return (
-        <Link
-          to={to}
-          aria-label={label}
-          onMouseEnter={onEnter}
-          onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: `linear-gradient(90deg, ${from}, ${toCol})`,
-            borderColor: border,
-          }}
-          className="
-            relative inline-flex items-center justify-center px-7 py-3 rounded-xl border font-semibold
-            transition-all duration-300 hover:translate-y-[-1px] active:scale-95 overflow-hidden
-          "
-        >
-          <span
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "linear-gradient( to bottom, rgba(255,255,255,.35), rgba(255,255,255,.05) 45%, rgba(0,0,0,.08) 46%, rgba(0,0,0,.0) )",
-              mixBlendMode: "soft-light",
-            }}
-          />
-          <span className="relative z-[1]">Buy Now</span>
-          {Heart}
-          <span
-            className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rotate-45"
-            style={{ background: toCol }}
-          />
-        </Link>
-      );
-
     case "blue":
+    case "gold":
       return (
         <Link
           to={to}
           aria-label={label}
           onMouseEnter={onEnter}
           onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: "none",
-            backgroundColor: "rgba(255,255,255,.08)",
-            borderColor: border,
-            backdropFilter: "blur(6px)",
-          }}
-          className="
-            inline-flex items-center justify-center px-6 py-3 rounded-2xl border font-semibold
-            transition-all duration-300 hover:scale-110 active:scale-95
-          "
+          style={{ ...baseStyle, color: text, backgroundImage: `linear-gradient(90deg, ${from}, ${toCol})`, borderColor: border }}
+          className={`relative group inline-flex items-center justify-center border-2 font-semibold tracking-wide transition-all duration-300 ${sizeCls} ${compact ? "" : "hover:scale-110 active:scale-95"}`}
         >
-          <span>Buy Now</span>
-          {Spark}
-        </Link>
-      );
-
-    default:
-      return (
-        <Link
-          to={to}
-          aria-label={label}
-          onMouseEnter={onEnter}
-          onMouseLeave={onLeave}
-          style={{
-            ...baseStyle,
-            color: text,
-            backgroundImage: `linear-gradient(180deg, ${from}, ${toCol})`,
-            borderColor: border,
-          }}
-          className="
-            relative inline-flex items-center justify-center px-6 py-3 rounded-full border-2 font-semibold
-            transition-all duration-300 hover:translate-y-[-1px] active:scale-95
-          "
-        >
-          <span className="relative z-[1]">Buy Now</span>
-          {Arrow}
-          <span
-            className="pointer-events-none absolute inset-0 rounded-full"
-            style={{
-              boxShadow:
-                "inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.12)",
-            }}
-          />
+          <span className="relative z-[1]">{label}</span>
+          {!compact && (
+            <svg aria-hidden="true" className="ml-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 5l7 7-7 7M5 12h14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </Link>
       );
   }
 }
 
+
 const FlavorSlider = () => {
   const sliderRef = useRef();
   const isTablet = useMediaQuery({ query: "(max-width: 1024px)" });
-
+  const isMobile = useMediaQuery({ query: "(max-width: 768px)" }); // NEW
   useGSAP(() => {
     const scrollAmount = sliderRef.current.scrollWidth - window.innerWidth;
 
@@ -418,8 +286,8 @@ const FlavorSlider = () => {
         scrollTrigger: {
           trigger: ".flavor-section",
           start: "2% top",
-          end: `+=${scrollAmount * 2.5 + 2000}px`,  // Slower: increased multiplier and base
-          scrub: 2.5,                                // Very smooth scrub
+          end: `+=${scrollAmount * 2.0 + 1800}px`,  // Slower: increased multiplier and base
+          scrub: 2.0,                                // Very smooth scrub
           pin: true,
         },
       });
@@ -494,23 +362,29 @@ const FlavorSlider = () => {
                 draggable={false}
               />
 
-              {/* Title */}
+              {/* Title
               <h1 className="relative z-30 mb-2 md:mb-0 leading-tight">
                 {flavor.name}
-              </h1>
+              </h1> */}
 
               {/* Theme-aware button */}
-              <div
-                className={`z-40 ${
-                  isTablet ? "static mt-3" : "absolute bottom-10 right-10"
-                }`}
-              >
-                <ThemeButton
-                  theme={t}
-                  to={toHref}
-                  label={`Buy ${flavor.name} now`}
-                />
-              </div>
+             <div
+  className={`z-40 ${
+    isMobile
+      ? "absolute top-17 left-5"       // ✅ inside frame top-left on mobile
+      : isTablet
+      ? "static mt-3"                  // unchanged for tablets
+      : "absolute bottom-10 right-10"  // unchanged for desktop
+  }`}
+>
+  <ThemeButton
+    theme={t}
+    to={toHref}
+    label={`Buy now`}
+    compact={isMobile}                 // ✅ softer shadows/smaller on mobile
+  />
+</div>
+
             </div>
           );
         })}

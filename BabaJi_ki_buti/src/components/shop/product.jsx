@@ -17,6 +17,7 @@ import {
   Sparkles,
   Flame,
   Tag,
+  ChevronDown, ChevronUp 
 } from "lucide-react";
 
 import toast from "react-hot-toast";
@@ -134,6 +135,18 @@ export default function ShopNow() {
   const headerRef = useRef(null);
   const gridRef = useRef(null);
   const prefersReducedMotion = useReducedMotion();
+  const dropdownRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selected, setSelected] = useState("price_low");
+  const options = [
+    { value: "relevance", label: "Relevance" },
+    { value: "newest", label: "Newest" },
+    { value: "reviews", label: "Top rated" },
+    { value: "price_low", label: "Price: Low to High" },
+    { value: "price_high", label: "Price: High to Low" },
+  ];
+
+  const selectedLabel = options.find((o) => o.value === selected)?.label;
 
   useEffect(() => {
     let mounted = true;
@@ -249,6 +262,21 @@ export default function ShopNow() {
     maxPrice,
     sort,
   ]);
+  useEffect(() => {
+  function onDocClick(e) {
+    if (!dropdownRef.current) return;
+    if (!dropdownRef.current.contains(e.target)) setIsOpen(false);
+  }
+  function onKey(e) {
+    if (e.key === "Escape") setIsOpen(false);
+  }
+  document.addEventListener("click", onDocClick);
+  document.addEventListener("keydown", onKey);
+  return () => {
+    document.removeEventListener("click", onDocClick);
+    document.removeEventListener("keydown", onKey);
+  };
+}, []);
 
   const filtered = useMemo(() => {
     let list = [...products];
@@ -364,15 +392,12 @@ export default function ShopNow() {
 
   return (
     <div className="bg-[#fffdfa] min-h-screen text-neutral-900">
-      {/* Top banner */}
-      <div className="bg-neutral-900 text-white py-2 sm:py-3 text-center text-sm sm:text-base">
-        <InfiniteNewsTicker />
-      </div>
+    
 
       {/* Header */}
       <section
         ref={headerRef}
-        className="relative pt-16 sm:pt-20 pb-10 overflow-hidden text-center sm:text-right"
+        className="relative pt-16 sm:pt-20 pb-10 overflow-visible text-center sm:text-right"
         style={{
           backgroundImage: `url('/images/shopbg.jpg')`,
           backgroundSize: "cover",
@@ -414,20 +439,56 @@ export default function ShopNow() {
             </div>
           </motion.div>
 
-          <div className="mt-4 flex items-center gap-3 justify-center sm:justify-end">
-            <label className="text-xs sm:text-sm text-slate-900/80">Sort:</label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="px-2 py-1.5 rounded-lg border border-amber-200 bg-white text-sm"
-            >
-              <option value="relevance">Relevance</option>
-              <option value="newest">Newest</option>
-              <option value="reviews">Top rated</option>
-              <option value="price_low">Price: Low to High</option>
-              <option value="price_high">Price: High to Low</option>
-            </select>
-          </div>
+        <div className="mt-4 flex items-center gap-3 justify-center sm:justify-end">
+  <label className="text-xs sm:text-sm font-medium text-slate-100 tracking-wide">
+    Sort:
+  </label>
+
+  <div ref={dropdownRef} className="relative w-44 sm:w-52 overflow-visible">
+    <button
+      onClick={() => setIsOpen((v) => !v)}
+      className={`w-full flex justify-between items-center rounded-xl border border-amber-400
+        bg-gradient-to-r from-amber-50 to-orange-100 px-4 py-2 text-gray-800 text-sm font-semibold
+        shadow-[0_2px_6px_rgba(0,0,0,0.1)] transition-all duration-300
+        hover:from-orange-100 hover:to-amber-50 focus:ring-2 focus:ring-amber-500 focus:border-amber-500
+        ${isOpen ? "ring-2 ring-amber-400" : ""}`}
+      aria-haspopup="listbox"
+      aria-expanded={isOpen}
+    >
+      <span>{selectedLabel}</span>
+      {isOpen ? <ChevronUp className="text-amber-700 w-4 h-4" /> : <ChevronDown className="text-amber-700 w-4 h-4" />}
+    </button>
+
+    {isOpen && (
+      <ul
+        role="listbox"
+        className="absolute left-0 right-0 top-full z-[9999] mt-2 max-h-64 overflow-auto
+                   rounded-xl border border-amber-300 bg-gradient-to-br from-amber-50 to-orange-100
+                   shadow-xl p-1 animate-fadeIn"
+      >
+        {options.map((option) => (
+          <li
+            key={option.value}
+            role="option"
+            aria-selected={selected === option.value}
+            onClick={() => {
+              setSelected(option.value);
+              setSort(option.value);      // <-- keep your filtering in sync
+              setIsOpen(false);
+            }}
+            className={`block w-full px-3 py-2 text-left text-sm text-gray-800 rounded-lg cursor-pointer
+                        hover:bg-amber-200 transition-colors
+                        ${selected === option.value ? "bg-amber-300/50 font-semibold" : ""}`}
+          >
+            {option.label}
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</div>
+
+
 
           <p className="mt-3 text-xs sm:text-sm text-slate-100">
             Showing <span className="font-semibold">{visible.length}</span> of{" "}

@@ -239,7 +239,7 @@ function CategoryRibbon({ categories, onPick }) {
 const HeroSection = () => {
 
  
-
+  const RIBBON_MODE = 'always';
   const isMobile = useMediaQuery({
     query: "(max-width: 768px)",
   });
@@ -258,9 +258,42 @@ const HeroSection = () => {
   const [showRibbon, setShowRibbon] = useState(false);
 
  useEffect(() => {
-    const t = setTimeout(() => setShowRibbon(true), 8000);
-    return () => clearTimeout(t);
-  }, []);
+  // If no video (tablet) or we fell back to image, show immediately.
+  if (isTablet || useImage) {
+    setShowRibbon(true);
+    return;
+  }
+
+  // First-run persistence
+  const SEEN_KEY = 'heroRibbonAfterEndOnce';
+  if (RIBBON_MODE === 'firstRun' && localStorage.getItem(SEEN_KEY) === '1') {
+    setShowRibbon(true);
+    return;
+  }
+
+  // Default: wait for the video to actually finish
+  const v = videoRef.current;
+  if (!v) {
+    // Safety: if no video element, just show
+    setShowRibbon(true);
+    return;
+  }
+
+  setShowRibbon(false); // hide until end
+
+  const onEnded = () => {
+    setShowRibbon(true);
+    if (RIBBON_MODE === 'firstRun') {
+      try { localStorage.setItem(SEEN_KEY, '1'); } catch {}
+    }
+  };
+
+  // In case user seeks to end quickly, we still want to honor the rule.
+  v.addEventListener('ended', onEnded, { once: true });
+
+  return () => v.removeEventListener('ended', onEnded);
+}, [isTablet, useImage]);
+
   const hero = useMemo(
     () => ({
       title: "babaji ki buti",
@@ -280,16 +313,16 @@ const HeroSection = () => {
   );
 
   const categories = [
-    { name: "Energy & Stamina", icon: "/images/c1.png", path: "/oil" },
-    { name: "Pain Relief", icon: "/images/c2.png", path: "/rice" },
-    { name: "Hair & Skin Care", icon: "/images/c3.png", path: "/jaggery" },
-    { name: "Digestive Health", icon: "/images/c4.png", path: "/spices" },
-    { name: "Men's Health", icon: "/images/c5.png", path: "/immunity" },
-    { name: "Women's Health", icon: "/images/c6.png", path: "/breakfast-snacks" },
-    { name: "Weight Management", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Specialized Health", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Nutritional Supplements", icon: "/images/c7.png", path: "/grains-pulses" },
-    { name: "Immunity & General Wellness", icon: "/images/c7.png", path: "/grains-pulses" },
+    { name: "Energy & Stamina", icon: "/images/c1.png", path: "/shop" },
+    { name: "Pain Relief", icon: "/images/c2.png", path: "/shop" },
+    { name: "Hair & Skin Care", icon: "/images/c3.png", path: "/shop" },
+    { name: "Digestive Health", icon: "/images/c4.png", path: "/shop" },
+    { name: "Men's Health", icon: "/images/c5.png", path: "/shop" },
+    { name: "Women's Health", icon: "/images/c6.png", path: "/shop" },
+    { name: "Weight Management", icon: "/images/c7.png", path: "/shop" },
+    { name: "Specialized Health", icon: "/images/c7.png", path: "/shop" },
+    { name: "Nutritional Supplements", icon: "/images/c7.png", path: "/shop" },
+    { name: "Immunity & General Wellness", icon: "/images/c7.png", path: "/shop" },
   ];
 
 
