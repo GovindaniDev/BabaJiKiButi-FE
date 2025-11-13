@@ -146,8 +146,9 @@ const BenefitSection = () => {
               BMI Calculator
             </Link>
 
-      <button
-        onClick={goToDosha}
+      <Link
+       to="/dosha"
+       onClick={(e)=>window.scrollTo({top:0,behavior:'instant'})}
         className="
            pointer-events-auto
   rounded-full font-bold uppercase whitespace-nowrap
@@ -164,9 +165,9 @@ const BenefitSection = () => {
         type="button"
       >
         Dosha Test
-      </button>
+      </Link>
     </div>
-          <div className="overflow-hidden  mt-4 md:mt-6">
+          {/* <div className="overflow-hidden  mt-4 md:mt-6">
            
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -175,7 +176,7 @@ const BenefitSection = () => {
                 animate={isMobile ? { x: 0, opacity: 1 } : {}}
                 exit={isMobile ? { x: -32, opacity: 0 } : {}}
                 transition={{ duration: 0.35, ease: "easeInOut" }}
-                /* Mobile: strict 3 columns; Desktop: flex wrap */
+                
                 className="
         list-wrapper
   grid grid-cols-3 justify-items-center
@@ -190,22 +191,22 @@ const BenefitSection = () => {
                 {lists.map((nutrient, index) => (
                   <div
                     key={index}
-                    /* fixed item width on mobile so all three line up */
+                    
                     className="relative flex flex-col items-center justify-start w-24 sm:w-28 md:w-auto"
                   >
-                    {/* Circle */}
+                    
                     <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-20 md:h-20 rounded-full flex items-center justify-center bg-white shadow-[0_0_15px_3px_rgba(139,69,19,0.5)] [text-shadow:2px_2px_4px_rgba(0,0,0,0.6),4px_4px_6px_rgba(0,0,0,0.4)]">
                    <Link to="/shop"> <img src={nutrient.img} alt="" /></Link>
                     </div>
 
-                    {/* Label slot: fixed height so 1–2 lines don't shift rows */}
+                  
                     <div className="mt-1 sm:mt-2 h-10 sm:h-12 flex items-center justify-center px-1 text-center">
                       <p className="md:text-lg font-paragraph text-center text-[#faeade] [text-shadow:2px_2px_4px_rgba(0,0,0,0.6),4px_4px_6px_rgba(0,0,0,0.4)]">
                         {nutrient.label}
                       </p>
                     </div>
 
-                    {/* Divider only on desktop so mobile alignment stays perfect */}
+                   
                     {index !== lists.length - 1 && (
                       <div className="spacer-border hidden md:block" />
                     )}
@@ -213,7 +214,7 @@ const BenefitSection = () => {
                 ))}
               </motion.div>
             </AnimatePresence>
-          </div>
+          </div> */}
         </div>
         <div className="col-center mt-8">
           <p>

@@ -74,30 +74,77 @@ const App = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const HomePage = () => {
-    useGSAP(() => {
-      const smoother = ScrollSmoother.create({
-        wrapper: "#smooth-wrapper",
-        content: "#smooth-content",
-        smooth: 2.3,
-        effects: true,
-      });
-      return () => smoother.kill();
-    }, []);
-    return (
-      <div id="smooth-wrapper">
-        <div id="smooth-content">
-          <HeroSection />
-          <MessageSection />
-          <FlavorSection />
-          <NutritionSection />
-          <BenefitSection />
-          <TestimonialSection />
-          <FooterSection />
-        </div>
+ // inside App.jsx
+
+const HomePage = () => {
+  const isTouch =
+    typeof window !== "undefined" &&
+    matchMedia("(pointer: coarse)").matches;
+
+  useGSAP(() => {
+    // Kill any stale Smoother/Triggers before creating a new one
+    const prev = ScrollSmoother.get();
+    if (prev) prev.kill();
+    ScrollTrigger.getAll().forEach(t => {
+      if (t.vars && t.vars.id === "HOME_TMP") t.kill(false);
+    });
+
+    // Base smoother
+    const smoother = ScrollSmoother.create({
+      wrapper: "#smooth-wrapper",
+      content: "#smooth-content",
+      smooth: isTouch ? 0 : 1.4,   // subtle easing on desktop only
+      smoothTouch: 0,               // never interpolate on touch
+      normalizeScroll: true,
+      effects: false,               // no parallax unless you turn it on explicitly
+    });
+
+    // Refresh after any media loads to lock layout
+    const onWindowLoad = () => ScrollTrigger.refresh();
+    window.addEventListener("load", onWindowLoad);
+
+    // Observe images inside smooth-content for first paint refresh
+    const imgs = Array.from(document.querySelectorAll("#smooth-content img"));
+    const refreshOnce = () => ScrollTrigger.refresh();
+    imgs.forEach(img => img.addEventListener("load", refreshOnce, { once: true }));
+
+    // Optional: route-height sanity trigger (helps when content injects)
+    ScrollTrigger.create({
+      id: "HOME_TMP",
+      trigger: "#smooth-content",
+      start: "top top",
+      onRefresh: () => {}, // existence alone can help certain devtools resizes
+    });
+
+    return () => {
+      window.removeEventListener("load", onWindowLoad);
+      imgs.forEach(img => img.removeEventListener("load", refreshOnce));
+      // Full cleanup in correct order
+      const s = ScrollSmoother.get();
+      if (s) s.kill();
+      ScrollTrigger.getAll().forEach(t => t.kill(false));
+      gsap.set("#smooth-content", { clearProps: "transform,willChange" });
+    };
+  }, { dependencies: [isTouch] });
+
+  return (
+    <div id="smooth-wrapper">
+      <div id="smooth-content">
+        {/* Make sure none of these contain sticky/fixed items.
+            If they must, render those sticky/fixed bits via portals outside #smooth-content */}
+        <HeroSection />
+        <MessageSection />
+        <FlavorSection />
+        <NutritionSection />
+        <BenefitSection />
+        <TestimonialSection />
+        <FooterSection />
       </div>
-    );
-  };
+    </div>
+  );
+};
+
+
 
   // Optional: block routes until we know auth
   if (meLoading) return <Loading label="Loading account..." />;

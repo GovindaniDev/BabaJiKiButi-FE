@@ -503,7 +503,7 @@ export default function ShopNow() {
       >
         <div className="absolute inset-0 bg-black/50 sm:bg-black/55 -z-10" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-2">
           <h1
             data-stagger
             className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-yellow-300 tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
@@ -934,7 +934,8 @@ function ProductCard({ product: p, userId }) {
     e.stopPropagation();
     if (!productId) return;
     if (!userId) {
-      navigate("/login", { state: { from: `/shop` } });
+           navigate("/login", { state: { from: `/shop` } });
+      window.scrollTo({ top: 0, behavior: 'instant' });
       return;
     }
     try {

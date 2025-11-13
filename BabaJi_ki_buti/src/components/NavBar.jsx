@@ -8,8 +8,21 @@ import { wishlistApi } from "../auth/wishlist/wishlistApi";
 import SearchBar from "../utils/SearchBar";
 import styled from "styled-components";
 
+/* ---------- small helpers ---------- */
+const isPointerFineNow = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia &&
+  window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+function useRouteClose(...setters) {
+  const location = useLocation();
+  useEffect(() => {
+    setters.forEach((s) => s(false));
+  }, [location.pathname]); // eslint-disable-line
+}
+
 export default function NavBar() {
-  // ---------------------------- local state ----------------------------
+  /* ---------------------------- local state ---------------------------- */
   const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(false);
@@ -17,10 +30,10 @@ export default function NavBar() {
   const [isTherapyOpen, setIsTherapyOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // ✅ wishlist count
+  // wishlist count
   const [wishlistCount, setWishlistCount] = useState(0);
 
-  // ---------------------------- element refs ---------------------------
+  /* ---------------------------- refs ---------------------------- */
   const servicesRef = useRef(null);
   const servicesMenuRef = useRef(null);
   const therapyMenuRef = useRef(null);
@@ -33,29 +46,12 @@ export default function NavBar() {
 
   const hoverTimers = useRef({ services: null, therapy: null, category: null });
 
-  // ------------------------------ cart mock ----------------------------
-  const [cartItems] = useState([]);
-  const cartCount = cartItems.reduce((n, it) => n + (it.qty || 1), 0);
-
-  // ------------------------------- helpers -----------------------------
-  const isPointerFine = () =>
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
-  const openWithHover = (key, setter) => {
-    clearTimeout(hoverTimers.current[key]);
-    hoverTimers.current[key] = setTimeout(() => setter(true), 70);
-  };
-  const closeWithHover = (key, setter) => {
-    clearTimeout(hoverTimers.current[key]);
-    hoverTimers.current[key] = setTimeout(() => setter(false), 120);
-  };
-
-  // -------------------------- outside click close ----------------------
+  /* -------------------------- outside click close ---------------------- */
   useEffect(() => {
     function onDocClick(e) {
       const t = e.target;
+
+      // Services + Therapy
       if (
         servicesRef.current &&
         !servicesRef.current.contains(t) &&
@@ -65,6 +61,8 @@ export default function NavBar() {
         setIsServicesOpen(false);
         setIsTherapyOpen(false);
       }
+
+      // Category
       if (
         categoryMenuRef.current &&
         !categoryMenuRef.current.contains(t) &&
@@ -73,6 +71,8 @@ export default function NavBar() {
       ) {
         setIsCategoryOpen(false);
       }
+
+      // Profile
       if (profileRef.current && !profileRef.current.contains(t))
         setIsProfileOpen(false);
     }
@@ -80,14 +80,23 @@ export default function NavBar() {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  // ----------------------- body scroll lock (mobile) -------------------
+  /* ----------------------- body scroll lock (mobile) ------------------- */
   useEffect(() => {
-    document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
-    return () => (document.body.style.overflow = "");
+    const el = document.documentElement;
+    if (isMobileMenuOpen) {
+      el.style.overflow = "hidden";
+      el.style.touchAction = "none";
+    } else {
+      el.style.overflow = "";
+      el.style.touchAction = "";
+    }
+    return () => {
+      el.style.overflow = "";
+      el.style.touchAction = "";
+    };
   }, [isMobileMenuOpen]);
 
-  // ------------------------------ data ---------------------------------
-  // If you have real category IDs from DB, put them here (replace null with the Long id).
+  /* ------------------------------ data --------------------------------- */
   const categories = [
     { id: null, name: "Energy & Stamina",            icon: "/images/c1.png" },
     { id: null, name: "Pain Relief",                 icon: "/images/c2.png" },
@@ -101,7 +110,7 @@ export default function NavBar() {
     { id: null, name: "Immunity & General Wellness", icon: "/images/c7.png" },
   ];
 
-  // --------------------------- keyboard a11y ---------------------------
+  /* --------------------------- keyboard a11y --------------------------- */
   const onServicesKeyDown = useCallback(
     (e) => {
       if (e.key === "Escape") {
@@ -138,7 +147,7 @@ export default function NavBar() {
     [isCategoryOpen]
   );
 
-  // -------------------------------- auth -------------------------------
+  /* -------------------------------- auth ------------------------------- */
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout, loading } = useAuth();
@@ -165,7 +174,7 @@ export default function NavBar() {
 
   const authReady = !loading && (isAuthenticated && !!userId);
 
-  // ------------------------ wishlist navigation ------------------------
+  /* ------------------------ wishlist navigation ------------------------ */
   const onWishlistClick = (e) => {
     e?.preventDefault?.();
     if (loading) return;
@@ -173,7 +182,7 @@ export default function NavBar() {
     else navigate("/login", { state: { from: "/wishlist" } });
   };
 
-  // ------------------------- wishlist count sync ------------------------
+  /* ------------------------- wishlist count sync ------------------------ */
   useEffect(() => {
     let alive = true;
 
@@ -195,7 +204,6 @@ export default function NavBar() {
     const onChanged = (e) => {
       const d = e?.detail || {};
       if (authReady && d.userId && String(d.userId) !== String(userId)) return;
-
       if (typeof d.count === "number") {
         setWishlistCount(d.count);
       } else {
@@ -251,17 +259,29 @@ export default function NavBar() {
   // ------------------------------- render ------------------------------
   return (
     <>
-      {/* Announcement bar offset */}
-      <header className="fixed inset-x-0 top-10 lg:top-0 z-50 bg-transparent pointer-events-none">
-        <div className="container mx-auto px-2 sm:px-3 md:px-4 mb-2 lg:mb-0 lg:mt-10">
-          <div className="flex items-center justify-between gap-3 lg:gap-6 xl:gap-8 min-h-14 py-2 rounded-full bg-white/70 backdrop-blur-md shadow-lg lg:shadow-md ring-1 ring-black/5 px-2 sm:px-3 md:px-4 pointer-events-auto">
+      {/* sits below your announcement bar if any */}
+      <header className="fixed inset-x-0 top-7 z-50 bg-transparent">
+        <div className="mx-auto max-w-[1400px] px-2 sm:px-3 md:px-4">
+          <div
+            className="
+              mt-[max(env(safe-area-inset-top),0px)]
+              my-2 lg:my-3
+              flex items-center justify-between gap-2 lg:gap-6 xl:gap-8
+              min-h-13 rounded-full bg-white/70 backdrop-blur-md
+              shadow-md ring-1 ring-black/5 px-2 sm:px-3 md:px-4
+            "
+          >
             {/* Brand */}
             <Link
               to="/"
               onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}
-              className="flex items-center gap-2 shrink-0"
+              className="flex items-center gap-2 shrink-0 min-w-0"
             >
-              <img src="/images/logo2.png" alt="nav-logo" className="h-8 sm:h-10 w-auto" />
+              <img
+                src="/images/logo2.png"
+                alt="Brand"
+                className="h-8 sm:h-10 w-auto max-w-[160px]"
+              />
             </Link>
 
             {/* Spacer */}
@@ -269,9 +289,15 @@ export default function NavBar() {
 
             {/* Desktop links */}
             <ul
-              className={`hidden lg:flex min-w-0 items-center gap-4 xl:gap-6 lg:pl-6 xl:pl-10 text-sm font-semibold text-gray-800 whitespace-nowrap ${
-                isServicesOpen || isCategoryOpen ? "overflow-visible" : "overflow-hidden"
-              }`}
+              className={[
+                "hidden lg:flex items-center gap-4 xl:gap-6 text-[13px] xl:text-sm font-semibold text-gray-800",
+                "min-w-0 flex-1 px-2",
+                (isServicesOpen || isCategoryOpen) ? "overflow-visible" : "overflow-x-auto overflow-y-visible",
+                // prevent ugly scrollbars on most platforms; fine if they appear
+                "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                "whitespace-nowrap"
+              ].join(" ")}
+              aria-label="Primary"
             >
               <li className="shrink-0">
                 <Link to="/" className="hover:text-amber-700" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
@@ -294,8 +320,8 @@ export default function NavBar() {
                 <button
                   ref={servicesRef}
                   onClick={() => setIsServicesOpen((v) => !v)}
-                  onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
-                  onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
+                  onMouseEnter={() => isPointerFineNow() && (clearTimeout(hoverTimers.current.services), hoverTimers.current.services = setTimeout(() => setIsServicesOpen(true), 70))}
+                 
                   onKeyDown={onServicesKeyDown}
                   aria-haspopup="menu"
                   aria-expanded={isServicesOpen}
@@ -310,8 +336,8 @@ export default function NavBar() {
                 {isServicesOpen && (
                   <div
                     ref={servicesMenuRef}
-                    onMouseEnter={() => isPointerFine() && openWithHover("services", setIsServicesOpen)}
-                    onMouseLeave={() => isPointerFine() && closeWithHover("services", setIsServicesOpen)}
+                    onMouseEnter={() => isPointerFineNow() && setIsServicesOpen(true)}
+                    
                     role="menu"
                     className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-lg py-2 z-50 border border-amber-100"
                   >
@@ -353,8 +379,8 @@ export default function NavBar() {
                     {/* nested therapy submenu */}
                     <div
                       className="relative group"
-                      onMouseEnter={() => isPointerFine() && openWithHover("therapy", setIsTherapyOpen)}
-                      onMouseLeave={() => isPointerFine() && closeWithHover("therapy", setIsTherapyOpen)}
+                      onMouseEnter={() => isPointerFineNow() && setIsTherapyOpen(true)}
+                      onMouseLeave={() => isPointerFineNow() && setIsTherapyOpen(false)}
                     >
                       <button
                         onClick={() => setIsTherapyOpen((v) => !v)}
@@ -442,22 +468,118 @@ export default function NavBar() {
               </li>
 
               {/* CATEGORY */}
-              <li className="relative shrink-0">
-                <button
-                  ref={categoryBtnRef}
-                  className="inline-flex items-center gap-1 hover:text-amber-700"
-                  onClick={() => setIsCategoryOpen((v) => !v)}
-                  onMouseEnter={() => isPointerFine() && openWithHover("category", setIsCategoryOpen)}
-                  onMouseLeave={() => isPointerFine() && closeWithHover("category", setIsCategoryOpen)}
-                  onKeyDown={onCategoryKeyDown}
-                  aria-haspopup="menu"
-                  aria-expanded={isCategoryOpen}
-                >
-                  CATEGORY
-                  <svg className={`w-4 h-4 transition ${isCategoryOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+          <li className="relative shrink-0">
+  <button
+    ref={categoryBtnRef}
+    className="inline-flex items-center gap-1 hover:text-amber-700"
+    onClick={() => setIsCategoryOpen((v) => !v)}           
+    onMouseEnter={() => isPointerFineNow() && setIsCategoryOpen(true)}
+    
+    onKeyDown={(e) => {                                     /* 👇 a11y: toggle with Enter/Space, close with Esc */
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        setIsCategoryOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setIsCategoryOpen(false);
+        categoryBtnRef?.current?.focus?.();
+      }
+    }}
+    aria-haspopup="menu"
+    aria-expanded={isCategoryOpen}
+  >
+    CATEGORY
+    <svg
+      className={`w-4 h-4 transition ${isCategoryOpen ? "rotate-180" : ""}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+    >
+      <path strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+
+  {isCategoryOpen && (
+   <div
+      ref={categoryMenuRef}
+      onMouseEnter={() => isPointerFineNow() && setIsCategoryOpen(true)}
+      onMouseLeave={() => isPointerFineNow() && setIsCategoryOpen(false)}
+      role="menu"
+      className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[min(92vw,1200px)] rounded-[32px] shadow-xl bg-white z-50 overflow-hidden border border-amber-100 cursor-pointer"
+      style={{ backgroundColor: "#fefcf8" }}
+    >
+      <div className="relative px-6 md:px-10 py-10 md:py-12">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-6 md:gap-8 mb-8 place-items-center">
+          {categories.map((category, i) => (
+            <a
+              key={i}
+              href={category.path}
+              onClick={(e) => {
+                e.preventDefault();
+                setIsCategoryOpen(false);
+                window.scrollTo({ top: 0, behavior: "instant" });
+                window.location.href = category.path; // 👈 navigate directly
+              }}
+              className="group flex flex-col items-center text-center h-full max-w-[160px]"
+              role="menuitem"
+            >
+              <div className="mx-auto h-16 w-16 rounded-full grid place-items-center bg-white border border-amber-100 shadow-sm transition-all duration-200 group-hover:scale-110 group-hover:bg-amber-50">
+                <img
+                  src={category.icon}
+                  alt={category.name}
+                  className="object-contain transition-transform duration-200 group-hover:scale-110"
+                />
+              </div>
+              <div className="mt-3 h-[40px] flex items-center justify-center px-2">
+                <span className="text-[11px] md:text-sm font-semibold text-[#5a6d52] leading-snug text-center line-clamp-2 group-hover:text-amber-700 transition-colors">
+                  {category.name}
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Link
+            to="/shop"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsCategoryOpen(false);
+              window.scrollTo({ top: 0, behavior: "instant" });
+              window.location.href = "/shop";
+            }}
+            className="px-6 md:px-8 py-2.5 md:py-3 border border-[#f6cfc0] text-[#9f4c4c] rounded-xl font-semibold text-sm tracking-wide bg-white/60 backdrop-blur-sm hover:bg-[#faeade]/90 hover:text-[#6a2c2c] shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            SHOP ALL
+          </Link>
+        </div>
+      </div>
+
+      <div className="relative h-16 md:h-20">
+        <svg
+          viewBox="0 0 1200 120"
+          preserveAspectRatio="none"
+          className="absolute inset-0 w-full h-full"
+        >
+          <path
+            d="M0 60 Q150 20 300 60 T600 60 T900 60 T1200 60 V120 H0Z"
+            fill="#f9ebd7"
+            opacity="0.45"
+          />
+          <path
+            d="M0 80 Q150 50 300 80 T600 80 T900 80 T1200 80 V120 H0Z"
+            fill="#f5e1c8"
+            opacity="0.65"
+          />
+          <path
+            d="M0 95 Q150 75 300 95 T600 95 T900 95 T1200 95 V120 H0Z"
+            fill="#f2dcc4"
+          />
+        </svg>
+      </div>
+    </div>
+  )}
+</li>
+
 
                 {isCategoryOpen && (
                   <div
@@ -524,7 +646,7 @@ export default function NavBar() {
 
               <li className="shrink-0">
                 <Link to="/blog" className="hover:text-amber-700" onClick={() => window.scrollTo({ top: 0, behavior: "instant" })}>
-                  JOIN COMMUNITY
+                  JOIN MEMBERSHIP
                 </Link>
               </li>
               <li className="shrink-0">
@@ -534,30 +656,31 @@ export default function NavBar() {
               </li>
             </ul>
 
-            {/* Desktop search (≥2xl) */}
-            <SearchBar ref={searchRef} />
+            {/* Desktop Search (kept compact so it never breaks layout) */}
+            <div className="hidden xl:block shrink-0 max-w-[16rem] w-full">
+              <SearchBar />
+            </div>
 
             {/* Desktop actions */}
-            <div className="hidden lg:flex items-center gap-3 xl:gap-4 shrink-0">
-              <div className="w-px h-6 2xl:h-8 bg-gray-200 hidden 2xl:block" />
+            <div className="hidden lg:flex items-center gap-2 xl:gap-4 shrink-0">
               <CartMenu userId={userId} />
 
               {/* Wishlist with badge */}
               <button
                 type="button"
                 onClick={onWishlistClick}
-                className="relative p-1.5 xl:p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
+                className="relative p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
                 aria-label="Wishlist"
                 disabled={loading}
                 title={authReady ? "Wishlist" : (loading ? "Checking session…" : "Sign in to view Wishlist")}
               >
-                <svg className="w-4 xl:w-5 h-4 xl:h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M11.645 20.91l-.007-.003-.022-.01a15.247 15.247 0 01-.383-.187 25.18 25.18 0 01-4.244-2.832C4.688 15.36 2.25 12.686 2.25 9.5 2.25 7.014 4.285 5 6.75 5c1.494 0 2.904.73 3.75 1.874A4.725 4.725 0 0114.25 5c2.465 0 4.5 2.014 4.5 4.5 0 3.186-2.438 5.86-4.739 8.378a25.175 25.175 0 01-4.244 2.832 15.247 15.247 0 01-.383.187l-.022.01-.007.003-.003.001a.75.75 0 01-.644 0l-.003-.001z" />
                 </svg>
 
                 {wishlistCount > 0 && (
                   <span
-                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#f2bfb0] text-white text-[10px] leading-[18px] grid place-items-center"
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] leading-[18px] grid place-items-center"
                     aria-label={`${wishlistCount} items in wishlist`}
                   >
                     {wishlistCount > 99 ? "99+" : wishlistCount}
@@ -569,12 +692,12 @@ export default function NavBar() {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((v) => !v)}
-                  className="p-1.5 xl:p-2 rounded-full hover:bg-gray-100"
+                  className="p-2 rounded-full hover:bg-gray-100"
                   aria-label="User Profile"
                   title={isAuthenticated ? `Hi, ${displayName}` : "Sign in"}
                   disabled={loading}
                 >
-                  <svg className="w-4 xl:w-5 h-4 xl:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                   </svg>
                 </button>
@@ -613,7 +736,7 @@ export default function NavBar() {
                         >
                           Login
                         </Link>
-                        <Link
+                          <Link
                           to="/register"
                           onClick={() => {
                             setIsProfileOpen(false);
@@ -632,18 +755,18 @@ export default function NavBar() {
 
             {/* Mobile actions */}
             <div className="lg:hidden flex items-center gap-1 sm:gap-2 shrink-0">
-              <CartMenu cartItems={cartItems} />
+              <CartMenu userId={userId} />
               <button
                 onClick={() => setIsMobileMenuOpen((v) => !v)}
                 className="p-2 rounded-full hover:bg-gray-100 min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px]"
                 aria-label="Open menu"
               >
                 {isMobileMenuOpen ? (
-                  <svg className="w-5 sm:w-6 h-5 sm:h-6" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" />
                   </svg>
                 ) : (
-                  <svg className="w-5 sm:w-6 h-5 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                   </svg>
                 )}
@@ -656,14 +779,15 @@ export default function NavBar() {
         {isMobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-[80]">
             {/* Backdrop */}
-            <div
+            <button
               className="absolute inset-0 bg-black/30 z-40"
               onClick={() => setIsMobileMenuOpen(false)}
-              aria-hidden="true"
+              aria-label="Close menu backdrop"
             />
+
             {/* Drawer */}
             <div
-              className="absolute right-0 top-0 h-full w-full max-w-[min(85vw,420px)] bg-white shadow-xl overflow-y-auto overscroll-contain z-50 pointer-events-auto"
+              className="absolute right-0 top-0 h-dvh w-full max-w-[min(85vw,420px)] bg-white shadow-xl overflow-y-auto overscroll-contain z-50"
               role="dialog"
               aria-modal="true"
             >
@@ -681,32 +805,16 @@ export default function NavBar() {
                 </button>
               </div>
 
-              {/* Search ONLY in drawer */}
+              {/* Search in drawer */}
               <div className="px-4 pt-3">
-                <div className="relative">
-                  <svg
-                    className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeWidth={1.5} d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                  </svg>
-                  <SearchBar />
-                </div>
+                <SearchBar />
               </div>
 
               {/* Drawer content */}
               <div className="px-4 py-3 space-y-2 pb-24">
-                <NavMobileLink to="/" onDone={() => setIsMobileMenuOpen(false)}>
-                  HOME
-                </NavMobileLink>
-                <NavMobileLink to="/about" onDone={() => setIsMobileMenuOpen(false)}>
-                  ABOUT US
-                </NavMobileLink>
-                <NavMobileLink to="/shop" onDone={() => setIsMobileMenuOpen(false)}>
-                  SHOP NOW
-                </NavMobileLink>
+                <NavMobileLink to="/" onDone={() => setIsMobileMenuOpen(false)}>HOME</NavMobileLink>
+                <NavMobileLink to="/about" onDone={() => setIsMobileMenuOpen(false)}>ABOUT US</NavMobileLink>
+                <NavMobileLink to="/shop" onDone={() => setIsMobileMenuOpen(false)}>SHOP NOW</NavMobileLink>
 
                 {/* CATEGORY (mobile) */}
                 <div>
@@ -749,40 +857,20 @@ export default function NavBar() {
                   </button>
                   {isMobileServicesOpen && (
                     <div className="mt-1 ml-1 space-y-1">
-                      <NavMobileLink to="/opd" onDone={() => setIsMobileMenuOpen(false)}>
-                        ओ.पी.डी. सेवाएं
-                      </NavMobileLink>
-                      <NavMobileLink to="/bmi" onDone={() => setIsMobileMenuOpen(false)}>
-                        BMI Calculator
-                      </NavMobileLink>
-                      <NavMobileLink to="/dosha" onDone={() => setIsMobileMenuOpen(false)}>
-                        Dosha Test
-                      </NavMobileLink>
-                      <NavMobileLink to="/service/nutrient" onDone={() => setIsMobileMenuOpen(false)}>
-                        न्यूट्रीशंट
-                      </NavMobileLink>
-                      <NavMobileLink to="/service/remedios" onDone={() => setIsMobileMenuOpen(false)}>
-                        प्राकृतिक चिकित्सा
-                      </NavMobileLink>
-                      <NavMobileLink to="/service/therapy" onDone={() => setIsMobileMenuOpen(false)}>
-                        Tailor-Made Ayurvedic Therapy
-                      </NavMobileLink>
-                      <NavMobileLink to="/panchkarma" onDone={() => setIsMobileMenuOpen(false)}>
-                        पंचकर्म
-                      </NavMobileLink>
-                      <NavMobileLink to="/naadi" onDone={() => setIsMobileMenuOpen(false)}>
-                        नाड़ी परीक्षण
-                      </NavMobileLink>
+                      <NavMobileLink to="/opd" onDone={() => setIsMobileMenuOpen(false)}>ओ.पी.डी. सेवाएं</NavMobileLink>
+                      <NavMobileLink to="/bmi" onDone={() => setIsMobileMenuOpen(false)}>BMI Calculator</NavMobileLink>
+                      <NavMobileLink to="/dosha" onDone={() => setIsMobileMenuOpen(false)}>Dosha Test</NavMobileLink>
+                      <NavMobileLink to="/service/nutrient" onDone={() => setIsMobileMenuOpen(false)}>न्यूट्रीशंट</NavMobileLink>
+                      <NavMobileLink to="/service/remedios" onDone={() => setIsMobileMenuOpen(false)}>प्राकृतिक चिकित्सा</NavMobileLink>
+                      <NavMobileLink to="/service/therapy" onDone={() => setIsMobileMenuOpen(false)}>Tailor-Made Ayurvedic Therapy</NavMobileLink>
+                      <NavMobileLink to="/panchkarma" onDone={() => setIsMobileMenuOpen(false)}>पंचकर्म</NavMobileLink>
+                      <NavMobileLink to="/naadi" onDone={() => setIsMobileMenuOpen(false)}>नाड़ी परीक्षण</NavMobileLink>
                     </div>
                   )}
                 </div>
 
-                <NavMobileLink to="/blog" onDone={() => setIsMobileMenuOpen(false)}>
-                  OUR BLOGS
-                </NavMobileLink>
-                <NavMobileLink to="/contact" onDone={() => setIsMobileMenuOpen(false)}>
-                  CONTACTS
-                </NavMobileLink>
+                <NavMobileLink to="/blog" onDone={() => setIsMobileMenuOpen(false)}>OUR BLOGS</NavMobileLink>
+                <NavMobileLink to="/contact" onDone={() => setIsMobileMenuOpen(false)}>CONTACTS</NavMobileLink>
 
                 <div className="pt-2 border-t border-gray-200">
                   {/* Mobile wishlist with badge */}
@@ -816,10 +904,7 @@ export default function NavBar() {
                     }}
                     className="flex items-center justify-between px-2 py-2 rounded-lg text-gray-800 hover:bg-gray-50"
                   >
-                    <span>Cart</span>
-                    <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-yellow-500 text-white text-xs grid place-items-center">
-                      {cartCount}
-                    </span>
+                    <CartMenu userId={userId} />
                   </Link>
                 </div>
 
@@ -841,12 +926,8 @@ export default function NavBar() {
                     </>
                   ) : (
                     <>
-                      <NavMobileLink to="/login" onDone={() => setIsMobileMenuOpen(false)}>
-                        Login
-                      </NavMobileLink>
-                      <NavMobileLink to="/register" onDone={() => setIsMobileMenuOpen(false)}>
-                        Register
-                      </NavMobileLink>
+                      <NavMobileLink to="/login" onDone={() => setIsMobileMenuOpen(false)}>Login</NavMobileLink>
+                      <NavMobileLink to="/register" onDone={() => setIsMobileMenuOpen(false)}>Register</NavMobileLink>
                     </>
                   )}
                 </div>

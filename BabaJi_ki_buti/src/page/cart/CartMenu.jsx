@@ -128,7 +128,7 @@ export default function CartMenu({ userId }) {
         type="button"
         className="relative p-2 rounded-full transition-colors hover:bg-gray-100"
         aria-label="Cart"
-        onClick={() => { navigate("/cart"); setIsCartOpen(false); }}
+        onClick={() => { navigate("/cart"); setIsCartOpen(false); window.scrollTo({top:0,behavior:'instant'}); }}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.09.835l.383 1.437M7.5 14.25h9.75a1.5 1.5 0 0 0 1.46-1.154l1.5-6A1.5 1.5 0 0 0 18.75 5.25H5.109m2.391 9L5.25 5.25m2.25 9-1.125 4.5m0 0h12.75m-12.75 0A1.125 1.125 0 1 0 8.625 19.5 1.125 1.125 0 0 0 7.5 18.75Zm11.625 0a1.125 1.125 0 1 0 0 2.25 1.125 1.125 0 0 0 0-2.25Z"/>

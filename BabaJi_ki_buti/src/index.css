@@ -52,6 +52,20 @@ body::-webkit-scrollbar {
   
 }
 
+#smooth-wrapper {
+  overflow: hidden;
+  min-height: 100%;
+}
+#smooth-content {
+  will-change: transform;
+}
+
+/* keep your existing .section-base etc. */
+
+.flavor-section { position: relative; isolation: isolate; z-index: 0; }
+.nutrition-section { position: relative; isolation: isolate; z-index: 0; }
+
+
 
 
 @layer components {
