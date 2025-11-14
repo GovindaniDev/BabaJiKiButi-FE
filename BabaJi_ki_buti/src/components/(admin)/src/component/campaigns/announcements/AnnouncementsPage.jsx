@@ -3,7 +3,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus, Save, X, Trash2, ArrowUp, ArrowDown, CheckCircle2, Clock, Globe, Link as LinkIcon,
-  Megaphone, Eye, EyeOff, RefreshCcw, Rocket, Calendar, Settings2
+  Megaphone, Eye, EyeOff, RefreshCcw, Rocket, Calendar, Settings2,
+  Pencil
 } from "lucide-react";
 import {
   createAnnouncement,
@@ -230,17 +231,39 @@ export default function AnnouncementsPage() {
 
   // load
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const data = await getAnnouncements().catch(() => null);
-      if (data) {
-        setList(Array.isArray(data.items) ? data.items : []);
-        setSpeedSec(Number.isFinite(Number(data?.ticker?.speedSec)) ? Number(data.ticker.speedSec) : 35);
-        setEnabled(Boolean(data?.ticker?.enabled ?? true));
-      }
-      setLoading(false);
-    })();
-  }, []);
+  (async () => {
+    setLoading(true);
+    const data = await getAnnouncements().catch(() => null);
+
+    if (data) {
+      // 1) Normalise list: support both [ ... ] and { items: [ ... ], ticker: {...} }
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data.items)
+        ? data.items
+        : [];
+
+      setList(items);
+
+      // 2) Ticker settings only if present on the root object
+      const meta = Array.isArray(data) ? null : data.ticker;
+
+      setSpeedSec(
+        meta && Number.isFinite(Number(meta.speedSec))
+          ? Number(meta.speedSec)
+          : 35
+      );
+      setEnabled(
+        meta && typeof meta.enabled === "boolean"
+          ? meta.enabled
+          : true
+      );
+    }
+
+    setLoading(false);
+  })();
+}, []);
+
 
   // derived ticker preview
   const now = useMemo(() => new Date(), []);
@@ -736,7 +759,7 @@ export default function AnnouncementsPage() {
                       title="Edit"
                       onClick={() => startEdit(a)}
                     >
-                      <RefreshCcw size={16}/>
+                      <Pencil size={16}/>
                     </Button>
 
                     <Button

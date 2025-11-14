@@ -40,6 +40,33 @@ const normalizeRoles = (claims) => {
   return Array.from(new Set(norm));
 };
 
+
+// Put this near the top of AuthContext.js, below other helpers
+const normalizeAuthMessage = (rawMsg, status) => {
+  if (!rawMsg) return "";
+
+  const m = rawMsg.toString().toLowerCase();
+
+  // 🔁 Map all "disabled" wordings to a blocked message
+  if (
+    m.includes("user is disabled") ||
+    m.includes("user disabled") ||
+    m.includes("account is disabled") ||
+    m.includes("account disabled")
+  ) {
+    return "Your account is blocked. Please contact support.";
+  }
+
+  // Also treat generic 423 with disabled text as "blocked"
+  if (status === 423 && (m.includes("disabled") || m.includes("locked"))) {
+    return "Your account is blocked. Please contact support.";
+  }
+
+  // Fallback: return original text
+  return rawMsg;
+};
+
+
 const resolveUserFromJWT = (access) => {
   if (!access) return null;
   try {
@@ -146,13 +173,15 @@ export default function AuthProvider({ children }) {
       const status = err?.response?.status ?? 0;
       const data = err?.response?.data;
 
-      const serverMsg =
+      const RawserverMsg =
         (typeof data?.error?.message === "string" && data.error.message.trim()) ||
         (typeof data?.data?.message === "string" && data.data.message.trim()) ||
         (typeof data?.message === "string" && data.message.trim()) ||
         (typeof data?.error === "string" && data.error.trim()) ||
         (typeof data === "string" && data.trim()) ||
         "";
+
+       const serverMsg = normalizeAuthMessage(RawserverMsg, status);
 
       if ([400, 401, 403, 404, 422, 423, 429].includes(status)) {
         return {

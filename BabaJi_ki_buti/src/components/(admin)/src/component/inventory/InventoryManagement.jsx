@@ -1,31 +1,150 @@
 // InventoryManagement.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Search,
   Download,
   Plus,
   Package,
   RefreshCw,
+  ChevronDown,
+  Check,
+  Filter as FilterIcon,
 } from "lucide-react";
 
 // ✅ axios instance pointing to /api
 import { app } from "../../../../../auth/httpAPI";
 
-/**
- * Backend: GET /api/products/stock
- * Response: ApiResponse<Page<StockInventoryDto>>
- * StockInventoryDto:
- * {
- *   stockInventoryId: number,
- *   productId: number,
- *   productName: string,
- *   previousStock: number,
- *   addedStock: number,
- *   availableStock: number,
- *   statusAfter: "DRAFT" | "ACTIVE" | "INACTIVE" | "LOW_STOCK",
- *   addedAt: "2025-10-06T12:34:56+05:30"
- * }
- */
+/* ---------------------- filter option lists ---------------------- */
+
+const STATUS_OPTIONS = [
+  {
+    value: "All Status",
+    label: "All status",
+    chipClass: "bg-slate-100 text-slate-700",
+  },
+  {
+    value: "ACTIVE",
+    label: "Active only",
+    chipClass: "bg-emerald-100 text-emerald-800",
+  },
+  {
+    value: "LOW_STOCK",
+    label: "Low Stock only",
+    chipClass: "bg-red-100 text-red-800",
+  },
+  {
+    value: "INACTIVE",
+    label: "Inactive only",
+    chipClass: "bg-gray-200 text-gray-800",
+  },
+  {
+    value: "DRAFT",
+    label: "Draft only",
+    chipClass: "bg-yellow-100 text-yellow-800",
+  },
+];
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100].map((n) => ({
+  value: n,
+  label: `${n} rows`,
+  chipClass: "bg-slate-100 text-slate-700",
+}));
+
+/* ---------------------- fancy dropdown component ---------------------- */
+
+function FilterDropdown({ label, value, onChange, options, compact = false }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const current =
+    options.find((o) => String(o.value) === String(value)) || options[0];
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const triggerBase =
+    "inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 shadow-sm hover:bg-emerald-100/90 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1";
+  const triggerSize = compact ? "px-2 py-1 text-xs" : "px-3 py-2 text-xs md:text-sm";
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {/* Trigger pill */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`${triggerBase} ${triggerSize}`}
+      >
+        {!compact && (
+          <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-emerald-700/80">
+            <FilterIcon className="h-3 w-3" />
+            {label}
+          </span>
+        )}
+
+        <span
+          className={`inline-flex items-center rounded-xl px-2 py-1 text-[11px] font-medium ${current?.chipClass}`}
+        >
+          {current?.value}
+        </span>
+
+        <ChevronDown
+          className={`h-4 w-4 text-emerald-700/70 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-emerald-100 bg-white/95 backdrop-blur shadow-xl ring-1 ring-emerald-100/70 z-20">
+          {!compact && (
+            <div className="px-3 pt-3 pb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/70">
+                {label} filter
+              </p>
+            </div>
+          )}
+          <div className="max-h-64 overflow-y-auto pb-2">
+            {options.map((opt) => {
+              const active = String(opt.value) === String(value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-2.5 text-sm flex items-center justify-between gap-3 text-left transition-colors ${
+                    active
+                      ? "bg-emerald-50 text-emerald-900"
+                      : "hover:bg-emerald-50/70 text-gray-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                   
+                    <span className="font-medium">{opt.label}</span>
+                  </div>
+                  {active && (
+                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function InventoryManagement() {
   // -------- UI state --------
@@ -305,51 +424,33 @@ export default function InventoryManagement() {
               />
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-            >
-              {statusOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s === "All Status" ? s : s.replaceAll("_", " ")}
-                </option>
-              ))}
-            </select>
+          <FilterDropdown
+  label="Status"
+  value={statusFilter}
+  onChange={(val) => setStatusFilter(String(val))}
+  options={STATUS_OPTIONS}
+/>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg"
-              />
-              <span className="text-gray-400">to</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg"
-              />
-            </div>
+
+
           </div>
 
-          {/* Page size selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Rows per page:</span>
-            <select
-              value={size}
-              onChange={(e) => {
-                setPage(0);
-                setSize(Number(e.target.value) || 20);
-              }}
-              className="px-2 py-1 border border-gray-200 rounded"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
+                       {/* Page size selector */}
+<div className="flex items-center gap-2">
+  <span className="text-sm text-gray-600">Rows per page:</span>
+  <FilterDropdown
+    label="Rows per page"
+    compact
+    value={size}
+    onChange={(val) => {
+      const n = Number(val) || 20;
+      setPage(0);
+      setSize(n);
+    }}
+    options={PAGE_SIZE_OPTIONS}
+  />
+</div>
+
         </div>
 
         {/* Table */}

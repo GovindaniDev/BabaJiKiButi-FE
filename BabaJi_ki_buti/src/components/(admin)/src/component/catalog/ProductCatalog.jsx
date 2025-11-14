@@ -1,7 +1,16 @@
 // ProductCatalog.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Search, Plus, ChevronDown, Package, Eye, Box, MoreVertical, IndianRupee,
+  Search,
+  Plus,
+  ChevronDown,
+  Package,
+  Eye,
+  Box,
+  MoreVertical,
+  IndianRupee,
+  Check,
+  Filter as FilterIcon,
 } from "lucide-react";
 import { getAllProducts } from "../../../../../auth/product/products";
 
@@ -90,6 +99,161 @@ const getStockColor = (s) =>
   s === "High" ? "bg-green-100 text-green-700"
     : s === "Medium" ? "bg-orange-100 text-orange-700"
     : "bg-red-100 text-red-700";
+
+
+/* ---------------------- filter option lists ---------------------- */
+
+const STATUS_OPTIONS = [
+  {
+    value: "All Status",
+    label: "All status",
+    chipClass: "bg-slate-100 text-slate-700",
+  },
+  {
+    value: "Published",
+    label: "Published only",
+    chipClass: "bg-emerald-100 text-emerald-800",
+  },
+  {
+    value: "Draft",
+    label: "Draft only",
+    chipClass: "bg-yellow-100 text-yellow-800",
+  },
+  {
+    value: "Scheduled",
+    label: "Scheduled only",
+    chipClass: "bg-blue-100 text-blue-800",
+  },
+];
+
+const CATEGORY_OPTIONS = [
+  {
+    value: "All Categories",
+    label: "All categories",
+    chipClass: "bg-slate-100 text-slate-700",
+  },
+  {
+    value: "Immunity & General Wellness",
+    label: "Immunity & General Wellness",
+    chipClass: "bg-emerald-50 text-emerald-800",
+  },
+  {
+    value: "Energy & Stamina",
+    label: "Energy & Stamina",
+    chipClass: "bg-orange-50 text-orange-800",
+  },
+  {
+    value: "Digestive Health",
+    label: "Digestive Health",
+    chipClass: "bg-teal-50 text-teal-800",
+  },
+  {
+    value: "Nutritional Supplements",
+    label: "Nutritional Supplements",
+    chipClass: "bg-indigo-50 text-indigo-800",
+  },
+  {
+    value: "Men’s Health",
+    label: "Men’s Health",
+    chipClass: "bg-blue-50 text-blue-800",
+  },
+  {
+    value: "Women’s Health",
+    label: "Women’s Health",
+    chipClass: "bg-pink-50 text-pink-800",
+  },
+  {
+    value: "Weight Management",
+    label: "Weight Management",
+    chipClass: "bg-amber-50 text-amber-800",
+  },
+];
+
+/* ---------------------- fancy dropdown component ---------------------- */
+
+function FilterDropdown({ label, value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const current = options.find((o) => o.value === value) || options[0];
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={wrapperRef}>
+      {/* Trigger pill */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs md:text-sm text-emerald-900 shadow-sm hover:bg-emerald-100/90 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+      >
+        <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wide text-emerald-700/80">
+          <FilterIcon className="h-3 w-3" />
+          {label}
+        </span>
+
+        <span
+          className={`inline-flex items-center rounded-xl px-2 py-1 text-[11px] font-medium ${current?.chipClass}`}
+        >
+          {current?.value}
+        </span>
+
+        <ChevronDown
+          className={`h-4 w-4 text-emerald-700/70 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {/* Panel */}
+      {open && (
+        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-emerald-100 bg-white/95 backdrop-blur shadow-xl ring-1 ring-emerald-100/70 z-20">
+          <div className="px-3 pt-3 pb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700/70">
+              {label} filter
+            </p>
+          </div>
+          <div className="max-h-64 overflow-y-auto pb-2">
+            {options.map((opt) => {
+              const active = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-3 py-2.5 text-sm flex items-center justify-between gap-3 text-left transition-colors ${
+                    active
+                      ? "bg-emerald-50 text-emerald-900"
+                      : "hover:bg-emerald-50/70 text-gray-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    
+                    <span className="font-medium">{opt.label}</span>
+                  </div>
+                  {active && (
+                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ---------------------- component ---------------------- */
 export default function ProductCatalog() {
@@ -286,51 +450,37 @@ export default function ProductCatalog() {
           <p className="text-sm text-gray-600">Search and filter your product catalog</p>
         </div>
 
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-200 flex items-center space-x-4">
-          <div className="flex items-center space-x-2 flex-1 max-w-md bg-gray-50 px-3 py-2 rounded-lg">
-            <Search className="w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 outline-none text-sm text-gray-600 bg-transparent"
-            />
-          </div>
+      {/* Filters */}
+<div className="p-4 border-b border-gray-200 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+  {/* Search */}
+  <div className="flex items-center space-x-2 flex-1 max-w-md bg-gray-50 px-3 py-2 rounded-xl border border-gray-200 shadow-[0_1px_3px_rgba(15,23,42,0.08)]">
+    <Search className="w-4 h-4 text-gray-400" />
+    <input
+      type="text"
+      placeholder="Search products by name or code…"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder:text-gray-400"
+    />
+  </div>
 
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option>All Status</option>
-              <option>Published</option>
-              <option>Draft</option>
-              <option>Scheduled</option>
-            </select>
-            <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-          </div>
+  {/* Dropdown filters */}
+  <div className="flex items-center gap-2 md:gap-3 justify-end">
+    <FilterDropdown
+      label="Status"
+      value={statusFilter}
+      onChange={setStatusFilter}
+      options={STATUS_OPTIONS}
+    />
+    <FilterDropdown
+      label="Category"
+      value={categoryFilter}
+      onChange={setCategoryFilter}
+      options={CATEGORY_OPTIONS}
+    />
+  </div>
+</div>
 
-          <div className="relative">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 pr-8 text-sm text-gray-700 cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option>All Categories</option>
-              <option>Immunity & General Wellness</option>
-              <option>Energy & Stamina</option>
-              <option>Digestive Health</option>
-              <option>Nutritional Supplements</option>
-              <option>Men’s Health</option>
-              <option>Women’s Health</option>
-              <option>Weight Management</option>
-            </select>
-            <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
-          </div>
-        </div>
 
         {/* Table / Loading / Error */}
         {loading ? (

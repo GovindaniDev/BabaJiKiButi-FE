@@ -62,12 +62,14 @@ body::-webkit-scrollbar {
 
 /* keep your existing .section-base etc. */
 
-.flavor-section { position: relative; isolation: isolate; z-index: 0; }
-.nutrition-section { position: relative; isolation: isolate; z-index: 0; }
-
-
-
-
+.flavor-section,
+.nutrition-section,
+.benefit-section,
+.testimonials-section {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+}
 @layer components {
   .paragraph-line {
     @apply text-nowrap overflow-hidden;

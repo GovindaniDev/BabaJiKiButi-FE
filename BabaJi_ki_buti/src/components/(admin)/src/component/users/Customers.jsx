@@ -44,28 +44,46 @@ const statusColor = {
   active: "bg-emerald-100 text-emerald-700",
   suspended: "bg-amber-100 text-amber-700",
   blocked: "bg-orange-100 text-orange-700",
-  deleted: "bg-slate-200 text-slate-700",
+ 
 };
 
 const prettyStatus=(s)=>(s==="inactive"?"suspended":s);
 
 // Tolerant normalizer for backend variations
 function normalizeUser(u = {}) {
-  const rawStatus = String(u.status ?? "active").toLowerCase();
-  const status=rawStatus==="inactive"||rawStatus==="suspended"?"suspended":rawStatus;
+  const raw = String(u.status ?? "ACTIVE").toUpperCase();
+  let status;
+  switch (raw) {
+    case "ACTIVE":
+      status = "active";
+      break;
+    case "SUSPENDED":
+      status = "suspended";
+      break;
+    case "DISABLED":
+      status = "blocked";
+      break;
+    default:
+      status = "active";
+  }
+
   return {
     id: u.id ?? u.userId ?? u.uid ?? String(Math.random()),
     name: u.name ?? u.fullName ?? u.username ?? u.email?.split("@")[0] ?? "User",
     email: u.email ?? u.mail ?? "",
     phone: u.phone ?? u.mobile ?? u.contact ?? "",
-    role: String(u.role ?? "user").toLowerCase(),
+    role: String(u.role ?? "USER").toLowerCase(),
     status,
-    joinDate: u.joinDate ?? u.createdAt ?? u.created_at ?? "",
+    // 👇 prefer backend createdAt
+    joinDate: u.createdAt ?? u.joinDate ?? u.created_at ?? "",
     lastLogin: u.lastLogin ?? u.last_seen ?? u.lastLoginAt ?? u.updatedAt ?? "",
     orders: Number(u.orders ?? u.orderCount ?? 0),
     totalSpent: Number(u.totalSpent ?? u.revenue ?? u.gmv ?? 0),
   };
 }
+
+
+
 
 /* ------------------------------ local UI bits ------------------------- */
 
@@ -149,10 +167,10 @@ export default function Users() {
     const active = rows.filter((u) => u.status === "active").length;
     const suspended = rows.filter((u) => u.status === "suspended").length;
     const blocked = rows.filter((u) => u.status === "blocked").length;
-    const deleted = rows.filter((u) => u.status === "deleted").length;
+   
     const orders = rows.reduce((s, u) => s + (u.orders || 0), 0);
     const revenue = rows.reduce((s, u) => s + (u.totalSpent || 0), 0);
-    return { total, active, suspended, blocked, deleted, orders, revenue };
+    return { total, active, suspended, blocked, orders, revenue };
   }, [rows]);
 
   const filtered = useMemo(() => {
@@ -208,12 +226,14 @@ export default function Users() {
     setSavingId(id);
     try {
       const toSend = {
-        name: payload.name,
-        email: payload.email,
-        phone: payload.phone,
-        role: payload.role,
-        status: payload.status,
-      };
+  name: payload.name,
+  email: payload.email,
+  phone: payload.phone,
+  // map "user" / "admin" -> "USER" / "ADMIN" for Spring Enum
+  role: payload.role ? payload.role.toUpperCase() : undefined,
+  status: payload.status,
+};
+
       const updated = id ? await userApi.updateById(id, toSend) : await userApi.create?.(toSend);
       const norm = normalizeUser(updated ?? toSend);
       if (id) {
@@ -230,65 +250,103 @@ export default function Users() {
     }
   };
 
-  const updateStatus = async (user, newStatus) => {
-    setSavingId(user.id);
-    try {
-      const updated = await userApi.updateById(user.id, { status: newStatus });
-      const norm = normalizeUser(updated);
-      setRows((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...norm } : u)));
-    } catch (e) {
-      console.error(e);
-      alert("Failed to change status.");
-    } finally {
-      setSavingId(null);
-    }
-  };
+  // Convert frontend value → backend enum-friendly value
+const toBackendStatus = (s) => {
+  switch (s) {
+    case "active": return "active";
+    case "suspended": return "suspended";
+    case "blocked": return "blocked"; // backend will map "blocked" → DISABLED
+    default: return "active";
+  }
+};
+
+// Updated status updater
+const updateStatus = async (user, newStatus) => {
+  setSavingId(user.id);
+  try {
+    const backendStatus = toBackendStatus(newStatus);
+    const updated = await userApi.updateById(user.id, { status: backendStatus });
+
+    const norm = normalizeUser(updated);
+    setRows((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, ...norm } : u))
+    );
+  } catch (e) {
+    console.error(e);
+    alert("Failed to change status.");
+  } finally {
+    setSavingId(null);
+  }
+};
 
   const updateRole = async (user, newRole) => {
-    setSavingId(user.id);
-    try {
-      const updated = await userApi.updateById(user.id, { role: newRole });
-      const norm = normalizeUser(updated);
-      setRows((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...norm } : u)));
-    } catch (e) {
-      console.error(e);
-      alert("Failed to change role.");
-    } finally {
-      setSavingId(null);
-    }
-  };
+  setSavingId(user.id);
+  try {
+    // frontend uses "user"/"admin" but backend needs "USER"/"ADMIN"
+    const updated = await userApi.updateById(user.id, { role: newRole.toUpperCase() });
+    const norm = normalizeUser(updated);
+    setRows((prev) => prev.map((u) => (u.id === user.id ? { ...u, ...norm } : u)));
+  } catch (e) {
+    console.error(e);
+    alert("Failed to change role.");
+  } finally {
+    setSavingId(null);
+  }
+};
 
-  const deleteUser = async (user, hard = false) => {
-    if (!window.confirm(hard ? "Hard delete this user permanently?" : "Soft delete this user?")) return;
-    setDeletingId(user.id);
-    try {
-      const ok = await userApi.deleteById(user.id, hard);
-      if (ok) {
-        setRows((prev) => prev.filter((u) => u.id !== user.id));
-      } else {
-        alert("Delete failed.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Delete failed.");
-    } finally {
-      setDeletingId(null);
+
+const deleteUser = async (user) => {
+  if (
+    !window.confirm(
+      "Soft delete (blacklist) this user? They will no longer be able to log in."
+    )
+  )
+    return;
+
+  setDeletingId(user.id);
+  try {
+    // backend will treat this as soft delete → DISABLED / blacklisted
+    const ok = await userApi.deleteById(user.id, false);
+
+    if (ok) {
+      // ✅ don't remove from table; just mark as blocked in UI
+      setRows((prev) =>
+        prev.map((u) =>
+          u.id === user.id ? { ...u, status: "blocked" } : u
+        )
+      );
+    } else {
+      alert("Soft delete failed.");
     }
-  };
+  } catch (e) {
+    console.error(e);
+    alert("Soft delete failed.");
+  } finally {
+    setDeletingId(null);
+  }
+};
+
 
   const actionsFor = (u) => {
-    const isBusy = savingId === u.id || deletingId === u.id;
-    return (
-      <ActionMenu
-        user={u}
-        busy={isBusy}
-        onEdit={() => openEditor(u)}
-        onToggleBlock={() => updateStatus(u, u.status === "blocked" ? "active" : "blocked")}
-        onToggleActive={() => updateStatus(u, u.status === "suspended" ? "active" : "suspended")}
-        onSoftDelete={() => deleteUser(u, false)}
-      />
-    );
+  const isBusy = savingId === u.id || deletingId === u.id;
+
+  const handleToggleStatus = () => {
+    const nextStatus = u.status === "active" ? "suspended" : "active";
+    updateStatus(u, nextStatus);
   };
+
+  return (
+    <ActionMenu
+      user={u}
+      busy={isBusy}
+      onEdit={() => openEditor(u)}
+      // we dropped the separate block toggle; soft delete = blacklist
+      onToggleActive={handleToggleStatus}
+      onSoftDelete={() => deleteUser(u)}
+    />
+  );
+};
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -309,7 +367,7 @@ export default function Users() {
           <ToolbarButton icon={RefreshCw} onClick={load} disabled={loading}>
             Refresh
           </ToolbarButton>
-          <ToolbarButton icon={Filter} onClick={() => {}}>Filter</ToolbarButton>
+          
           <ToolbarButton icon={Download} onClick={exportCSV}>Export CSV</ToolbarButton>
           <ToolbarButton icon={Plus} variant="primary" onClick={() => openEditor({ id: null, name: "", email: "", phone: "", role: "user", status: "active" })}>
             Add User
@@ -390,7 +448,7 @@ export default function Users() {
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-slate-500">Status:</span>
-            {["all", "active", "suspended", "blocked", "deleted"].map((s) => (
+            {["all", "active", "suspended", "blocked"].map((s) => (
               <button
                 key={s}
                 className={cn(
@@ -568,7 +626,7 @@ function RoleSwitcher({ user, onChange, busy }) {
 }
 
 function StatusSwitcher({ user, onChange, busy }) {
-  const statuses = ["active", "suspended", "blocked", "deleted"];
+  const statuses = ["active", "suspended", "blocked"];
   return (
     <select
       className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700"
@@ -645,17 +703,18 @@ function EditDrawer({ user, onClose, onSave, saving }) {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Role">
-              <select
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              >
-                <option value="user">user</option>
-                <option value="admin">admin</option>
-                {/* <option value="affiliate">affiliate</option> */}
-              </select>
-            </Field>
+          <Field label="Role">
+  <select
+    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+    value={form.role}
+    onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+  >
+    <option value="user">user</option>
+    <option value="admin">admin</option>
+    {/* <option value="affiliate">affiliate</option> */}
+  </select>
+</Field>
+
 
             <Field label="Status">
               <select
@@ -666,7 +725,7 @@ function EditDrawer({ user, onClose, onSave, saving }) {
                 <option value="active">active</option>
                 <option value="suspended">Suspended</option>
                 <option value="blocked">blocked</option>
-                <option value="deleted">deleted</option>
+      
               </select>
             </Field>
           </div>
@@ -704,48 +763,69 @@ function Field({ label, children }) {
   );
 }
 
-function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftDelete }) {
+function ActionMenu({ user, busy, onEdit, onToggleActive, onSoftDelete }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0, placement: "bottom" });
+  const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = React.useRef(null);
+  const menuRef = React.useRef(null);
 
-  const blockLabel = user.status === "blocked" ? "Unblock" : "Block";
-  const activeLabel = user.status === "suspended" ? "Activate" : "Set Suspend";
+  const activeLabel =
+    user.status === "suspended" || user.status === "blocked"
+      ? "Activate"
+      : "Suspend";
 
   const close = () => setOpen(false);
   const toggle = () => setOpen((o) => !o);
 
-  // compute viewport position for the popover (fixed, not clipped by table/scroll)
   const computePosition = useCallback(() => {
-    const el = btnRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const menuWidth = 176; // ~w-44 px
-    const menuHeightGuess = 200; // rough; we also clamp with max-h
+    const btnEl = btnRef.current;
+    if (!btnEl) return;
 
-    let left = Math.min(
-      Math.max(8, r.right - menuWidth),                // prefer align-right
-      window.innerWidth - menuWidth - 8                // keep within viewport
+    const btnRect = btnEl.getBoundingClientRect();
+    const menuEl = menuRef.current;
+
+    const padding = 8;
+    const defaultWidth = 176; // w-44
+    const defaultHeight = 140; // 3 items ~ 40px each
+
+    const menuWidth = menuEl?.offsetWidth ?? defaultWidth;
+    const menuHeight = menuEl?.offsetHeight ?? defaultHeight;
+
+    // Align RIGHT edge of menu with RIGHT edge of button
+    let left = btnRect.right - menuWidth;
+    left = Math.min(
+      Math.max(padding, left),
+      window.innerWidth - menuWidth - padding
     );
 
-    // decide top/bottom placement
-    const spaceBelow = window.innerHeight - r.bottom;
-    const placeBottom = spaceBelow > menuHeightGuess + 16;
-    let top = placeBottom ? r.bottom + 8 : r.top - menuHeightGuess - 8;
+    // Prefer below the button with a tiny gap
+    let top = btnRect.bottom + 4;
 
-    // clamp to viewport
-    top = Math.min(Math.max(8, top), window.innerHeight - 8 - menuHeightGuess);
+    // If it would go off the bottom, show above the button
+    if (top + menuHeight + padding > window.innerHeight) {
+      top = btnRect.top - menuHeight - 4;
+    }
 
-    setPos({ top, left, placement: placeBottom ? "bottom" : "top" });
+    // Final clamp
+    top = Math.min(
+      Math.max(padding, top),
+      window.innerHeight - menuHeight - padding
+    );
+
+    setPos({ top, left });
   }, []);
 
+  // Recompute whenever menu opens or window changes
   useEffect(() => {
     if (!open) return;
     computePosition();
+
     const onScroll = () => computePosition();
     const onResize = () => computePosition();
+
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
+
     return () => {
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
@@ -758,7 +838,7 @@ function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftD
         type="button"
         ref={btnRef}
         disabled={busy}
-        onClick={() => { if (!open) computePosition(); toggle(); }}
+        onClick={toggle}
         className={cn(
           "inline-flex items-center rounded-xl p-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-slate-600",
           busy && "opacity-60 cursor-not-allowed"
@@ -769,47 +849,58 @@ function ActionMenu({ user, busy, onEdit, onToggleBlock, onToggleActive, onSoftD
         <MoreVertical className="h-5 w-5" />
       </button>
 
-      {/* PORTAL menu to avoid being clipped by overflow containers */}
-      {open && createPortal(
-        <>
-          {/* backdrop */}
-          <button
-            className="fixed inset-0 z-[90] cursor-default"
-            onClick={close}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-          <div
-            className={cn(
-              "fixed z-[100] w-44 rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5",
-              "max-h-[280px] overflow-auto"
-            )}
-            style={{ top: pos.top, left: pos.left }}
-            role="menu"
-          >
-            <MenuBtn onClick={() => { close(); onEdit?.(); }}>
-              <Edit2 className="h-4 w-4" /> Edit
-            </MenuBtn>
+      {open &&
+        createPortal(
+          <>
+            {/* backdrop */}
+            <button
+              className="fixed inset-0 z-[90] cursor-default"
+              onClick={close}
+              aria-hidden="true"
+              tabIndex={-1}
+            />
 
-            <MenuBtn onClick={() => { close(); onToggleBlock?.(); }}>
-              <LockKeyhole className="h-4 w-4" /> {blockLabel}
-            </MenuBtn>
+            {/* menu */}
+            <div
+              ref={menuRef}
+              className={cn(
+                "fixed z-[100] w-44 rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5",
+                "max-h-[280px] overflow-auto"
+              )}
+              style={{ top: pos.top, left: pos.left }}
+              role="menu"
+            >
+              <MenuBtn
+                onClick={() => {
+                  close();
+                  onEdit?.();
+                }}
+              >
+                <Edit2 className="h-4 w-4" /> Edit
+              </MenuBtn>
 
-            <MenuBtn onClick={() => { close(); onToggleActive?.(); }}>
-              <UserCheck className="h-4 w-4" /> {activeLabel}
-            </MenuBtn>
+              <MenuBtn
+                onClick={() => {
+                  close();
+                  onToggleActive?.();
+                }}
+              >
+                <UserCheck className="h-4 w-4" /> {activeLabel}
+              </MenuBtn>
 
-            <MenuBtn danger onClick={() => { close(); onSoftDelete?.(); }}>
-              <Trash2 className="h-4 w-4" /> Soft delete
-            </MenuBtn>
-
-            <MenuLink to={`/admin/users/${user.id}`} onClick={close}>
-              <Eye className="h-4 w-4" /> View
-            </MenuLink>
-          </div>
-        </>,
-        document.body
-      )}
+              <MenuBtn
+                danger
+                onClick={() => {
+                  close();
+                  onSoftDelete?.();
+                }}
+              >
+                <Trash2 className="h-4 w-4" /> Soft delete
+              </MenuBtn>
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }

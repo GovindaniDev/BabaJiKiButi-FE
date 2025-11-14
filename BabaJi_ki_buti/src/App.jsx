@@ -51,6 +51,10 @@ import AddStockPage from "./page/admin/inventory/AddStockPage";
 import AnnouncementsPage from "./components/(admin)/src/component/campaigns/announcements/AnnouncementsPage";
 import DoshaPage from "./page/dosha/DoshaPage";
 import RootRedirect from "./RootRedirect";
+import SubscriptionPage from "./page/admin/subscriptions/SubscriptionPage";
+import ReviewPage from "./page/admin/reviews/ReviewPage";
+import ReportPage from "./page/admin/reports/ReportPage";
+import ReferralLoyaltyPage from "./page/admin/referralloyalty/ReferralLoyaltyPage";
 
 const App = () => {
   const [loading, setLoading] = useState(true);
@@ -119,6 +123,10 @@ const App = () => {
               <Route path="pricing/coupon/CouponPage" element={<CouponPage />} />
               <Route path="inventory/AddStockPage" element={<AddStockPage />} />
               <Route path="campaigns/announcements" element={<AnnouncementsPage />} />
+              <Route path="subscriptions" element={<SubscriptionPage />} />
+              <Route path="reviews" element={<ReviewPage />} />
+              <Route path="reports" element={<ReportPage />} />
+              <Route path="referralloyalty" element={<ReferralLoyaltyPage />} />  
             </Route>
           </Route>
 
